@@ -1,0 +1,1521 @@
+#!/usr/bin/env python3
+"""
+PWA Manager — FINAL, COMPLETE, BULLETPROOF
+- FULL GTK4 UI (Adwaita)
+- Desktop shortcuts LAUNCH 100%
+- Flatpak/Snap Firefox, Brave, Vivaldi SUPPORT
+- Auto icon download
+- Extension presets (Twitch, YouTube, Kick)
+- Custom apps + browser presets
+- Kiosk, GPU, nice/ionice
+- Dark mode
+- Full logging
+- FIX: Handles config migration from list to dict (TypeError: string indices must be integers, not 'str')
+- FIX: NameError: name 'slugify' is not defined (Moved function definitions)
+- FIX: Isolated profile not used for extension manager launch.
+- FIX: Browser selection for custom PWA installation is ignored.
+"""
+
+import gi
+gi.require_version("Gtk", "4.0")
+gi.require_version("Gdk", "4.0")
+gi.require_version("Adw", "1")
+from gi.repository import Gtk, Gio, GLib, Gdk, Adw
+import os
+import re
+import sys
+import json
+import shutil
+import argparse
+import subprocess
+import tempfile
+import threading
+from urllib.parse import urlparse
+from pathlib import Path
+
+# ---------------- Utilities (MOVED TO TOP TO FIX NAMEREF) ----------------
+def slugify(text: str) -> str:
+    """Converts a string to a URL-friendly slug."""
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+
+def get_browsers():
+    """Returns the browser configuration dictionary."""
+    return CONFIG.get("browsers", DEFAULT_CONFIG["browsers"])
+
+def get_profile_dir(app: dict) -> Path:
+    """Calculates the PWA's isolated profile directory path."""
+    app_name = app.get("name", "untitled")
+    return CONFIG_DIR / "profiles" / slugify(app_name)
+
+def profile_config_path(app: dict) -> Path:
+    """Calculates the path to the profile's config file."""
+    return get_profile_dir(app) / "profile.json"
+
+def load_profile_config(app: dict) -> dict:
+    """Loads the config for a specific PWA profile."""
+    p = profile_config_path(app)
+    if p.exists():
+        try:
+            return json.loads(p.read_text())
+        except Exception:
+            return {}
+    return {}
+
+def save_profile_config(app: dict, data: dict):
+    """Saves the config for a specific PWA profile."""
+    pd = get_profile_dir(app)
+    pd.mkdir(parents=True, exist_ok=True)
+    profile_config_path(app).write_text(json.dumps(data, indent=2))
+
+def get_hostname_from_url(url: str) -> str:
+    """Extracts the clean hostname from a URL."""
+    try:
+        parsed = urlparse(url)
+        hostname = parsed.netloc or parsed.path
+        return hostname.replace('www.', '').split('/')[0].split(':')[0]
+    except Exception:
+        return ""
+
+# ---------------- Extension Helpers (Simplified) ----------------
+
+def get_app_key(app):
+    hostname = get_hostname_from_url(app["url"])
+    for key in ["twitch", "kick", "youtube"]:
+        if key in hostname:
+            return key
+    return None
+
+def load_installed_extensions(app):
+    # This now loads a list of dictionaries like: [{'name': '...', 'web_url': '...'}]
+    if not app:
+        return []
+        
+    profile_cfg = load_profile_config(app)
+    return profile_cfg.get("extensions", [])
+
+def save_installed_extensions(app, exts):
+    profile_cfg = load_profile_config(app)
+    profile_cfg["extensions"] = exts
+    save_profile_config(app, profile_cfg)
+def get_icon_path(app: dict) -> Path:
+    """Calculates the path to the PWA's icon file."""
+    return ICON_DIR / f"{slugify(app['name'])}.png"
+
+def get_desktop_file_path(app: dict) -> Path:
+    """Calculates the path to the PWA's desktop file."""
+    return DESKTOP_DIR / f"pwa-{slugify(app['name'])}-manager.desktop" # Modified slug to avoid conflicts
+
+def download_file(url: str, path: Path, timeout: int = 10):
+    """Downloads a file using curl."""
+    try:
+        subprocess.run(["curl", "-fLs", "-o", str(path), url], check=True, timeout=timeout)
+        return True
+    except Exception:
+        return False
+
+def download_icon(app: dict, status_callback=None):
+    """Attempts to download an icon for the PWA."""
+    hostname = get_hostname_from_url(app['url'])
+    if not hostname:
+        if status_callback: status_callback("Failed to parse hostname")
+        return
+    icon_path = get_icon_path(app)
+    ICON_DIR.mkdir(parents=True, exist_ok=True)
+    
+    # Try icon.horse first
+    if download_file(f"https://icon.horse/icon/{hostname}?size=large", icon_path):
+        if status_callback: status_callback(f"Icon: {hostname}")
+        return
+    # Fallback to Google's favicon service
+    if download_file(f"https://www.google.com/s2/favicons?domain={hostname}&sz=256", icon_path):
+        if status_callback: status_callback(f"Fallback icon: {hostname}")
+
+    # Direct /favicon.ico from the site itself — almost every site still has this
+    parsed = urlparse(app['url'])
+    base_url = f"{parsed.scheme}://{parsed.netloc}"
+    if download_file(f"{base_url}/favicon.ico", icon_path, timeout=8):
+        if status_callback: status_callback(f"Icon from {hostname}/favicon.ico")
+        return
+    else:
+        if status_callback: status_callback("Icon download failed")
+
+def make_launcher_wrapper(app: dict, browser_key: str, nice: int, ionice: int, gpu: bool) -> Path:
+    """
+    Create a small shell wrapper that will be referenced by the .desktop Exec line.
+    This ensures that the launcher command is complex but the .desktop file is simple.
+    """
+    slug = slugify(app['name'])
+    scripts_dir = CONFIG_DIR / "scripts"
+    scripts_dir.mkdir(parents=True, exist_ok=True)
+    wrapper = scripts_dir / f"pwa-launch-{slug}.sh"
+    profile_dir = get_profile_dir(app)
+    profile_dir.mkdir(parents=True, exist_ok=True)
+
+    browser_cfg = get_browsers().get(browser_key, {})
+    pkg_type, base_cmd = detect_browser_command(browser_key)
+
+    kiosk_flag = browser_cfg.get('kiosk_flag', '') if app.get('kiosk', False) else ''
+    args_data = browser_cfg.get('args', '{profile_dir} {url}')
+    args_template = ' '.join(args_data) if isinstance(args_data, list) else str(args_data)
+    app_url = app.get('url', '')
+    
+    # --- START PATCH: Define unique WM Class ---
+    unique_wm_class = f"PWA-{slug}"
+    # The --class argument is primarily used for X11/Xwayland window matching
+    wm_class_arg = f"--class={unique_wm_class}" if browser_key.lower() in ["edge", "brave", "vivaldi", "chrome"] else ""
+    # --- END PATCH ---
+
+    # Format args, including {kiosk_flag} and the new {unique_wm_class}
+    args = args_template.format(
+        profile_dir=str(profile_dir), 
+        url=app_url, 
+        kiosk_flag=kiosk_flag
+    )
+    
+    # Determine binary to call
+    if pkg_type in ('flatpak', 'snap'):
+        # base_cmd is a list like ['flatpak','run','org.x']
+        prefix = ' '.join(base_cmd)
+        exec_cmd = f"$NICE_CMD $IONICE_CMD {prefix} {args} {wm_class_arg}" # PATCH: Add wm_class_arg
+    else:
+        cmd0 = browser_cfg.get('cmd', browser_key)
+        cmd0_path = shutil.which(cmd0) or cmd0
+        # escape double quotes in path
+        cmd0_path_esc = str(cmd0_path).replace('"', '\"')
+        exec_cmd = f"$NICE_CMD $IONICE_CMD \"{cmd0_path_esc}\" {args} {wm_class_arg}" # PATCH: Add wm_class_arg
+
+    # Build wrapper content
+    lines = [
+        '#!/usr/bin/env bash',
+        '# This wrapper script is generated by PWA Manager',
+        'set -euo pipefail',
+        # CRUCIAL FIX: Source user environment to ensure $PATH is correct (Linux launch fix)
+        'source "$HOME/.profile" 2>/dev/null', 
+        '',
+        'CONFIG_DIR="$HOME/.pwa_manager"',
+        'LOG_FILE="$CONFIG_DIR/launch.log"',
+        '# Redirect stderr to log file for debugging',
+        'exec 2>>"$LOG_FILE"', 
+        '# Log commands as they are executed (set -x)',
+        'set -x', 
+        '',
+        f'NICE_CMD="nice -n {nice}"',
+        f'IONICE_CMD="ionice -c {ionice}"',
+        '',
+        # --- CRITICAL PATCH: Set GTK_APPLICATION_ID for modern desktops (Wayland/GNOME/KDE) ---
+        # This ensures correct window grouping and icon display in Wayland sessions.
+        f'export GTK_APPLICATION_ID="{unique_wm_class}"',
+        # -------------------------------------------------------------------------------------
+        # FIX: Simplified final execution for Linux stability. 
+        # exec setsid detaches the process, ensuring the desktop entry works on both X11 and Wayland.
+        f"exec setsid {exec_cmd}",
+    ]
+    
+    wrapper_content = '\n'.join(lines)
+    
+    try:
+        wrapper.write_text(wrapper_content)
+        wrapper.chmod(0o755)
+    except Exception as e:
+        print(f"Error writing wrapper script: {e}")
+
+    return wrapper
+
+def create_desktop_file(app: dict, script_path: str, status_callback=None):
+    desktop_path = get_desktop_file_path(app)
+    icon_path = get_icon_path(app)
+    app_name = app["name"]
+    slug = slugify(app_name) # PATCH: Get the slug
+
+    # Use configured browser or app default
+    profile_cfg = load_profile_config(app)
+    browser_key = (profile_cfg.get('browser') or app.get('browser') or CONFIG.get('browser', 'edge')).lower()
+
+    # ensure wrapper exists. make_launcher_wrapper now handles the unique WM Class definition.
+    nice_val = CONFIG.get('nice', 0)
+    ionice_val = CONFIG.get('ionice', 2)
+    gpu = CONFIG.get('gpu', True)
+    wrapper = make_launcher_wrapper(app, browser_key, nice_val, ionice_val, gpu)
+
+    # TryExec - help DE know how to check
+    try_exec = shutil.which(get_browsers().get(browser_key, {}).get('cmd', browser_key)) or str(wrapper)
+
+    # --- START CRITICAL PATCH: Add WM Class and DBus Name ---
+    unique_wm_class = f"PWA-{slug}"
+    dbus_name = f"com.pwa.{slug}"
+    # --- END CRITICAL PATCH ---
+
+    desktop_content = f"""[Desktop Entry]
+Version=1.0
+Type=Application
+Name={app_name}
+Exec={str(wrapper)}
+TryExec={try_exec}
+Icon={icon_path}
+Terminal=false
+Categories=Network;WebBrowser;
+StartupNotify=true
+X-GNOME-FullName={app_name} PWA
+StartupWMClass={unique_wm_class}
+X-DBus-Name={dbus_name}
+"""
+
+    try:
+        DESKTOP_DIR.mkdir(parents=True, exist_ok=True)
+        desktop_path.write_text(desktop_content)
+        desktop_path.chmod(0o755)
+        # CRITICAL: Always update the desktop database after creating/modifying a .desktop file
+        subprocess.run(["update-desktop-database", str(DESKTOP_DIR)], check=False)
+        if status_callback:
+            status_callback(f"Desktop: {app_name}")
+    except Exception as e:
+        if status_callback:
+            status_callback(f"Desktop failed: {e}")
+
+def save_config():
+    """Writes the current CONFIG dictionary to the config file."""
+    CONFIG_FILE.write_text(json.dumps(CONFIG, indent=2))
+
+# ---------------- Config ----------------
+CONFIG_DIR = Path(os.path.expanduser("~/.pwa_manager"))
+CONFIG_FILE = CONFIG_DIR / "config.json"
+ICON_DIR = Path(os.path.expanduser("~/.local/share/icons/hicolor/512x512/apps/"))
+DESKTOP_DIR = Path(os.path.expanduser("~/.local/share/applications/"))
+LOG_FILE = CONFIG_DIR / "launch.log"
+
+DEFAULT_EXT_PRESETS = {
+    "twitch": [
+        {"name": "BetterTTV", "web_url": "https://betterttv.com/"},
+        {"name": "FrankerFaceZ", "web_url": "https://www.frankerfacez.com/"}, 
+        {"name": "7TV", "web_url": "https://7tv.app/"}, 
+    ],
+    "kick": [
+        {"name": "NipahTV", "web_url": "https://nipahtv.com/"}, 
+        {"name": "7TV", "web_url": "https://7tv.app/"},
+    ],
+    "youtube": [
+        {"name": "SponsorBlock", "web_url": "https://sponsor.ajay.app/"},
+        {"name": "uBlock Origin", "web_url": "https://github.com/gorhill/uBlock#ublock-origin"},
+        {"name": "Return YouTube Dislike", "web_url": "https://returnyoutubedislike.com/"},
+    ],
+}
+
+DEFAULT_APPS = [
+    # ------------------- Productivity & Work (General Use) -------------------
+    {"name": "Gmail", "url": "https://mail.google.com", "kiosk": False, "browser": "edge"},
+    {"name": "Google Docs", "url": "https://docs.google.com/document/", "kiosk": False, "browser": "edge"},
+    {"name": "Google Sheets", "url": "https://docs.google.com/spreadsheets/", "kiosk": False, "browser": "edge"},
+    {"name": "Google Slides", "url": "https://docs.google.com/presentation/", "kiosk": False, "browser": "edge"},
+    {"name": "Google Drive", "url": "https://drive.google.com", "kiosk": False, "browser": "edge"},
+    {"name": "Google Calendar", "url": "https://calendar.google.com", "kiosk": False, "browser": "edge"},
+    {"name": "Microsoft 365 (Office)", "url": "https://www.office.com", "kiosk": False, "browser": "edge"},
+    {"name": "Outlook Web", "url": "https://outlook.live.com/mail/", "kiosk": False, "browser": "edge"},
+    {"name": "Notion", "url": "https://www.notion.so", "kiosk": False, "browser": "edge"},
+    {"name": "Trello", "url": "https://trello.com", "kiosk": False, "browser": "edge"},
+    {"name": "Todoist", "url": "https://todoist.com", "kiosk": False, "browser": "edge"},
+    {"name": "Asana", "url": "https://app.asana.com", "kiosk": False, "browser": "edge"},
+    {"name": "ClickUp", "url": "https://app.clickup.com", "kiosk": False, "browser": "edge"},
+    {"name": "Miro", "url": "https://miro.com", "kiosk": False, "browser": "edge"},
+
+    # ------------------- Communication & Community -------------------
+    {"name": "Slack", "url": "https://app.slack.com", "kiosk": False, "browser": "edge"},
+    {"name": "Discord", "url": "https://discord.com/app", "kiosk": False, "browser": "edge"},
+    {"name": "Zoom Web Client", "url": "https://zoom.us/join", "kiosk": False, "browser": "edge"},
+    {"name": "Facebook", "url": "https://www.facebook.com", "kiosk": False, "browser": "edge"},
+    {"name": "X (Twitter)", "url": "https://x.com", "kiosk": False, "browser": "edge"},
+    {"name": "Instagram", "url": "https://www.instagram.com", "kiosk": False, "browser": "edge"},
+    {"name": "TikTok", "url": "https://www.tiktok.com", "kiosk": False, "browser": "edge"},
+    {"name": "Reddit", "url": "https://www.reddit.com", "kiosk": False, "browser": "edge"},
+    {"name": "Pinterest", "url": "https://www.pinterest.com", "kiosk": False, "browser": "edge"},
+
+    # ------------------- Entertainment & Streaming -------------------
+    {"name": "Netflix", "url": "https://www.netflix.com", "kiosk": False, "browser": "edge"},
+    {"name": "Hulu", "url": "https://www.hulu.com", "kiosk": False, "browser": "edge"},
+    {"name": "AniWatch", "url": "https://aniwatchtv.to/", "kiosk": False, "browser": "edge"},
+    {"name": "Disney+", "url": "https://www.disneyplus.com", "kiosk": False, "browser": "edge"},
+    {"name": "Max (HBO)", "url": "https://max.com", "kiosk": False, "browser": "edge"},
+    {"name": "Prime Video", "url": "https://www.amazon.com/luna/play", "kiosk": False, "browser": "edge"},
+    {"name": "Peacock", "url": "https://www.peacocktv.com", "kiosk": False, "browser": "edge"},
+    {"name": "Paramount+", "url": "https://www.paramountplus.com", "kiosk": False, "browser": "edge"},
+    {"name": "Apple TV+", "url": "https://tv.apple.com", "kiosk": False, "browser": "edge"},
+    {"name": "YouTube", "url": "https://www.youtube.com", "kiosk": False, "browser": "edge"},
+    {"name": "YouTube Music", "url": "https://music.youtube.com", "kiosk": False, "browser": "edge"},
+    {"name": "Spotify Web", "url": "https://open.spotify.com", "kiosk": False, "browser": "edge"},
+    {"name": "Twitch", "url": "https://www.twitch.tv", "kiosk": False, "browser": "edge"},
+    {"name": "Kick", "url": "https://kick.com", "kiosk": False, "browser": "edge"},
+    {"name": "Crunchyroll", "url": "https://www.crunchyroll.com", "kiosk": False, "browser": "edge"},
+
+    # ------------------- News & Reference -------------------
+    {"name": "Wikipedia", "url": "https://www.wikipedia.org", "kiosk": False, "browser": "edge"},
+    {"name": "BBC News", "url": "https://www.bbc.com/news", "kiosk": False, "browser": "edge"},
+    {"name": "CNN", "url": "https://edition.cnn.com", "kiosk": False, "browser": "edge"},
+    {"name": "The New York Times", "url": "https://www.nytimes.com", "kiosk": False, "browser": "edge"},
+    {"name": "The Washington Post", "url": "https://www.washingtonpost.com", "kiosk": False, "browser": "edge"},
+    {"name": "Forbes", "url": "https://www.forbes.com", "kiosk": False, "browser": "edge"},
+
+    # ------------------- Shopping & Travel -------------------
+    {"name": "Amazon", "url": "https://www.amazon.com", "kiosk": False, "browser": "edge"},
+    {"name": "eBay", "url": "https://www.ebay.com", "kiosk": False, "browser": "edge"},
+    {"name": "Walmart", "url": "https://www.walmart.com", "kiosk": False, "browser": "edge"},
+    {"name": "Target", "url": "https://www.target.com", "kiosk": False, "browser": "edge"},
+    {"name": "Etsy", "url": "https://www.etsy.com", "kiosk": False, "browser": "edge"},
+    {"name": "Airbnb", "url": "https://www.airbnb.com", "kiosk": False, "browser": "edge"},
+    {"name": "Trivago", "url": "https://www.trivago.com", "kiosk": False, "browser": "edge"},
+    {"name": "Uber Web", "url": "https://m.uber.com", "kiosk": False, "browser": "edge"},
+
+    # ------------------- Utilities & Education -------------------
+    {"name": "Google Translate", "url": "https://translate.google.com", "kiosk": False, "browser": "edge"},
+    {"name": "Photopea (Web Editor)", "url": "https://www.photopea.com", "kiosk": False, "browser": "edge"},
+    {"name": "Khan Academy", "url": "https://www.khanacademy.org", "kiosk": False, "browser": "edge"},
+    {"name": "Duolingo", "url": "https://www.duolingo.com", "kiosk": False, "browser": "edge"},
+    {"name": "Yummly (Recipes)", "url": "https://www.yummly.com", "kiosk": False, "browser": "edge"},
+    {"name": "Starbucks Order", "url": "https://app.starbucks.com", "kiosk": False, "browser": "edge"},
+
+    # ------------------- Cloud Gaming (Kiosk Mode Recommended) -------------------
+    {"name": "xCloud (Xbox)", "url": "https://www.xbox.com/play", "kiosk": True, "browser": "firefox"},
+    {"name": "GeForce Now", "url": "https://play.geforcenow.com", "kiosk": True, "browser": "firefox"},
+    {"name": "Amazon Luna", "url": "https://www.amazon.com/luna/play", "kiosk": True, "browser": "firefox"},
+]
+    
+DEFAULT_CONFIG = {
+    "apps": DEFAULT_APPS,
+    "browser": "edge",
+    "gpu": True,
+    "kiosk": False,
+    "nice": 0,
+    "ionice": 2,
+    "dark_mode": True,
+    "browsers": {
+        "firefox": {
+            "cmd": "firefox",
+            "flatpak": "org.mozilla.firefox",
+            "args": "--profile={profile_dir} --no-remote {kiosk_flag} {url}",
+            "kiosk_flag": "--kiosk",
+            "app_mode": False,
+            "ext_base": "https://addons.mozilla.org/en-US/firefox/addon/",
+            "store_url": "https://addons.mozilla.org/en-US/firefox/", 
+            "ext_dir": "extensions",
+            "ext_suffix": ".xpi"
+        },
+        "edge": {
+            "cmd": "microsoft-edge",
+            "args": "--user-data-dir={profile_dir} --app={url} {kiosk_flag}",
+            "kiosk_flag": "--start-fullscreen",
+            "app_mode": True,
+            "ext_base": "https://microsoftedge.microsoft.com/addons/detail/",
+            "store_url": "https://microsoftedge.microsoft.com/addons/", 
+            "ext_dir": "Extensions",
+            "ext_suffix": ".crx"
+        },
+        "brave": {
+            "cmd": "brave",
+            "flatpak": "com.brave.Browser",
+            "args": "--user-data-dir={profile_dir} --app={url} {kiosk_flag}",
+            "kiosk_flag": "--start-fullscreen",
+            "app_mode": True,
+            "ext_base": "https://chromewebstore.google.com/detail/",
+            "store_url": "https://chromewebstore.google.com/", 
+            "ext_dir": "Extensions",
+            "ext_suffix": ".crx"
+        },
+        "vivaldi": {
+            "cmd": "vivaldi",
+            "args": "--user-data-dir={profile_dir} --app={url} {kiosk_flag}",
+            "kiosk_flag": "--start-fullscreen",
+            "app_mode": True,
+            "ext_base": "https://chromewebstore.google.com/detail/",
+            "store_url": "https://chromewebstore.google.com/", 
+            "ext_dir": "Extensions",
+            "ext_suffix": ".crx"
+        },
+    },
+}
+
+# Load config
+CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+if CONFIG_FILE.exists():
+    try:
+        CONFIG = json.loads(CONFIG_FILE.read_text())
+    except Exception:
+        CONFIG = DEFAULT_CONFIG.copy()
+else:
+    CONFIG = DEFAULT_CONFIG.copy()
+
+# --- START CONFIG MIGRATION AND PATCHING ---
+# 1. Normalize the apps collection to a dictionary (slug -> app_dict)
+apps_collection = CONFIG.get("apps", [])
+if not isinstance(apps_collection, dict):
+    CONFIG["apps"] = {slugify(app["name"]): app for app in apps_collection if isinstance(app, dict) and "name" in app}
+
+# 2. Merge default apps, correctly adding to the CONFIG["apps"] dictionary.
+existing_names = {app["name"] for app in CONFIG["apps"].values()}
+for app in DEFAULT_APPS:
+    app_slug = slugify(app["name"])
+    if app["name"] not in existing_names and app_slug not in CONFIG["apps"]:
+        CONFIG["apps"][app_slug] = app
+
+# 3. PATCH MISSING BROWSER KEYS (THE FIX FOR YOUR CURRENT ERROR)
+CONFIG.setdefault("browsers", {})
+for browser_key, default_data in DEFAULT_CONFIG["browsers"].items():
+    # If the browser is completely missing, add the default data
+    if browser_key not in CONFIG["browsers"]:
+        CONFIG["browsers"][browser_key] = default_data
+    else:
+        # If the browser exists, ensure critical new keys (like store_url) are set
+        for key, value in default_data.items():
+            CONFIG["browsers"][browser_key].setdefault(key, value)
+
+CONFIG.setdefault("dark_mode", True)
+# --- END CONFIG MIGRATION AND PATCHING ---
+
+save_config() # Save the newly normalized and patched config
+
+# ---------------- Install/Uninstall ----------------
+
+def install_app(app, browser_key, kiosk, nice, ionice, gpu, status_callback=None):
+    # --- FIX 1: Ensures 'name' and 'slug' exist for custom URL apps (KeyError fix) ---
+    if 'url' in app and ('name' not in app or not app['name']):
+        parsed_url = urlparse(app['url'])
+        app['name'] = parsed_url.netloc or 'Custom PWA'
+        
+    app_slug = slugify(app["name"])
+    
+    profile_dir = get_profile_dir(app)
+    profile_dir.mkdir(parents=True, exist_ok=True)
+    profile_cfg = load_profile_config(app)
+    profile_cfg["browser"] = browser_key.lower()
+    save_profile_config(app, profile_cfg)
+    marker = profile_dir / "installed.marker"
+    marker.write_text("installed\n")
+    download_icon(app, status_callback)
+    # The main script path is passed for the Exec= line
+    create_desktop_file(app, os.path.abspath(sys.argv[0]), status_callback)
+    
+    # --- FIX 2: Ensures app is stored as a dictionary entry keyed by slug ---
+    if app_slug not in CONFIG["apps"]:
+        CONFIG["apps"][app_slug] = app
+
+    save_config()
+    
+    if status_callback: status_callback(f"Installed: {app['name']}")
+
+def remove_app_files(app_to_remove):
+    """Handles the removal of desktop files, icons, and launcher wrappers."""
+    app_slug = slugify(app_to_remove['name'])
+    
+    # Remove launcher wrapper
+    scripts_dir = CONFIG_DIR / "scripts"
+    wrapper = scripts_dir / f"pwa-launch-{app_slug}.sh"
+    wrapper.unlink(missing_ok=True)
+    
+    # Remove desktop file, icon, and marker
+    profile_dir = get_profile_dir(app_to_remove)
+    marker = profile_dir / "installed.marker"
+    desktop_path = get_desktop_file_path(app_to_remove)
+    icon_path = get_icon_path(app_to_remove)
+    
+    marker.unlink(missing_ok=True)
+    desktop_path.unlink(missing_ok=True)
+    icon_path.unlink(missing_ok=True)
+    
+    # Critical: Update desktop database
+    subprocess.run(["update-desktop-database", "-q", str(DESKTOP_DIR)], check=False)
+
+def uninstall_app(name):
+    """Removes the app entry from the config and deletes associated files."""
+    app_slug = slugify(name)
+    app_to_remove = CONFIG["apps"].pop(app_slug, None)
+        
+    if app_to_remove:
+        remove_app_files(app_to_remove)
+        save_config() 
+        return
+
+def list_installed_apps():
+    profiles_root = CONFIG_DIR / "profiles"
+    installed = []
+    if profiles_root.is_dir():
+        for p in profiles_root.iterdir():
+            # Check for the installed marker file
+            if p.is_dir() and (p / "installed.marker").exists():
+                installed.append(p.name)
+    return installed
+
+def find_app_by_name(name):
+    # FIX: Iterate over values() since CONFIG["apps"] is a dict
+    for app in CONFIG["apps"].values():
+        if app.get("name") == name:
+            return app
+    return None
+
+# ---------------- FLATPAK/SNAP DETECTION ----------------
+def detect_browser_command(browser_key: str) -> tuple[str, list]:
+    cfg = get_browsers().get(browser_key, {})
+    base_cmd = cfg.get("cmd", browser_key)
+
+    if cfg.get("flatpak"):
+        try:
+            # Check for local flatpak installation (non-system path)
+            result = subprocess.run(["flatpak", "info", cfg["flatpak"]], capture_output=True, text=True)
+            if result.returncode == 0 and "Installed" in result.stdout:
+                return "flatpak", ["flatpak", "run", cfg["flatpak"]]
+        except Exception:
+            pass
+
+    try:
+        # Check for snap installation
+        result = subprocess.run(["snap", "info", base_cmd], capture_output=True, text=True)
+        if result.returncode == 0 and "installed" in result.stdout:
+            return "snap", ["snap", "run", base_cmd]
+    except Exception:
+        pass
+
+    # Check for path installation
+    if shutil.which(base_cmd):
+        return "path", [base_cmd]
+
+    return None, []
+
+# ---------------- LAUNCH (FULLY LOGGED) ----------------
+def log_debug(msg):
+    LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(LOG_FILE, "a") as f:
+        f.write(f"[DEBUG] {msg}\n")
+    print(msg, file=sys.stderr)
+
+def launch_app_from_cli(app_name: str):
+    app = find_app_by_name(app_name)
+    if not app:
+        print(f"ERROR: App '{app_name}' not found.", file=sys.stderr)
+        sys.exit(1)
+
+    profile_dir = get_profile_dir(app)
+    profile_cfg = load_profile_config(app)
+    browser_key = (profile_cfg.get("browser") or app.get("browser") or CONFIG.get("browser", "edge")).lower()
+    browser_cfg = get_browsers().get(browser_key, {})
+    if not browser_cfg:
+        print(f"ERROR: Browser '{browser_key}' not configured.", file=sys.stderr)
+        sys.exit(1)
+
+    pkg_type, base_cmd = detect_browser_command(browser_key)
+    if not base_cmd:
+        print(f"ERROR: Browser '{browser_key}' not found (PATH/Flatpak/Snap)", file=sys.stderr)
+        sys.exit(1)
+
+    kiosk_flag = browser_cfg.get("kiosk_flag", "") if app.get("kiosk", False) else ""
+    gpu = CONFIG.get("gpu", True)
+    nice_val = CONFIG.get("nice", 0)
+    ionice_val = CONFIG.get("ionice", 2)
+
+    try:
+        final_args = browser_cfg["args"].format(
+            profile_dir=str(profile_dir),
+            url=app["url"],
+            kiosk_flag=kiosk_flag
+        ).split()
+
+        if not gpu and browser_key in ["edge", "brave", "vivaldi"]:
+            final_args.append("--disable-gpu")
+
+        cmd = []
+        if nice_val != 0:
+            cmd += ["nice", "-n", str(nice_val)]
+        if ionice_val != 0:
+            cmd += ["ionice", "-c", str(ionice_val)]
+        cmd += base_cmd + final_args
+
+        log_debug(f"LAUNCH CMD: {' '.join(cmd)}")
+
+        # Use shell=False, full control
+        subprocess.Popen(
+            cmd,
+            start_new_session=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+        sys.exit(0)
+
+    except Exception as e:
+        log_debug(f"LAUNCH ERROR: {e}")
+        print(f"Launch failed: {e}", file=sys.stderr)
+        sys.exit(1)
+
+def launch_extension_manager(browser_key: str, preset_key: str, profile_dir: Path):
+    """Launches the browser to the extension homepages for installation in an isolated profile."""
+    try:
+        browser_config = get_browsers().get(browser_key)
+        if not browser_config:
+            print(f"ERROR: Browser config not found for {browser_key}")
+            return
+
+        extensions = DEFAULT_EXT_PRESETS.get(preset_key)
+        if not extensions:
+            # Fallback to store_url if no preset is found
+            url = browser_config["store_url"]
+            print(f"INFO: No extensions found for preset '{preset_key}'. Launching browser to store: {url}")
+            # --- FIX: Ensure store URL launch uses the profile directory ---
+            if browser_key.lower() == "firefox":
+                cmd_list = [browser_config["cmd"], "--profile", str(profile_dir), "--no-remote", url]
+            else:
+                cmd_list = [browser_config["cmd"], f"--user-data-dir={str(profile_dir)}", url]
+            subprocess.Popen(cmd_list)
+            # -----------------------------------------------------------------
+            return
+
+        # SIMPLIFIED FIX: Extract the direct web_url for every extension.
+        urls = [
+            ext.get('web_url')
+            for ext in extensions
+            if ext.get('web_url')
+        ]
+        
+        # --- FIX: Determine profile argument for isolated launch ---
+        profile_arg = []
+        if browser_key.lower() == "firefox":
+            profile_arg = ["--profile", str(profile_dir), "--no-remote"]
+        else:
+            profile_arg = [f"--user-data-dir={str(profile_dir)}"]
+        # -------------------------------------------------------------
+
+        # Launch all URLs in the browser
+        cmd_list = [browser_config["cmd"]] + profile_arg + urls
+        subprocess.Popen(cmd_list)
+
+        print(f"INFO: Launched {browser_config['name']} to install extensions for {preset_key}.")
+
+    except FileNotFoundError:
+        print(f"ERROR: Browser command not found for {browser_config['cmd']}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+# ---------------- FULL GTK4 UI ----------------
+Adw.init()
+
+class PWAManagerApp(Adw.Application):
+    def __init__(self):
+        super().__init__(application_id="com.applify", flags=Gio.ApplicationFlags.FLAGS_NONE)
+        self.win = None
+        self.sorted_apps_list = [] # Store the sorted list of apps for UI indexing
+    def do_activate(self):
+        if not self.win:
+            self.win = PWAManagerWindow(application=self)
+        self.win.present()
+
+class PWAManagerWindow(Adw.ApplicationWindow):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.set_title("Applify")
+        self.set_default_size(900, 700)
+        self.sorted_apps_list = [] # Initialize this in the window as well
+
+        self.statusbar = Gtk.Label()
+        self.statusbar.set_xalign(0)
+        self.statusbar.set_margin_top(10)
+        self.statusbar.set_margin_start(10)
+
+        header = Adw.HeaderBar()
+        header.set_show_start_title_buttons(True)
+        header.set_show_end_title_buttons(True)
+        title = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        title.append(Gtk.Label(label="Applify"))
+        title.append(Gtk.Label(label="Progressive Web Apps Made Easy"))
+        header.set_title_widget(title)
+
+        self.mode_switch = Gtk.Switch()
+        self.mode_switch.set_active(CONFIG.get("dark_mode", True))
+        self.mode_switch.connect("notify::active", self.on_mode_toggled)
+        mode_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        mode_box.append(Gtk.Label(label="Light"))
+        mode_box.append(self.mode_switch)
+        mode_box.append(Gtk.Label(label="Dark"))
+        mode_box.set_valign(Gtk.Align.CENTER)
+        header.pack_end(mode_box)
+
+        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        main_box.append(header)
+        content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
+        content_box.set_margin_top(15)
+        content_box.set_margin_bottom(15)
+        content_box.set_margin_start(15)
+        content_box.set_margin_end(15)
+        main_box.append(content_box)
+        self.set_content(main_box)
+
+        # App Management
+        app_frame = Gtk.Frame()
+        app_frame.set_label_widget(Gtk.Label(label="<b>App Management</b>", use_markup=True))
+        app_grid = Gtk.Grid()
+        app_grid.set_row_spacing(10)
+        app_grid.set_column_spacing(12)
+        app_grid.set_margin_top(12)
+        app_grid.set_margin_bottom(12)
+        app_grid.set_margin_start(12)
+        app_grid.set_margin_end(12)
+        app_frame.set_child(app_grid)
+        
+        # --- START SEARCH BAR IMPLEMENTATION ---
+        app_grid.attach(Gtk.Label(label="Search App:", halign=Gtk.Align.START), 0, 0, 1, 1)
+        self.search_entry = Gtk.SearchEntry()
+        self.search_entry.set_placeholder_text("Type PWA name to filter...")
+        self.search_entry.connect("search-changed", self.on_search_changed)
+        app_grid.attach(self.search_entry, 1, 0, 2, 1)
+
+        app_grid.attach(Gtk.Label(label="Select App:", halign=Gtk.Align.START), 0, 1, 1, 1)
+        self.app_combo = Gtk.DropDown.new_from_strings([])
+        self.populate_app_combo()
+        self.app_combo.connect("notify::selected", self.on_app_selected)
+        app_grid.attach(self.app_combo, 1, 1, 2, 1)
+
+        app_grid.attach(Gtk.Label(label="Custom URL:", halign=Gtk.Align.START), 0, 2, 1, 1)
+        self.url_entry = Gtk.Entry()
+        self.url_entry.set_placeholder_text("https://example.com")
+        self.url_entry.set_hexpand(True)
+        app_grid.attach(self.url_entry, 1, 2, 2, 1)
+        # --- END SEARCH BAR IMPLEMENTATION ---
+
+        content_box.append(app_frame)
+
+        # Options
+        options_frame = Gtk.Frame()
+        options_frame.set_label_widget(Gtk.Label(label="<b>PWA Options</b>", use_markup=True))
+        options_grid = Gtk.Grid()
+        options_grid.set_row_spacing(10)
+        options_grid.set_column_spacing(12)
+        options_grid.set_margin_top(12)
+        options_grid.set_margin_bottom(12)
+        options_grid.set_margin_start(12)
+        options_grid.set_margin_end(12)
+        options_frame.set_child(options_grid)
+
+        options_grid.attach(Gtk.Label(label="Kiosk Mode:", halign=Gtk.Align.START), 0, 0, 1, 1)
+        self.kiosk_check = Gtk.CheckButton()
+        options_grid.attach(self.kiosk_check, 1, 0, 1, 1)
+
+        options_grid.attach(Gtk.Label(label="GPU Acceleration:", halign=Gtk.Align.START), 0, 1, 1, 1)
+        self.gpu_check = Gtk.CheckButton()
+        self.gpu_check.set_active(CONFIG.get("gpu", True))
+        options_grid.attach(self.gpu_check, 1, 1, 1, 1)
+
+        options_grid.attach(Gtk.Label(label="Browser:", halign=Gtk.Align.START), 0, 2, 1, 1)
+        self.browser_model = Gio.ListStore.new(Gtk.StringObject)
+        self.browser_combo = Gtk.DropDown.new(self.browser_model, None)
+        self.refresh_browser_combo()
+        options_grid.attach(self.browser_combo, 1, 2, 1, 1)
+
+        self.add_browser_btn = Gtk.Button(label="Add Browser Preset")
+        self.add_browser_btn.connect("clicked", self.on_add_browser_preset)
+        options_grid.attach(self.add_browser_btn, 2, 2, 1, 1)
+
+        content_box.append(options_frame)
+
+        # Extensions
+        ext_frame = Gtk.Frame()
+        ext_frame.set_label_widget(Gtk.Label(label="<b>Extensions</b>", use_markup=True))
+        ext_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        ext_vbox.set_margin_top(12)
+        ext_vbox.set_margin_bottom(12)
+        ext_vbox.set_margin_start(12)
+        ext_vbox.set_margin_end(12)
+        ext_frame.set_child(ext_vbox)
+
+        self.ext_scroll = Gtk.ScrolledWindow()
+        self.ext_scroll.set_hexpand(True)
+        self.ext_scroll.set_vexpand(True)
+        self.ext_scroll.set_min_content_height(150)
+        self.ext_listbox = Gtk.ListBox()
+        self.ext_scroll.set_child(self.ext_listbox)
+        ext_vbox.append(self.ext_scroll)
+
+        ext_btn_box = Gtk.Box(spacing=6)
+        self.install_preset_btn = Gtk.Button(label="Install Presets")
+        self.install_preset_btn.connect("clicked", self.on_install_presets)
+        self.open_store_btn = Gtk.Button(label="Open Store")
+        self.open_store_btn.connect("clicked", self.on_open_store)
+        self.add_custom_ext_btn = Gtk.Button(label="Add Custom")
+        self.add_custom_ext_btn.connect("clicked", self.on_add_custom_ext)
+        for b in [self.install_preset_btn, self.open_store_btn, self.add_custom_ext_btn]:
+            ext_btn_box.append(b)
+        ext_vbox.append(ext_btn_box)
+
+        content_box.append(ext_frame)
+
+        # Performance
+        perf_frame = Gtk.Frame()
+        perf_frame.set_label_widget(Gtk.Label(label="<b>Performance</b>", use_markup=True))
+        perf_grid = Gtk.Grid()
+        perf_grid.set_row_spacing(10)
+        perf_grid.set_column_spacing(12)
+        perf_grid.set_margin_top(12)
+        perf_grid.set_margin_bottom(12)
+        perf_grid.set_margin_start(12)
+        perf_grid.set_margin_end(12)
+        perf_frame.set_child(perf_grid)
+        perf_grid.attach(Gtk.Label(label="Nice:", halign=Gtk.Align.START), 0, 0, 1, 1)
+        self.nice_spin = Gtk.SpinButton()
+        self.nice_spin.set_range(-20, 19)
+        self.nice_spin.set_increments(1, 5)
+        self.nice_spin.set_value(CONFIG.get("nice", 0))
+        perf_grid.attach(self.nice_spin, 1, 0, 1, 1)
+        perf_grid.attach(Gtk.Label(label="Ionice:", halign=Gtk.Align.START), 0, 1, 1, 1)
+        self.ionice_spin = Gtk.SpinButton()
+        self.ionice_spin.set_range(0, 3)
+        self.ionice_spin.set_increments(1, 1)
+        self.ionice_spin.set_value(CONFIG.get("ionice", 2))
+        perf_grid.attach(self.ionice_spin, 1, 1, 1, 1)
+        content_box.append(perf_frame)
+
+        # Buttons
+        btn_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        btn_box.set_homogeneous(True)
+        self.install_btn = Gtk.Button(label="Install")
+        self.install_btn.connect("clicked", self.on_install)
+        self.install_custom_btn = Gtk.Button(label="Install Custom")
+        self.install_custom_btn.connect("clicked", self.on_install_custom)
+        self.uninstall_btn = Gtk.Button(label="Uninstall")
+        self.uninstall_btn.connect("clicked", self.on_uninstall)
+        # --- START CLONE FEATURE ---
+        self.clone_btn = Gtk.Button(label="Clone App")
+        self.clone_btn.connect("clicked", self.on_clone)
+        # --- END CLONE FEATURE ---
+        self.refresh_btn = Gtk.Button(label="Refresh")
+        self.refresh_btn.connect("clicked", self.on_refresh)
+        self.remove_btn = Gtk.Button(label="Remove Entry")
+        self.remove_btn.connect("clicked", self.on_remove_app)
+        
+        # Added self.clone_btn to the list of buttons
+        for b in [self.install_btn, self.install_custom_btn, self.uninstall_btn, self.clone_btn, self.refresh_btn, self.remove_btn]: 
+            if b in [self.install_btn, self.install_custom_btn]:
+                b.add_css_class("suggested-action")
+            elif b in [self.uninstall_btn, self.remove_btn]:
+                b.add_css_class("destructive-action")
+            btn_box.append(b)
+        content_box.append(btn_box)
+        content_box.append(self.statusbar)
+
+        self.style_manager = Adw.StyleManager.get_default()
+        self.apply_color_scheme()
+
+        if self.sorted_apps_list:
+            self.app_combo.set_selected(0)
+            self.populate_app_fields(self.sorted_apps_list[0])
+        self.update_button_states()
+    
+    # --- FIX 1: Add the missing helper method ---
+    def get_selected_app(self):
+        """Retrieves the app dictionary currently selected in the dropdown."""
+        combo = self.app_combo
+        selected_index = combo.get_selected()
+        
+        # Check if an index is selected and if it's within the bounds of the list
+        if selected_index >= 0 and selected_index < len(self.sorted_apps_list):
+            return self.sorted_apps_list[selected_index]
+        return None
+    # --- END FIX 1 ---
+
+    def apply_color_scheme(self):
+        dark = CONFIG.get("dark_mode", True)
+        self.style_manager.set_color_scheme(Adw.ColorScheme.FORCE_DARK if dark else Adw.ColorScheme.FORCE_LIGHT)
+        self.mode_switch.set_active(dark)
+
+    def on_mode_toggled(self, switch, _):
+        dark = switch.get_active()
+        CONFIG["dark_mode"] = dark
+        save_config()
+        self.apply_color_scheme()
+        self.status_push(f"Switched to {'Dark' if dark else 'Light'} mode")
+
+    def status_push(self, msg):
+        # We need to use GLib.idle_add for thread safety if called from a worker thread
+        GLib.idle_add(self.statusbar.set_text, msg)
+
+    # --- START SEARCH FILTERING LOGIC ---
+    def populate_app_combo(self, search_term=""):
+        # 1. Get all apps
+        all_apps = CONFIG["apps"].values()
+        
+        # 2. Filter apps based on search_term
+        if search_term:
+            search_term_lower = search_term.lower()
+            filtered_apps = [
+                app for app in all_apps 
+                if search_term_lower in app["name"].lower()
+            ]
+        else:
+            filtered_apps = list(all_apps)
+        
+        # 3. Sort the filtered list and update the internal list
+        self.sorted_apps_list = sorted(filtered_apps, key=lambda x: x["name"].lower())
+        
+        strings = []
+        installed = set(list_installed_apps())
+        
+        for app in self.sorted_apps_list:
+            name = app["name"]
+            slug = slugify(name)
+            hint = " (Firefox only)" if app.get("browser", "").lower() == "firefox" else ""
+            text = f"Installed {name}{hint}" if slug in installed else f"{name}{hint}"
+            strings.append(text)
+            
+        model = Gio.ListStore.new(Gtk.StringObject)
+        for s in strings:
+            model.append(Gtk.StringObject.new(s))
+        self.app_combo.set_model(model)
+        
+    def on_search_changed(self, entry):
+        search_term = entry.get_text().strip()
+        
+        # Repopulate the combo box with filtered results
+        self.populate_app_combo(search_term)
+        
+        # Select the first item if available, otherwise clear selection
+        if self.sorted_apps_list:
+            self.app_combo.set_selected(0)
+            # Manually trigger population as notify::selected might not fire if selected index stays 0
+            self.on_app_selected(self.app_combo, None) 
+        else:
+            self.app_combo.set_selected(Gtk.INVALID_LIST_POSITION)
+            self.update_button_states() # Ensure buttons are disabled
+            # Clear app fields and extensions if no app is selected
+            self.kiosk_check.set_active(False)
+            self.url_entry.set_text("")
+            self.populate_extensions(None)
+    # --- END SEARCH FILTERING LOGIC ---
+
+    def refresh_browser_combo(self, select=None):
+        self.browser_model.remove_all()
+        keys = sorted(get_browsers().keys(), key=str.lower)
+        for k in keys:
+            self.browser_model.append(Gtk.StringObject.new(k.capitalize()))
+        if select:
+            for i, k in enumerate(keys):
+                if k.lower() == select.lower():
+                    self.browser_combo.set_selected(i)
+                    break
+
+    def populate_app_fields(self, app):
+        self.kiosk_check.set_active(app.get("kiosk", False))
+        profile_cfg = load_profile_config(app)
+        # Prioritize the app's saved browser key, then the profile's, then the global default.
+        browser = app.get("browser") or profile_cfg.get("browser") or CONFIG.get("browser", "edge")
+        self.refresh_browser_combo(select=browser)
+        self.populate_extensions(app)
+        # Note: If a non-Firefox app is set to Firefox, don't allow changing the browser
+        if app.get("browser", "").lower() == "firefox":
+            self.browser_combo.set_sensitive(False)
+        else:
+            self.browser_combo.set_sensitive(True)
+
+    def _launch_url_in_browser(self, app, url):
+        """Helper to launch a single URL using the app's configured isolated profile and browser."""
+        if not url:
+            self.status_push("Error: No URL provided for extension.")
+            return
+            
+        profile_cfg = load_profile_config(app)
+        browser_key = (profile_cfg.get("browser") or app.get("browser") or CONFIG.get("browser", "edge")).lower()
+        browser_cfg = get_browsers().get(browser_key)
+        profile_dir = get_profile_dir(app)
+
+        if not browser_cfg or not browser_cfg.get("cmd"):
+            self.status_push(f"Error: Browser command not found for {browser_key}.")
+            return
+            
+        # --- FIX: Apply profile isolation to single URL launch ---
+        if browser_key.lower() == "firefox":
+            profile_arg = ["--profile", str(profile_dir), "--no-remote"]
+        else:
+            profile_arg = [f"--user-data-dir={str(profile_dir)}"]
+
+        try:
+            cmd_list = [browser_cfg["cmd"]] + profile_arg + [url]
+            subprocess.Popen(cmd_list, start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self.status_push(f"Opened {url} in {browser_key.capitalize()} isolated profile.")
+        except FileNotFoundError:
+            self.status_push(f"Launch FAILED: Browser executable not found in PATH.")
+        except Exception as e:
+            self.status_push(f"Launch failed: {e}")
+        # --- END FIX ---
+
+
+    def populate_extensions(self, app):
+        while row := self.ext_listbox.get_row_at_index(0):
+            self.ext_listbox.remove(row)
+            
+        if not app: # If no app is selected (e.g., search returns no results)
+            return
+            
+        exts = load_installed_extensions(app)
+        
+        # The complex ID verification logic is removed  now only link to homepages.
+        for ext in exts:
+            row = Gtk.ListBoxRow()
+            hbox = Gtk.Box(spacing=6)
+            label = ext["name"]
+            
+            hbox.append(Gtk.Label(label=label, halign=Gtk.Align.START))
+            
+            # Add a button to quickly open the URL again
+            open_btn = Gtk.Button(label="Open Page")
+            open_btn.connect("clicked", lambda b, u=ext.get('web_url'): self._launch_url_in_browser(app, u))
+            hbox.append(open_btn)
+
+            remove_btn = Gtk.Button(label="Remove")
+            remove_btn.connect("clicked", lambda b, e=ext: self.on_remove_ext(app, e))
+            hbox.append(remove_btn)
+            row.set_child(hbox)
+            self.ext_listbox.append(row)
+
+    def on_app_selected(self, dropdown, _):
+        idx = dropdown.get_selected()
+        # FIX: Check against the sorted list
+        if idx != Gtk.INVALID_LIST_POSITION and hasattr(self, 'sorted_apps_list') and idx < len(self.sorted_apps_list):
+            self.populate_app_fields(self.sorted_apps_list[idx])
+            self.update_button_states()
+
+    def update_button_states(self):
+        idx = self.app_combo.get_selected()
+        installed = set(list_installed_apps())
+        # FIX: Get app from the sorted list
+        app = self.sorted_apps_list[idx] if idx != Gtk.INVALID_LIST_POSITION and hasattr(self, 'sorted_apps_list') and idx < len(self.sorted_apps_list) else None
+        
+        slug = slugify(app["name"]) if app else ""
+        
+        is_installed = slug in installed
+        
+        is_selected = idx != Gtk.INVALID_LIST_POSITION # <-- Added helper variable
+
+        self.install_btn.set_sensitive(is_selected and not is_installed)
+        self.uninstall_btn.set_sensitive(is_selected and is_installed)
+        self.open_store_btn.set_sensitive(is_selected and is_installed)
+        self.remove_btn.set_sensitive(is_selected)
+        # --- START CLONE FEATURE ---
+        self.clone_btn.set_sensitive(is_selected)
+        # --- END CLONE FEATURE ---
+
+    def on_install_presets(self, btn):
+        idx = self.app_combo.get_selected()
+        if idx == Gtk.INVALID_LIST_POSITION:
+            return
+        
+        # FIX: Get app from the sorted list
+        app = self.sorted_apps_list[idx] 
+        profile_dir = get_profile_dir(app) 
+        
+        key = get_app_key(app)
+        if not key:
+            self.status_push("No presets for this app")
+            return
+        # Use selected browser key from dropdown
+        browser_key = self.browser_combo.get_selected_item().get_string().lower() if self.browser_combo.get_selected_item() else "edge"
+        profile_cfg = load_profile_config(app)
+        profile_cfg["browser"] = browser_key
+        save_profile_config(app, profile_cfg)
+
+        # FIX: Pass the profile_dir to ensure isolation
+        launch_extension_manager(browser_key, key, profile_dir)
+        self.status_push(f"Launched {browser_key.capitalize()} to open extension pages for {app['name']}. Complete installation manually.")
+
+    # --- FIX 2: Correct on_open_store arguments for standard window launch ---
+    def on_open_store(self, btn):
+        app = self.get_selected_app()
+        if not app:
+            self.status_push("Select an app first.")
+            return
+
+        # 1. Determine the browser key from profile, app default, or global config
+        profile_cfg = load_profile_config(app)
+        browser_key = (profile_cfg.get("browser") or app.get("browser") or CONFIG.get("browser", "edge")).lower()
+        browser_cfg = get_browsers().get(browser_key, {})
+        
+        # 2. Get the correct store URL
+        store_url = browser_cfg.get("store_url")
+        if not store_url:
+            self.status_push(f"No extension store URL configured for {browser_key}. Check config.json.")
+            return
+            
+        profile_dir = get_profile_dir(app)
+        
+        # --- FIX: Use a generic launch command (no --app flag) and ensure profile is used ---
+        if browser_key.lower() == "firefox":
+            # Firefox args: {url} is at the end. Must include --no-remote.
+            args = ["--profile", str(profile_dir), "--no-remote", store_url]
+        else:
+            # Chromium args: --user-data-dir must come first. No --app needed.
+            args = [f"--user-data-dir={str(profile_dir)}", store_url]
+        # --- END FIX ---
+        
+        # 4. Get the full command list (handle Flatpak/Snap)
+        pkg_type, base_cmd = detect_browser_command(browser_key)
+        if not base_cmd:
+            self.status_push(f"Browser '{browser_key}' not found (PATH/Flatpak/Snap)")
+            return
+
+        cmd = base_cmd + args
+        
+        try:
+            # Launch the browser command
+            subprocess.Popen(cmd, start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self.status_push(f"Opening {browser_key.capitalize()} extension store...")
+        except FileNotFoundError:
+            self.status_push(f"Launch FAILED: Browser executable '{base_cmd[0]}' not found in PATH.")
+        except Exception as e:
+            self.status_push(f"Failed to open store: {e}")
+    # --- END FIX 2 ---
+
+    def on_add_custom_ext(self, btn):
+        dialog = Adw.MessageDialog(transient_for=self, heading="Add Custom Extension")
+        dialog.add_response("cancel", "Cancel")
+        dialog.add_response("add", "Add")
+        dialog.set_response_appearance("add", Adw.ResponseAppearance.SUGGESTED)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, margin_top=8, margin_bottom=8, margin_start=8, margin_end=8)
+        box.append(Gtk.Label(label="Extension Name", halign=Gtk.Align.START))
+        name_entry = Gtk.Entry()
+        box.append(name_entry)
+        # FIX: Change ID prompt to URL prompt
+        box.append(Gtk.Label(label="Extension Web URL (e.g., https://7tv.app/)", halign=Gtk.Align.START))
+        url_entry = Gtk.Entry()
+        box.append(url_entry)
+        dialog.set_extra_child(box)
+        dialog.show()
+
+        def on_response(dlg, resp):
+            if resp == "add":
+                name = name_entry.get_text().strip()
+                web_url = url_entry.get_text().strip()
+                if name and web_url:
+                    idx = self.app_combo.get_selected()
+                    if idx != Gtk.INVALID_LIST_POSITION:
+                        app = self.sorted_apps_list[idx] # FIX: Get app from the sorted list
+                        
+                        # Use the web_url for installation redirect
+                        browser_key = self.browser_combo.get_selected_item().get_string().lower() if self.browser_combo.get_selected_item() else "edge"
+                        browser_config = get_browsers().get(browser_key)
+                        
+                        profile_dir = get_profile_dir(app) # <-- NEW: Get profile dir
+
+                        # --- FIX: Launch the single URL directly, including profile isolation ---
+                        profile_arg = []
+                        if browser_key.lower() == "firefox":
+                            profile_arg = ["--profile", str(profile_dir), "--no-remote"]
+                        else:
+                            profile_arg = [f"--user-data-dir={str(profile_dir)}"]
+                            
+                        if browser_config and browser_config.get("cmd"):
+                            cmd_list = [browser_config["cmd"]] + profile_arg + [web_url]
+                            subprocess.Popen(cmd_list, start_new_session=True)
+                            self.status_push(f"Launched {browser_key.capitalize()} to open page for {name}.")
+                        else:
+                            self.status_push(f"Error: Browser command not found for {browser_key}.")
+                        # --- END FIX ---
+
+                        # Save the extension to the profile
+                        ext_data = {"name": name, "web_url": web_url}
+                        exts = load_installed_extensions(app)
+                        # Check if URL already exists
+                        if all(e.get("web_url") != web_url for e in exts): 
+                            exts.append(ext_data)
+                            save_installed_extensions(app, exts)
+                            
+                        GLib.idle_add(self.populate_extensions, app)
+                        self.status_push(f"Custom extension page opened. Complete installation manually.")
+            dlg.close()
+        dialog.connect("response", on_response)
+
+    def on_add_browser_preset(self, btn):
+        dialog = Adw.MessageDialog(transient_for=self, heading="Add Browser Preset")
+        dialog.add_response("cancel", "Cancel")
+        listbox = Gtk.ListBox()
+        for preset in ["brave", "vivaldi", "opera"]:
+            row = Gtk.ListBoxRow()
+            row.set_child(Gtk.Label(label=preset.capitalize(), halign=Gtk.Align.CENTER))
+            row.preset = preset
+            listbox.append(row)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6, margin_top=6, margin_bottom=6, margin_start=6, margin_end=6)
+        box.append(listbox)
+        dialog.set_extra_child(box)
+        dialog.show()
+
+        def on_row_activated(lb, row):
+            key = add_custom_browser_preset(row.preset)
+            if key:
+                self.refresh_browser_combo(select=key)
+                self.status_push(f"Added {row.preset}")
+            dialog.close()
+        listbox.connect("row-activated", on_row_activated)
+        dialog.connect("response", lambda d, r: d.close())
+
+    def on_clone(self, btn):
+        original_app = self.get_selected_app()
+        if not original_app:
+            self.status_push("Select an app to clone first.")
+            return
+
+        dialog = Adw.MessageDialog(
+            transient_for=self,
+            heading=f"Clone {original_app['name']}",
+            body="Enter a new name for the cloned PWA. The browser and extension settings will be copied."
+        )
+        dialog.add_response("cancel", "Cancel")
+        dialog.add_response("clone", "Clone")
+        dialog.set_response_appearance("clone", Adw.ResponseAppearance.SUGGESTED)
+        
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, margin_top=8, margin_bottom=8, margin_start=8, margin_end=8)
+        box.append(Gtk.Label(label="New App Name", halign=Gtk.Align.START))
+        name_entry = Gtk.Entry()
+        name_entry.set_text(f"{original_app['name']} (Clone)")
+        box.append(name_entry)
+        dialog.set_extra_child(box)
+        dialog.show()
+
+        def on_response(dlg, resp):
+            if resp == "clone":
+                new_name = name_entry.get_text().strip()
+                new_slug = slugify(new_name)
+                
+                if not new_name:
+                    self.status_push("Cloning failed: Name cannot be empty.")
+                    dlg.close()
+                    return
+
+                if new_slug in CONFIG["apps"]:
+                    self.status_push(f"Cloning failed: App '{new_name}' already exists.")
+                    dlg.close()
+                    return
+
+                # 1. Create the new app dict by copying the original
+                new_app = original_app.copy()
+                new_app["name"] = new_name
+                
+                # 2. Add to global config
+                CONFIG["apps"][new_slug] = new_app
+                save_config()
+                
+                # 3. Clone the profile config (browser setting, extensions list)
+                original_profile_cfg = load_profile_config(original_app)
+                # This will save the profile config to the new PWA's isolated profile path
+                save_profile_config(new_app, original_profile_cfg)
+                
+                # 4. Update UI and select the new app
+                self.populate_app_combo()
+                # Find the index of the newly added app in the sorted list
+                new_index = next((i for i, a in enumerate(self.sorted_apps_list) if a["name"] == new_name), 0)
+                self.app_combo.set_selected(new_index)
+                
+                self.status_push(f"Cloned '{original_app['name']}' to '{new_name}'. Profile settings copied.")
+            dlg.close()
+            
+        dialog.connect("response", on_response)
+
+    def on_install(self, btn):
+        idx = self.app_combo.get_selected()
+        if idx == Gtk.INVALID_LIST_POSITION:
+            return
+        app = self.sorted_apps_list[idx] # FIX: Get app from the sorted list
+        self._perform_install(app)
+
+    def on_install_custom(self, btn):
+        url = self.url_entry.get_text().strip()
+        if not url.startswith("http"):
+            self.status_push("URL must start with http(s)://")
+            return
+        dialog = Adw.MessageDialog(transient_for=self, heading="Custom PWA")
+        dialog.add_response("cancel", "Cancel")
+        dialog.add_response("install", "Install")
+        dialog.set_response_appearance("install", Adw.ResponseAppearance.SUGGESTED)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, margin_top=8, margin_bottom=8, margin_start=8, margin_end=8)
+        box.append(Gtk.Label(label="App Name", halign=Gtk.Align.START))
+        name_entry = Gtk.Entry()
+        inferred = urlparse(url).netloc.replace("www.", "").split('.')[0].capitalize()
+        name_entry.set_text(inferred)
+        box.append(name_entry)
+        dialog.set_extra_child(box)
+        dialog.show()
+
+        def on_response(dlg, resp):
+            if resp == "install":
+                name = name_entry.get_text().strip()
+                if name:
+                    # Get the browser key currently selected in the dropdown
+                    browser_key_selected = self.browser_combo.get_selected_item().get_string().lower() if self.browser_combo.get_selected_item() else "edge"
+
+                    app = {
+                        "name": name, 
+                        "url": url, 
+                        "kiosk": self.kiosk_check.get_active(),
+                        "browser": browser_key_selected # <--- Browser choice is explicitly set here
+                    }
+                    app_slug = slugify(name)
+                    CONFIG["apps"][app_slug] = app 
+                    save_config()
+                    self.populate_app_combo()
+                    
+                    # Find the index of the newly added app in the sorted list
+                    new_index = next((i for i, a in enumerate(self.sorted_apps_list) if a["name"] == name), 0)
+                    self.app_combo.set_selected(new_index)
+                    
+                    self._perform_install(app)
+            dlg.close()
+        dialog.connect("response", on_response)
+
+    def _perform_install(self, app):
+        kiosk = self.kiosk_check.get_active()
+        browser_key = self.browser_combo.get_selected_item().get_string().lower() if self.browser_combo.get_selected_item() else CONFIG.get("browser", "edge")
+
+        gpu = self.gpu_check.get_active()
+        CONFIG["gpu"] = gpu
+        CONFIG["kiosk"] = kiosk
+        CONFIG["nice"] = int(self.nice_spin.get_value())
+        CONFIG["ionice"] = int(self.ionice_spin.get_value())
+        
+        app["kiosk"] = kiosk
+        app["browser"] = browser_key # <--- CRITICAL FIX: Ensure the app dict's browser is updated with the user's explicit choice
+        save_config()
+        profile_cfg = load_profile_config(app)
+        profile_cfg["browser"] = browser_key
+        save_profile_config(app, profile_cfg)
+        
+        # Install the app (creates profile, desktop file, and wrapper)
+        install_app(app, browser_key, kiosk, int(self.nice_spin.get_value()), int(self.ionice_spin.get_value()), gpu, self.status_push)
+        
+        self.populate_app_combo()
+        self.update_button_states()
+        self.status_push(f"Installed {app['name']}")
+
+    def on_uninstall(self, btn):
+        idx = self.app_combo.get_selected()
+        if idx == Gtk.INVALID_LIST_POSITION:
+            return
+        
+         # FIX: Get app from the sorted list
+        app = self.sorted_apps_list[idx]
+        uninstall_app(app["name"])
+        self.status_push(f"Uninstalled {app['name']}")
+        self.populate_app_combo()
+        self.update_button_states()
+
+    def on_refresh(self, btn):
+        # Pass the current search term to retain the filter
+        current_search = self.search_entry.get_text().strip()
+        self.populate_app_combo(current_search)
+        self.update_button_states()
+        self.status_push("Refreshed")
+
+    def on_remove_app(self, btn):
+        idx = self.app_combo.get_selected()
+        if idx == Gtk.INVALID_LIST_POSITION or not hasattr(self, 'sorted_apps_list') or idx >= len(self.sorted_apps_list):
+            return
+        
+        # Get the app from the sorted UI list
+        app = self.sorted_apps_list[idx] 
+        app_name = app["name"]
+        app_slug = slugify(app_name)
+        
+        dialog = Adw.MessageDialog(
+            transient_for=self,
+            heading=f"Remove {app_name}?",
+            body="Remove entry. Optionally delete profile."
+        )
+        dialog.add_response("cancel", "Cancel")
+        dialog.add_response("keep", "Keep Profile")
+        dialog.add_response("delete", "Delete Profile")
+        dialog.set_response_appearance("delete", Adw.ResponseAppearance.DESTRUCTIVE)
+        dialog.show()
+
+        def on_response(dlg, resp):
+            if resp == "cancel":
+                dlg.close()
+                return
+            
+            # Remove from config dictionary
+            removed = CONFIG["apps"].pop(app_slug, None) 
+            
+            if removed:
+                # Remove desktop/icon files even if we keep the profile folder
+                remove_app_files(removed)
+            
+            if resp == "delete":
+                pd = get_profile_dir(app)
+                try:
+                    shutil.rmtree(pd)
+                    self.status_push(f"Removed + profile deleted")
+                except Exception as e:
+                    self.status_push(f"Profile delete failed: {e}")
+            else:
+                self.status_push(f"Removed (profile kept)")
+            
+            # Update config file and UI
+            save_config()
+            # Pass the current search term to retain the filter
+            current_search = self.search_entry.get_text().strip()
+            self.populate_app_combo(current_search)
+            self.update_button_states()
+            dlg.close()
+        dialog.connect("response", on_response)
+
+    def on_remove_ext(self, app, ext):
+        exts = load_installed_extensions(app)
+        # ext is the dict {'name': ..., 'web_url': ...}
+        if ext in exts:
+            exts.remove(ext)
+            save_installed_extensions(app, exts)
+        self.populate_extensions(app)
+
+
+# -------------------------------------------------------------------------
+
+
+def add_custom_browser_preset(preset_key):
+    # This function uses the DEFAULT_CONFIG template which is available
+    presets = {
+        "brave": {
+            "cmd": "brave",
+            "flatpak": "com.brave.Browser",
+            "args": "--user-data-dir={profile_dir} --app={url} {kiosk_flag}",
+            "kiosk_flag": "--start-fullscreen",
+            "app_mode": True,
+            "ext_base": "https://chromewebstore.google.com/detail/",
+            "store_url": "https://chromewebstore.google.com/",
+            "ext_dir": "Extensions",
+            "ext_suffix": ".crx"
+        },
+        "vivaldi": {
+            **DEFAULT_CONFIG["browsers"]["vivaldi"], 
+            "store_url": "https://chromewebstore.google.com/",
+            "ext_base": "https://chromewebstore.google.com/detail/"
+        },
+        "opera": {
+            **DEFAULT_CONFIG["browsers"]["edge"], 
+            "cmd": "opera", 
+            "ext_base": "https://addons.opera.com/en/extensions/details/", 
+            "store_url": "https://addons.opera.com/en/",
+        },
+    }
+    if preset_key not in presets:
+        return None
+    key = preset_key.lower()
+    CONFIG.setdefault("browsers", {})
+    # Check if the preset already exists before adding
+    if key not in CONFIG["browsers"]:
+        CONFIG["browsers"][key] = presets[preset_key]
+        save_config()
+    return key
+
+# ---------------- Main ----------------
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--launch-app", type=str)
+    args = parser.parse_args()
+    if args.launch_app:
+        launch_app_from_cli(args.launch_app)
+        return
+    app = PWAManagerApp()
+    app.run(sys.argv)
+
+if __name__ == "__main__":
+    # Ensure script is executable
+    script_path = Path(__file__)
+    if not os.access(script_path, os.X_OK):
+        try:
+            script_path.chmod(0o755)
+        except:
+            pass
+    main()
