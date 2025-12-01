@@ -55,6 +55,8 @@ No more "another Chrome window" confusion.
 - Discord → Discord icon
 - Even custom sites get smart icons (via icon.horse + favicon + Google fallbacks)
 
+There is a known issue with Brave not showing the icons and defaulting to Brave's browser icon in the panel. A fix is being worked on.
+
 #### Cloud Gaming Ready
 Dedicated kiosk presets for:
 - Xbox Cloud Gaming (xCloud)
@@ -65,6 +67,8 @@ Uses **Firefox** by default for:
 - Native gamepad support
 - Better Wayland compatibility
 - Anti-cheat workarounds (when needed)
+
+V1.0.2 fixed the kiosk mode issue. All cloud gaming will launch in a console-like mode now.
 
 #### Multi-Account Heaven
 **Clone any app** in one click:
