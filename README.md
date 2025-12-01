@@ -1,3 +1,5 @@
+![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/appify.png)
+
 # Appify – The Ultimate Linux PWA Manager
 
 **Turn any website into a first-class desktop app — instantly.**
