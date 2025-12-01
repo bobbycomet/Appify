@@ -1,5 +1,4 @@
-![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/appify.png)
-
+<img src="https://github.com/bobbycomet/Appify/blob/main/appify.png" alt="Appify Screenshot" width="25%"/>
 # Appify – The Ultimate Linux PWA Manager
 
 **Turn any website into a first-class desktop app — instantly.**
