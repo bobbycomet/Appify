@@ -162,7 +162,10 @@ def make_launcher_wrapper(app: dict, browser_key: str, nice: int, ionice: int, g
     # --- START PATCH: Define unique WM Class ---
     unique_wm_class = f"PWA-{slug}"
     # The --class argument is primarily used for X11/Xwayland window matching
-    wm_class_arg = f"--class={unique_wm_class}" if browser_key.lower() in ["edge", "brave", "vivaldi", "chrome"] else ""
+    if browser_key.lower() in ["edge", "brave","vivaldi", "chrome"]:
+        wm_class_arg = f"--class={unique_wm_class} --name={unique_wm_class}"
+    else:
+        wm_class_arg = ""
     # --- END PATCH ---
 
     # Format args, including {kiosk_flag} and the new {unique_wm_class}
@@ -182,7 +185,7 @@ def make_launcher_wrapper(app: dict, browser_key: str, nice: int, ionice: int, g
         cmd0_path = shutil.which(cmd0) or cmd0
         # escape double quotes in path
         cmd0_path_esc = str(cmd0_path).replace('"', '\"')
-        exec_cmd = f"$NICE_CMD $IONICE_CMD \"{cmd0_path_esc}\" {args} {wm_class_arg}" # PATCH: Add wm_class_arg
+        exec_cmd = f"$NICE_CMD $IONICE_CMD \"{cmd0_path_esc}\" {args} {wm_class_arg}"# PATCH: for exec_cmd to not break the pwa to a 404 issue with the links
 
     # Build wrapper content
     lines = [
@@ -372,9 +375,9 @@ DEFAULT_APPS = [
     {"name": "Starbucks Order", "url": "https://app.starbucks.com", "kiosk": False, "browser": "edge"},
 
     # ------------------- Cloud Gaming (Kiosk Mode Recommended) -------------------
-    {"name": "xCloud (Xbox)", "url": "https://www.xbox.com/play", "kiosk": True, "browser": "firefox"},
-    {"name": "GeForce Now", "url": "https://play.geforcenow.com", "kiosk": True, "browser": "firefox"},
-    {"name": "Amazon Luna", "url": "https://www.amazon.com/luna/play", "kiosk": True, "browser": "firefox"},
+    {"name": "xCloud (Xbox)", "url": "https://www.xbox.com/play", "kiosk": True, "browser": "flatpak run org.mozilla.firefox"},
+    {"name": "GeForce Now", "url": "https://play.geforcenow.com", "kiosk": True, "browser": "flatpak run org.mozilla.firefox"},
+    {"name": "Amazon Luna", "url": "https://www.amazon.com/luna/play", "kiosk": True, "browser": "flatpak run org.mozilla.firefox"},
 ]
     
 DEFAULT_CONFIG = {
