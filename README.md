@@ -63,7 +63,7 @@ Dedicated kiosk presets for:
 - GeForce Now
 - Amazon Luna
 
-Uses **Firefox** by default for:
+Uses **Firefox Flatpak** by default for:
 - Native gamepad support
 - Better Wayland compatibility
 - Anti-cheat workarounds (when needed)
