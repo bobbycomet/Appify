@@ -131,6 +131,13 @@ sudo dpkg -i pwamanager.deb
 sudo apt --fix-broken install -y 
 rm pwamanager.deb
 ```
+Coming soon
+App image
+Windows version
 
+What is not coming
+Flatpak
+Why?
+It would break many of the functions because of their sandboxing.
 
 Discord- https://discord.gg/7fEt5W7DPh
