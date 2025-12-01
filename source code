@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-PWA Manager — FINAL, COMPLETE, BULLETPROOF
+PWA Manager — FINAL
 - FULL GTK4 UI (Adwaita)
 - Desktop shortcuts LAUNCH 100%
 - Flatpak/Snap Firefox, Brave, Vivaldi SUPPORT
