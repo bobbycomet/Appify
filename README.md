@@ -124,4 +124,10 @@ Including:
 
 Just search, tweak, install.
 
-Install files, videos, and Griffin are all coming soon. 
+Install
+```
+wget -O pwamanager.deb https://github.com/bobbycomet/Appify/releases/download/v1.0.0/pwamanager-1.0.0.deb 
+sudo dpkg -i pwamanager.deb 
+sudo apt --fix-broken install -y 
+rm pwamanager.deb
+```
