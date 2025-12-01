@@ -126,7 +126,7 @@ Just search, tweak, install.
 
 Install
 ```
-wget -O pwamanager.deb https://github.com/bobbycomet/Appify/releases/download/v1.0.0/pwamanager-1.0.0.deb 
+wget -O pwamanager.deb https://github.com/bobbycomet/Appify/releases/download/v1.0.1/pwamanager-1.0.1.deb
 sudo dpkg -i pwamanager.deb 
 sudo apt --fix-broken install -y 
 rm pwamanager.deb
