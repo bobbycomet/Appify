@@ -131,3 +131,6 @@ sudo dpkg -i pwamanager.deb
 sudo apt --fix-broken install -y 
 rm pwamanager.deb
 ```
+
+
+Discord- https://discord.gg/7fEt5W7DPh
