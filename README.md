@@ -12,7 +12,6 @@
 Whether you're turning Gmail into a desktop app, running multiple Twitch accounts, or playing cloud games with anti-cheat bypasses — **Appify does it all**.
 
 It will soon be available as:
-- **.deb** (Debian/Ubuntu/Mint/Pop!_OS/Zorin)
 - **AppImage** (Universal Linux)
 
 > Built for **Griffin Linux** — soon to be available for everyone.
