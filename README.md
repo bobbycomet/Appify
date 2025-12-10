@@ -130,6 +130,7 @@ Including:
 Just search, tweak, install.
 
 Install
+Download the Deb directly in the releases page or,
 ```
 wget -O pwamanager.deb https://github.com/bobbycomet/Appify/releases/download/v1.0.2/pwamanager-1.0.2.deb
 sudo dpkg -i pwamanager.deb 
