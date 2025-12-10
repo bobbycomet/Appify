@@ -7,6 +7,9 @@
 
 ![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/Appify1.png)
 
+**VERSION 1.0.3 UPDATE: Fixed some issues where Firefox native was not launching in kiosk, you must use the system package of Firefox stable to have controller support, this is because Flatpak browser does not support it as well.**
+**Brave browser now allows icons, but the Flatpak version does not. This is due to the sandboxing.**
+
 **Appify** (formerly known as PWA Manager) is a beautiful, powerful, and powerful Progressive Web App (PWA) creator for Linux. Designed with **Windows switchers** in mind, it makes web apps feel native — complete with their own window, taskbar icon, isolated profiles, extensions, and performance controls.
 
 Whether you're turning Gmail into a desktop app, running multiple Twitch accounts, or playing cloud games with anti-cheat bypasses — **Appify does it all**.
@@ -54,8 +57,6 @@ No more "another Chrome window" confusion.
 - YouTube → Red YouTube icon
 - Discord → Discord icon
 - Even custom sites get smart icons (via icon.horse + favicon + Google fallbacks)
-
-There is a known issue with Brave not showing the icons and defaulting to Brave's browser icon in the panel. A fix is being worked on.
 
 #### Cloud Gaming Ready
 Dedicated kiosk presets for:
