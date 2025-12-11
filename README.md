@@ -140,9 +140,9 @@ Including:
 Just search, tweak, install.
 
 Install
-Download the Deb directly in the releases page or,
+Download the Deb directly from the releases page or from the source. Here is how to set the environment.
 ```
-wget -O pwamanager.deb https://github.com/bobbycomet/Appify/releases/download/v1.0.2/pwamanager-1.0.3.deb
+wget -O pwamanager.deb https://github.com/bobbycomet/Appify/releases/download/v1.0.2/pwamanager-1.0.4.deb
 sudo dpkg -i pwamanager.deb 
 sudo apt --fix-broken install -y 
 rm pwamanager.deb
@@ -160,7 +160,7 @@ For OpenSUSE, Tumbleweed, etc...
 ```
 sudo zypper install python3-gobject typelib-1_0-Gtk-4_0 typelib-1_0-Adw-1 curl xdg-utils
 ```
-For those who want to do it from the source
+Debian/Ubuntu
 ```
 sudo apt update
 sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-4.0 gir1.2-adw-1 curl xdg-utils
