@@ -5,8 +5,6 @@
 
 **Turn any website into a first-class desktop app — instantly.**
 
-![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/Appify1.png)
-
 ![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/Extensionsview.png)
 
 **VERSION 1.0.5 UPDATES: Presets now show in the extensions window, and fixed a minor bug that was not updating the config folder in the .pwa_manager folder. If you have issues with the config file not updating, you must delete the profile and reinstall the PWA you made.** 
@@ -24,7 +22,7 @@
 **You must use the system package of Firefox stable to have controller support; this is because the Flatpak browser does not support it out of the box. Again, a Flatpak sandboxing issue.**
 
 
-**Appify** (formerly known as PWA Manager) is a beautiful, powerful, and free Progressive Web App (PWA) creator for Linux. Designed with **Windows switchers** in mind, it makes web apps feel native — complete with their own window, taskbar icon, isolated profiles, extensions, and performance controls.
+**Appify** is a beautiful, powerful, and free Progressive Web App (PWA) creator for Linux. Designed with **Windows switchers** in mind, it makes web apps feel native — complete with their own window, taskbar icon, isolated profiles, extensions, and performance controls.
 
 Whether you're turning Gmail into a desktop app, running multiple Twitch accounts, or playing cloud games with anti-cheat bypasses — **Appify does it all**.
 
