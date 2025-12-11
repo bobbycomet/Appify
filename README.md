@@ -13,6 +13,8 @@
 
 **NEW ADDITIONs: More sites in the presets, and more extensions in the presets. Some Google Docs add-ons that are from Google, not the Chrome store.**
 
+**Changed the Remove entry to Delete profile for clarity.**
+
 **Keeps the fixed issues where Brave native was not launching. Cleaned up the Brave logic for better Flatpak, snap, and native browser launching. Brave Browser now allows icons, but the Flatpak version does not. This is due to the sandboxing, not the tool.**
 
 **Added tooltips, just hover over nice, ionice, GPU acceleration, and Kiok mode, and it will give you a rundown on what it does.**
