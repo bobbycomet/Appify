@@ -15,11 +15,11 @@ Appify
 Appify – The Ultimate Linux PWA Manager
 Progressive Web Apps, finally done right on Linux.
 
-Author      : BobbyComet[](https://github.com/bobbycomet)
-Version     : 1.0.3
-License     : GPL 3.0
-Project     : https://github.com/bobbycomet/Appify
-Discord     : https://discord.gg/7fEt5W7DPh
+Author: BobbyComet[](https://github.com/bobbycomet)
+Version: 1.0.3
+License: GPL 3.0
+Project: https://github.com/bobbycomet/Appify
+Discord: https://discord.gg/7fEt5W7DPh
 """
 
 import gi
@@ -159,6 +159,13 @@ def make_launcher_wrapper(app: dict, browser_key: str, nice: int, ionice: int, g
     profile_dir.mkdir(parents=True, exist_ok=True)
 
     browser_cfg = get_browsers().get(browser_key, {})
+    # Brave config fix
+    if browser_key == "brave":
+        if shutil.which("brave-browser-stable"):
+            browser_cfg["cmd"] = "brave-browser-stable"
+        elif shutil.which("brave"):
+            browser_cfg["cmd"] = "brave"
+    #end of config fix
     pkg_type, base_cmd = detect_browser_command(browser_key)
 
     kiosk_flag = browser_cfg.get('kiosk_flag', '') if app.get('kiosk', False) else ''
@@ -235,6 +242,9 @@ def make_launcher_wrapper(app: dict, browser_key: str, nice: int, ionice: int, g
         if ' ' in cmd0 and (cmd0.startswith('GDK_BACKEND=x11') or cmd0.startswith('env ')):
             exec_cmd = f"$NICE_CMD $IONICE_CMD {cmd0} {args} {wm_class_arg}"
         else:
+            # ORIGINAL LOCATION: This block is now redundant, but we only keep the exec_cmd definition.
+            # cmd0_path = shutil.which(cmd0) or cmd0 # <-- DEFINED ABOVE
+            # cmd0_path_esc = str(cmd0_path).replace('"', '\\"') # <-- DEFINED ABOVE
             exec_cmd = f"$NICE_CMD $IONICE_CMD \"{cmd0_path_esc}\" {args} {wm_class_arg}"# PATCH: for exec_cmd to not break the pwa to a 404 issue with the links
 
     # Build wrapper content
@@ -773,6 +783,24 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         title.append(Gtk.Label(label="Progressive Web Apps Made Easy"))
         header.set_title_widget(title)
 
+        # About button (three-line "hamburger" icon, standard on GNOME)
+        menu_btn = Gtk.MenuButton()
+        menu_btn.set_icon_name("open-menu-symbolic")  # standard GNOME menu icon
+        
+        # Simple menu with just "About"
+        popover = Gtk.PopoverMenu()
+        menu = Gio.Menu()
+        menu.append("About Applify", "app.about")
+        popover.set_menu_model(menu)
+        menu_btn.set_popover(popover)
+        
+        # Connect the action
+        about_action = Gio.SimpleAction.new("about", None)
+        about_action.connect("activate", self.show_about_dialog)
+        self.get_application().add_action(about_action)
+        
+        header.pack_end(menu_btn)
+
         self.mode_switch = Gtk.Switch()
         self.mode_switch.set_active(CONFIG.get("dark_mode", True))
         self.mode_switch.connect("notify::active", self.on_mode_toggled)
@@ -944,6 +972,39 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         content_box.append(btn_box)
         content_box.append(self.statusbar)
 
+        # --- START TOOLTIP ADDITIONS ---
+        
+        # Nice spinbutton tooltip
+        self.nice_spin.set_tooltip_text(
+            "Nice value (−20 to +19)\n"
+            "• Lower number = higher CPU priority (needs root for < 0)\n"
+            "• Higher number = lower priority (politer to the system)\n"
+            "Default: 0"
+        )
+
+        # Ionice spinbutton tooltip
+        self.ionice_spin.set_tooltip_text(
+            "Ionice class (0–3)\n"
+            "• 0 = Real-time (root only)\n"
+            "• 1 = Best-effort (default for root)\n"
+            "• 2 = Best-effort (default for normal users) ← recommended\n"
+            "• 3 = Idle (only runs when disk is otherwise idle)"
+        )
+
+        # GPU checkbox tooltip
+        self.gpu_check.set_tooltip_text(
+            "Enable/disable GPU hardware acceleration for the browser.\n"
+            "Turn OFF only if you experience crashes or black screens on very old hardware."
+        )
+
+        # Kiosk checkbox tooltip
+        self.kiosk_check.set_tooltip_text(
+            "Kiosk mode = fullscreen, no address bar, no tabs, no context menu.\n"
+            "Perfect for cloud gaming (xCloud, GeForce Now, Luna) and digital signage."
+        )
+
+        # --- END TOOLTIP ADDITIONS ---
+
         self.style_manager = Adw.StyleManager.get_default()
         self.apply_color_scheme()
 
@@ -952,6 +1013,32 @@ class PWAManagerWindow(Adw.ApplicationWindow):
             self.populate_app_fields(self.sorted_apps_list[0])
         self.update_button_states()
     
+    # --- ADDED: About Dialog function for the Menu Button ---
+    def show_about_dialog(self, action=None, param=None):
+        about = Adw.AboutDialog(
+            application_name="Appify",
+            application_icon="appify",
+            developer_name="BobbyComet",
+            version="1.0.4",
+            website="https://github.com/bobbycomet/Appify",
+            issue_url="https://github.com/bobbycomet/Appify/issues",
+            license_type=Gtk.License.GPL_3_0,
+            copyright="© 2025 BobbyComet",
+            comments="Progressive Web Apps made easy on Linux\n" 
+                     "Isolated profiles • Desktop shortcuts • Extension presets • Flatpak/Snap support",
+            developers=["BobbyComet"],
+            artists=None,
+        )
+        about.present(self)
+    
+        # Extra links in the "Links" section
+        about.add_link("Discord Community", "https://discord.gg/7fEt5W7DPh")
+        about.add_link("GitHub", "https://github.com/bobbycomet/Appify")
+        about.add_link("Support the project", "https://ko-fi.com/bobby60908")
+    
+        about.present()
+    # --- END ADDED: About Dialog function ---
+
     # --- FIX 1: Add the missing helper method ---
     def get_selected_app(self):
         """Retrieves the app dictionary currently selected in the dropdown."""
@@ -1520,7 +1607,7 @@ def add_custom_browser_preset(preset_key):
     # This function uses the DEFAULT_CONFIG template which is available
     presets = {
         "brave": {
-            "cmd": "brave",
+            "cmd": "brave-browser-stable", #brave command fix
             "flatpak": "com.brave.Browser",
             "args": "--user-data-dir={profile_dir} --app={url} {kiosk_flag}",
             "kiosk_flag": "--start-fullscreen",
