@@ -167,7 +167,7 @@ sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-4.0 gir1.2-adw-1 curl xd
 ```
 Don't forget to (the py file name will update in the future)
 ```
-chomod +x PWAmanager.py
+chmod +x PWAmanager.py
 ```
 For the desktop file (use the icon in the files above)
 ```
