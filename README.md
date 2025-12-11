@@ -7,17 +7,16 @@
 
 ![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/Appify1.png)
 
-**VERSION 1.0.3 UPDATE: Fixed some issues where Firefox native was not launching in kiosk, you must use the system package of Firefox stable to have controller support, this is because Flatpak browser does not support it as well.**
+**VERSION 1.0.3 UPDATEs: Fixed some issues where Firefox native was not launching in kiosk, you must use the system package of Firefox stable to have controller support, this is because Flatpak browser does not support it as well.**
+
 **Brave browser now allows icons, but the Flatpak version does not. This is due to the sandboxing.**
 
-**Appify** (formerly known as PWA Manager) is a beautiful, powerful, and powerful Progressive Web App (PWA) creator for Linux. Designed with **Windows switchers** in mind, it makes web apps feel native — complete with their own window, taskbar icon, isolated profiles, extensions, and performance controls.
+**Appify** (formerly known as PWA Manager) is a beautiful, powerful, and free Progressive Web App (PWA) creator for Linux. Designed with **Windows switchers** in mind, it makes web apps feel native — complete with their own window, taskbar icon, isolated profiles, extensions, and performance controls.
 
 Whether you're turning Gmail into a desktop app, running multiple Twitch accounts, or playing cloud games with anti-cheat bypasses — **Appify does it all**.
 
-It will soon be available as:
-- **AppImage** (Universal Linux)
 
-> Built for **Griffin Linux** — soon to be available for everyone.
+> Built for **Griffin Linux aka Griffin OS** — soon to be available for everyone.
 
 ---
 
@@ -49,6 +48,10 @@ Each PWA gets its own browser profile:
 - No data leaks to other profiles
 
 **Uninstall an app? Your data stays safe.** Reinstall later — everything is still there.
+
+**Light/Dark modes**
+
+**Want to take the data with you?** Just copy your folder .pwamanager (should be in your home directory, just choose show hidden files), and you can place it in a new computer for your profiles and everything else to work. This is for safety. I could add an import/export, but this way, if something broke in the import/export, you lose data; it will not mess up your data by doing it this way.
 
 #### Per-App Icons & Taskbar Identity
 No more "another Chrome window" confusion.
@@ -107,6 +110,7 @@ Fine-tune every PWA:
 - GPU acceleration on/off
 - `nice` priority (-20 to 19)
 - `ionice` class (realtime, best-effort, idle)
+- Already configured for most uses, so many of you will never need to touch this.
 
 Perfect for gaming, streaming, or background apps.
 
@@ -132,16 +136,56 @@ Just search, tweak, install.
 Install
 Download the Deb directly in the releases page or,
 ```
-wget -O pwamanager.deb https://github.com/bobbycomet/Appify/releases/download/v1.0.2/pwamanager-1.0.2.deb
+wget -O pwamanager.deb https://github.com/bobbycomet/Appify/releases/download/v1.0.2/pwamanager-1.0.3.deb
 sudo dpkg -i pwamanager.deb 
 sudo apt --fix-broken install -y 
 rm pwamanager.deb
 ```
+
+For Fedora, CentOS, RHEL, etc...
+```
+sudo dnf install python3-gobject gtk4 libadwaita curl xdg-utils
+```
+For Arch, Manjaro, etc... 
+```
+sudo pacman -S python-gobject gtk4 libadwaita curl xdg-utils
+```
+For OpenSUSE, Tumbleweed, etc...
+```
+sudo zypper install python3-gobject typelib-1_0-Gtk-4_0 typelib-1_0-Adw-1 curl xdg-utils
+```
+For those who want to do it from the source
+```
+sudo apt update
+sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-4.0 gir1.2-adw-1 curl xdg-utils
+```
+Don't forget to (the py file name will update in the future)
+```
+chomod +x PWAmanager.py
+```
+For the desktop file (use the icon in the files above)
+```
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=PWA Manager (Appify)
+Comment=Manage and launch isolated Progressive Web Apps
+Exec=pwamanager
+Icon=appify
+Terminal=false
+Categories=Utility;Network;
+StartupNotify=true
+```
+
 Coming soon
-App image
+More updates for tool tips, YouTube videos (not really needed, but some people understand better with visuals), and more PWA site presets.
+Griffin Repo, as stated, this is for a custom distro I am almost finished with. This tool will be a part of that repo. This tool might get an update checker, ot I might turn it into its own repo for updates. Have yet to decide.
 Windows version
 
-What is not coming
+What is not coming soon
+Appimage
+Why?
+I tried it multiple times, but I can't seem to grasp how to make them. It might be a while before I have an AppImage. For now works on Debian/Ubuntu systems.
 Flatpak
 Why?
 It would break many of the functions because of their sandboxing.
