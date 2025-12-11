@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """
-Appify
 - FULL GTK4 UI (Adwaita)
 - Desktop shortcuts LAUNCH
 - Flatpak/Snap Firefox, Brave, Vivaldi SUPPORT
@@ -83,15 +82,46 @@ def get_hostname_from_url(url: str) -> str:
     except Exception:
         return ""
 
-# ---------------- Extension Helpers (Simplified) ----------------
+# ---------------- Extension Helpers (Modified for better presets) ----------------
 
 def get_app_key(app):
     hostname = get_hostname_from_url(app["url"])
-    for key in ["twitch", "kick", "youtube"]:
-        if key in hostname:
-            return key
-    return None
 
+    # FIX uses domain mapping table for unlimited presets 
+    for domain_substring, preset_key in PRESET_DOMAIN_MAP.items():
+        if domain_substring in hostname:
+            return preset_key
+
+    return "generic_pwa"
+
+
+# --- START NEW FUNCTION ---
+def get_available_presets(app):
+    """
+    Returns a list of extensions available for the current app 
+    that are not yet installed.
+    """
+    preset_key = get_app_key(app)
+    # Check if a preset key exists (even "generic_pwa" will work if defined)
+    if not preset_key: 
+        return []
+    
+    # Ensure DEFAULT_EXT_PRESETS is accessible (it should be defined globally)
+    all_presets = DEFAULT_EXT_PRESETS.get(preset_key, [])
+    
+    # Get currently installed extensions
+    installed_exts = load_installed_extensions(app)
+    # Create a set of installed names for fast lookup
+    installed_names = {ext["name"] for ext in installed_exts}
+    
+    # Filter out installed ones
+    available_presets = [
+        preset for preset in all_presets 
+        if preset["name"] not in installed_names
+    ]
+    
+    return available_presets
+# --- END NEW FUNCTION ---
 def load_installed_extensions(app):
     # This now loads a list of dictionaries like: [{'name': '...', 'web_url': '...'}]
     if not app:
@@ -346,11 +376,149 @@ ICON_DIR = Path(os.path.expanduser("~/.local/share/icons/hicolor/512x512/apps/")
 DESKTOP_DIR = Path(os.path.expanduser("~/.local/share/applications/"))
 LOG_FILE = CONFIG_DIR / "launch.log"
 
+PRESET_DOMAIN_MAP = {
+    # =================== AI & Search ===================
+    "chatgpt.com": "ChatGPT",
+    "claude.ai": "Claude",
+    "x.ai": "Grok",
+    "gemini.google.com": "Gemini",
+    "perplexity.ai": "Perplexity",
+
+    # =================== Productivity & Daily Work ===================
+    "mail.google.com": "Gmail",
+    "calendar.google.com": "Google Calendar",
+    "keep.google.com": "Google Keep",
+    "drive.google.com": "Google Drive",
+    "docs.google.com": "Google Docs",
+    "spreadsheets": "Google Sheets",
+    "presentation": "Google Slides",
+    "office.com": "Microsoft 365",
+    "outlook.live.com": "Outlook Web",
+    "onedrive.live.com": "OneDrive",
+    "notion.so": "Notion",
+    "clickup.com": "ClickUp",
+    "trello.com": "Trello",
+    "todoist.com": "Todoist",
+    "ticktick.com": "TickTick",
+    "miro.com": "Miro",
+    "canva.com": "Canva",
+    "lucid.app": "Lucidchart",
+    "excalidraw.com": "Excalidraw",
+    "diagrams.net": "diagrams.net",
+
+    # =================== Communication ===================
+    "discord.com": "Discord",
+    "slack.com": "Slack",
+    "microsoft.com": "Microsoft Teams",   # covers teams.microsoft.com
+    "zoom.us": "Zoom Web",
+    "meet.google.com": "Google Meet",
+
+    # =================== Social ===================
+    "x.com": "X / Twitter",
+    "reddit.com": "Reddit",
+    "instagram.com": "Instagram",
+    "facebook.com": "Facebook",
+    "linkedin.com": "LinkedIn",
+    "pinterest.com": "Pinterest",
+    "bsky.app": "Bluesky",
+    "5mind.com": "5MIND",
+
+    # =================== Streaming ===================
+    "youtube.com": "youtube",
+    "music.youtube.com": "youtube Music",
+    "netflix.com": "Netflix",
+    "disneyplus.com": "Disney+",
+    "primevideo.com": "Prime Video",
+    "spotify.com": "Spotify Web",
+    "twitch.tv": "Twitch",
+    "crunchyroll.com": "Crunchyroll",
+    "plex.tv": "Plex Web",
+    "stremio.com": "Stremio Web",
+    "hulu.com": "Hulu",
+    "aniwatchtv.to": "AniWatch",
+    "max.com": "Max (HBO)",
+    "peacocktv.com": "Peacock",
+    "paramountplus.com": "Paramount+",
+    "tv.apple.com": "Apple TV+",
+    "kick.com": "Kick",
+    "rumble.com": "Rumble",
+    "hianime.to": "Hianime",
+    "capcut.com": "Capcut",
+
+    # =================== Cloud Gaming ===================
+    "xbox.com": "Xbox Cloud Gaming",
+    "geforcenow.com": "GeForce NOW",
+    "luna.amazon.com": "Amazon Luna",
+    "boosteroid.com": "Boosteroid",
+    "airgpu.com": "AirGPU",
+
+    # =================== Art & Creation ===================
+    "photopea.com": "Photopea (Photoshop)",
+    "figma.com": "Figma",
+    "clipstudio.net": "Clip Studio Paint Web",
+    "sketchfab.com": "Sketchfab",
+    "pixlr.com": "Pixlr Editor",
+    "remove.bg": "Remove.bg",
+
+    # =================== VTuber & Streaming Tools ===================
+    "streamlabs.com": "Streamlabs OBS Web",
+    "ko-fi.com": "Ko-fi",
+    "patreon.com": "Patreon",
+    "throne.com": "Throne (Wishlist)",
+    "streamelements.com": "Streamelements",
+    "studio.youtube.com": "youtube Studio",
+
+    # =================== Utilities ===================
+    "translate.google.com": "Google Translate",
+    "deepl.com": "DeepL Translate",
+    "speedtest.net": "Speedtest.net",
+    "fast.com": "Fast.com",
+    "pomofocus.io": "Pomofocus Timer",
+    "mynoise.net": "myNoise.net",
+    "rainymood.com": "Rainy Mood",
+    "radio.garden": "Radio Garden",
+    "ilovepdf.com": "ILovePDF",
+    "tinypng.com": "TinyPNG",
+    "khanacademy.org": "Khan Academy",
+    "duolingo.com": "Duolingo",
+    "yummly.com": "Yummly",
+    "starbucks.com": "Starbucks Order",
+
+    # =================== Shopping ===================
+    "amazon.com": "Amazon",
+    "ebay.com": "eBay",
+    "aliexpress.com": "AliExpress",
+    "walmart.com": "Walmart",
+    "target.com": "Target",
+    "bestbuy.com": "Best Buy",
+    "etsy.com": "Etsy",
+    "trivago.com": "Trivago",
+    "uber.com": "Uber Web",
+
+    # =================== News & Knowledge ===================
+    "wikipedia.org": "Wikipedia",
+    "bbc.com": "BBC News",
+    "reuters.com": "Reuters",
+    "theverge.com": "The Verge",
+    "techcrunch.com": "TechCrunch",
+    "ycombinator.com": "Hacker News",
+    "wolframalpha.com": "Wolfram Alpha",
+    "cnn.com": "CNN",
+    "nytimes.com": "The New York Times",
+    "washingtonpost.com": "The Washington Post",
+    "forbes.com": "Forbes",
+}
+
+
+
 DEFAULT_EXT_PRESETS = {
     "twitch": [
         {"name": "BetterTTV", "web_url": "https://betterttv.com/"},
         {"name": "FrankerFaceZ", "web_url": "https://www.frankerfacez.com/"}, 
         {"name": "7TV", "web_url": "https://7tv.app/"}, 
+        {"name": "Twitch Auto-Claim Drops & Points", "web_url": "https://chromewebstore.google.com/detail/auto-channel-points-claim/ijcbjbkdaamjmmkckomkjpnbjljpfmpd"},
+        {"name": "Twitch Chat Cleaner", "web_url": "https://chromewebstore.google.com/detail/twitch-chat-filter/llonbigblcfnjplgihpkhoaadbabgkib"},
+        {"name": "Twitch Bonus Auto-clicker", "web_url": "https://chromewebstore.google.com/detail/twitch-points-autoclicker/lpmkeomaogcpodnaicnfdgngmkibjbmb"},
     ],
     "kick": [
         {"name": "NipahTV", "web_url": "https://nipahtv.com/"}, 
@@ -360,84 +528,224 @@ DEFAULT_EXT_PRESETS = {
         {"name": "SponsorBlock", "web_url": "https://sponsor.ajay.app/"},
         {"name": "uBlock Origin", "web_url": "https://github.com/gorhill/uBlock#ublock-origin"},
         {"name": "Return YouTube Dislike", "web_url": "https://returnyoutubedislike.com/"},
+        {"name": "Unhook for YouTube", "web_url": "https://chromewebstore.google.com/detail/unhook-remove-youtube-rec/agbjjhcakilocfjoidcmclcoidipnnhl"},
+        {"name": "Enhancer for YouTube", "web_url": "https://chromewebstore.google.com/detail/enhancer-for-youtube/ponfelnnbfdgchaoffdenecfgkfklngg"},
+        {"name": "DeArrow (Title/Thumbnail Cleaner)", "web_url": "https://chromewebstore.google.com/detail/dearrow-title-thumbnail-f/ibgpcpbhkbhjcmfnhiepghebomnipido"},
+        {"name": "YouTube NonStop", "web_url": "https://chromewebstore.google.com/detail/youtube-nonstop/ajioplkfknbldfggjllgmojioedcjhkf"},
+    ],
+    "Google Docs": [
+        {"name": "super styles for google docs", "web_url": "https://workspace.google.com/u/0/marketplace/app/super_styles_for_google_docs/749048387655"},
+        {"name": "code blocks for  google docs", "web_url": "https://workspace.google.com/u/0/marketplace/app/code_blocks/100740430168"},
+        {"name": "Grammare and spell check for google docs", "web_url":  "https://workspace.google.com/u/0/marketplace/app/grammar_and_spell_checker_languagetool/805250893316"},
+        {"name": "DocSecrets", "web_url": "https://workspace.google.com/marketplace/app/docsecrets/106495793380"},
+        {"name": "DocTools", "web_url": "https://workspace.google.com/marketplace/app/doctools/812550428155"},
+        {"name": "Text Cleaner", "web_url": "https://workspace.google.com/marketplace/app/text_cleaner/590957751694"},
+        {"name": "Table of Contents Add-On", "web_url": "https://workspace.google.com/marketplace/app/table_of_contents/673827206993"},
+    ],
+    "Google Sheets": [
+        {"name": "Power Tools", "web_url": "https://workspace.google.com/marketplace/app/power_tools/1058867473888"},
+        {"name": "Advanced Find & Replace", "web_url": "https://workspace.google.com/marketplace/app/advanced_find_replace/1042060810936"},
+    ],
+    "Google Slides": [
+        {"name": "Slides Toolbox", "web_url": "https://workspace.google.com/marketplace/app/slides_toolbox/303181111203"},
+    ],
+    "Google Drive": [
+        {"name": "Save to Google Drive Button", "web_url": "https://chromewebstore.google.com/detail/save-to-google-drive/gmbmikajjgmnabiglmofipeabaddhgne"},
+    ],
+    "Reddit": [
+        {"name": "Reddit Enhancement Suite (RES)", "web_url": "https://chromewebstore.google.com/detail/reddit-enhancement-suite/kbpojkailcjolinmakdefkkcjkcimeoa"},
+        {"name": "Old Reddit Redirect", "web_url": "https://chromewebstore.google.com/detail/old-reddit-redirect/pinhfnpggfpgpbkllgidmclklgljlijl"},
+    ],
+    "X / Twitter": [
+        {"name": "Control Panel for Twitter", "web_url": "https://chromewebstore.google.com/detail/control-panel-for-twitter/dkboeeeenhalhjemdfeehiakblbkocbm"},
+        {"name": "GoodTwitter 2", "web_url": "https://chromewebstore.google.com/detail/goodtwitter2/ojhmphdkpgbibohbihfgmfgphojmpidd"},
+        {"name": "Hide Promoted Posts for Twitter", "web_url": "https://chromewebstore.google.com/detail/hide-promoted-tweets/bkhbpbbbjbpjpmcjoemilnbibhhfcpfo"},
+    ],
+    "Instagram": [
+        {"name": "Web for Instagram Plus DM Tools", "web_url": "https://chromewebstore.google.com/detail/web-for-instagram-with-dm/ifcmnnhkkddkggmbggojfajbgbhjfgcj"},
+        {"name": "Inssist Web Enhancer", "web_url": "https://chromewebstore.google.com/detail/inssist-lite/bodncoafpljjafcfdajpheodjbjfljkk"},
+    ],
+    "Facebook": [
+        {"name": "FB Purity", "web_url": "https://chromewebstore.google.com/detail/fb-purity-clean-up-facebook/lhfdgjlabncfcbnolpjnpeepffkfoich"},
+        {"name": "Social Fixer", "web_url": "https://chromewebstore.google.com/detail/social-fixer-for-facebook/lbdkchheehjoocbbpnkgmnmkgcodionf"},
+    ],
+    "Discord": [
+        {"name": "Discord Theme Injector", "web_url": "https://chromewebstore.google.com/detail/theme-injector-for-discord/oodljbhpfjglgfkddbjdchbllkaeeboc"},
+        {"name": "BetterDiscord Web Tweaks", "web_url": "https://chromewebstore.google.com/detail/betterdiscord-web/hcbpjfjmhadnlekookpimnhiohjhjhna"},
+    ],
+    "Netflix": [
+        {"name": "Netflix Extended", "web_url": "https://chromewebstore.google.com/detail/netflix-extended/bhplkbgoehhhddaecmdaohpebcglgbaa"},
+        {"name": "Super Netflix", "web_url": "https://chromewebstore.google.com/detail/super-netflix/nlcbkpgbhjjnclnndmlbkjnhcphljfff"},
+    ],
+    "Disney+": [
+        {"name": "Disney+ Hotkeys", "web_url": "https://chromewebstore.google.com/detail/disney-hotkeys/omimjmlmcpiimjdpvjhjyayekhqppcbb"},
+    ],
+    "Prime Video": [
+        {"name": "Prime Video Enhancer", "web_url": "https://chromewebstore.google.com/detail/prime-video-extended/keigkbhgjjdjnpgehpenfpkpkppojlcn"},
+    ],
+    "Hulu": [
+        {"name": "Hulu Hotkeys", "web_url": "https://chromewebstore.google.com/detail/hulu-keyboard-controls/ehfnocfijmmlhmhfhfkbawo1stmjhqrs"},
+    ],
+    "Spotify Web": [
+        {"name": "Spotify Tree Navigation", "web_url": "https://chromewebstore.google.com/detail/tree-style-tab-for-spotif/mkcjquizjjhfkfbysptwp891z4p04zlf"},
+        {"name": "Spotify Visualizer", "web_url": "https://chromewebstore.google.com/detail/spotify-visualizer/ojllcjggccimihgojokahbahkofhabbo"},
+    ],
+    "Amazon": [
+        {"name": "Honey", "web_url": "https://chromewebstore.google.com/detail/paypal-honey-automatic-cou/mbckjcfnjmoiagmdehgmjhmehgdafkog"},
+        {"name": "Rakuten Cash Back", "web_url": "https://chromewebstore.google.com/detail/rakuten-cash-back-button/kfbdmcokinfnbgkafhbbebgaolhldljl"},
+        {"name": "Keepa Price Tracker", "web_url": "https://chromewebstore.google.com/detail/keepa-amazon-price-tracker/neebplgakaahbhdphmkckjjcegoiijjo"},
+        {"name": "Fakespot Review Analyzer", "web_url": "https://chromewebstore.google.com/detail/fakespot-analyzer/mhkfjnjlajhemjjmlgcboghkbikkcjif"},
+    ],
+    "Notion": [
+        {"name": "Notion Boost", "web_url": "https://chromewebstore.google.com/detail/notion-boost/fpjpmgnjinhkjcjbhcballlkpcefnplh"},
+    ],
+    "Trello": [
+        {"name": "Card Aging Assistant", "web_url": "https://chromewebstore.google.com/detail/trello-card-ageing/iplpocngbmgkofkfecadangmlpdhkoem"},
+    ],
+    "ClickUp": [
+        {"name": "ClickUp Hotkeys Enhancer", "web_url": "https://chromewebstore.google.com/detail/clickup-enhancer/bmkfpiidgmobgomieofhpaohgjcamkmm"},
+    ],
+    "Gmail": [
+        {"name": "Simplify Gmail", "web_url": "https://chromewebstore.google.com/detail/simplify-gmail/pnhplgjpclknigjpcckkpaeoemljnchg"},
+        {"name": "Gmail Sender Icons", "web_url": "https://chromewebstore.google.com/detail/sender-icons-for-gmail/nkfabcolfplmlijojjgcfdffoehibbfg"},
+    ],
+    "Google Calendar": [
+        {"name": "Event Merge", "web_url": "https://chromewebstore.google.com/detail/event-merge-for-google-cal/dlifekfklhbcbgponifgpdbcopbekmna"},
     ],
 }
 
 DEFAULT_APPS = [
-    # ------------------- Productivity & Work (General Use) -------------------
+    # =================== AI & Search (2025 Essentials) ===================
+    {"name": "ChatGPT", "url": "https://chatgpt.com", "kiosk": False, "browser": "edge"},
+    {"name": "Claude", "url": "https://claude.ai", "kiosk": False, "browser": "edge"},
+    {"name": "Grok", "url": "https://grok.x.ai", "kiosk": False, "browser": "edge"},
+    {"name": "Gemini", "url": "https://gemini.google.com", "kiosk": False, "browser": "edge"},
+    {"name": "Perplexity", "url": "https://perplexity.ai", "kiosk": False, "browser": "edge"},
+
+    # =================== Productivity & Daily Work ===================
     {"name": "Gmail", "url": "https://mail.google.com", "kiosk": False, "browser": "edge"},
+    {"name": "Google Calendar", "url": "https://calendar.google.com", "kiosk": False, "browser": "edge"},
+    {"name": "Google Keep", "url": "https://keep.google.com", "kiosk": False, "browser": "edge"},
+    {"name": "Google Drive", "url": "https://drive.google.com", "kiosk": False, "browser": "edge"},
     {"name": "Google Docs", "url": "https://docs.google.com/document/", "kiosk": False, "browser": "edge"},
     {"name": "Google Sheets", "url": "https://docs.google.com/spreadsheets/", "kiosk": False, "browser": "edge"},
     {"name": "Google Slides", "url": "https://docs.google.com/presentation/", "kiosk": False, "browser": "edge"},
-    {"name": "Google Drive", "url": "https://drive.google.com", "kiosk": False, "browser": "edge"},
-    {"name": "Google Calendar", "url": "https://calendar.google.com", "kiosk": False, "browser": "edge"},
-    {"name": "Microsoft 365 (Office)", "url": "https://www.office.com", "kiosk": False, "browser": "edge"},
-    {"name": "Outlook Web", "url": "https://outlook.live.com/mail/", "kiosk": False, "browser": "edge"},
+    {"name": "Microsoft 365", "url": "https://www.office.com", "kiosk": False, "browser": "edge"},
+    {"name": "Outlook Web", "url": "https://outlook.live.com", "kiosk": False, "browser": "edge"},
+    {"name": "OneDrive", "url": "https://onedrive.live.com", "kiosk": False, "browser": "edge"},
     {"name": "Notion", "url": "https://www.notion.so", "kiosk": False, "browser": "edge"},
+    {"name": "ClickUp", "url": "https://app.clickup.com", "kiosk": False, "browser": "edge"},
     {"name": "Trello", "url": "https://trello.com", "kiosk": False, "browser": "edge"},
     {"name": "Todoist", "url": "https://todoist.com", "kiosk": False, "browser": "edge"},
-    {"name": "Asana", "url": "https://app.asana.com", "kiosk": False, "browser": "edge"},
-    {"name": "ClickUp", "url": "https://app.clickup.com", "kiosk": False, "browser": "edge"},
+    {"name": "TickTick", "url": "https://ticktick.com", "kiosk": False, "browser": "edge"},
     {"name": "Miro", "url": "https://miro.com", "kiosk": False, "browser": "edge"},
+    {"name": "Canva", "url": "https://www.canva.com", "kiosk": False, "browser": "edge"},
+    {"name": "Lucidchart", "url": "https://lucid.app", "kiosk": False, "browser": "edge"},
+    {"name": "Excalidraw", "url": "https://excalidraw.com", "kiosk": False, "browser": "edge"},
+    {"name": "diagrams.net", "url": "https://app.diagrams.net", "kiosk": False, "browser": "edge"},
 
-    # ------------------- Communication & Community -------------------
-    {"name": "Slack", "url": "https://app.slack.com", "kiosk": False, "browser": "edge"},
+    # =================== Communication (Everyone Uses) ===================
     {"name": "Discord", "url": "https://discord.com/app", "kiosk": False, "browser": "edge"},
-    {"name": "Zoom Web Client", "url": "https://zoom.us/join", "kiosk": False, "browser": "edge"},
-    {"name": "Facebook", "url": "https://www.facebook.com", "kiosk": False, "browser": "edge"},
-    {"name": "X (Twitter)", "url": "https://x.com", "kiosk": False, "browser": "edge"},
-    {"name": "Instagram", "url": "https://www.instagram.com", "kiosk": False, "browser": "edge"},
-    {"name": "TikTok", "url": "https://www.tiktok.com", "kiosk": False, "browser": "edge"},
-    {"name": "Reddit", "url": "https://www.reddit.com", "kiosk": False, "browser": "edge"},
-    {"name": "Pinterest", "url": "https://www.pinterest.com", "kiosk": False, "browser": "edge"},
+    {"name": "Slack", "url": "https://app.slack.com", "kiosk": False, "browser": "edge"},
+    {"name": "Microsoft Teams", "url": "https://teams.microsoft.com", "kiosk": False, "browser": "edge"},
+    {"name": "Zoom Web", "url": "https://zoom.us/join", "kiosk": False, "browser": "edge"},
+    {"name": "Google Meet", "url": "https://meet.google.com", "kiosk": False, "browser": "edge"},
 
-    # ------------------- Entertainment & Streaming -------------------
+    # =================== Social (Mainstream) ===================
+    {"name": "X / Twitter", "url": "https://x.com", "kiosk": False, "browser": "edge"},
+    {"name": "Reddit", "url": "https://www.reddit.com", "kiosk": False, "browser": "edge"},
+    {"name": "Instagram", "url": "https://www.instagram.com", "kiosk": False, "browser": "edge"},
+    {"name": "Facebook", "url": "https://www.facebook.com", "kiosk": False, "browser": "edge"},
+    {"name": "LinkedIn", "url": "https://www.linkedin.com", "kiosk": False, "browser": "edge"},
+    {"name": "Pinterest", "url": "https://www.pinterest.com", "kiosk": False, "browser": "edge"},
+    {"name": "Bluesky", "url": "https://bsky.app", "kiosk": False, "browser": "edge"},
+    {"name": "5MIND", "url": "https://5mind.com/", "kiosk": False, "browser": "edge"},
+
+    # =================== Streaming & Entertainment (Big Ones) ===================
+    {"name": "youtube", "url": "https://www.youtube.com", "kiosk": False, "browser": "edge"},
+    {"name": "youtube Music", "url": "https://music.youtube.com", "kiosk": False, "browser": "edge"},
     {"name": "Netflix", "url": "https://www.netflix.com", "kiosk": False, "browser": "edge"},
+    {"name": "Disney+", "url": "https://www.disneyplus.com", "kiosk": False, "browser": "edge"},
+    {"name": "Prime Video", "url": "https://www.primevideo.com", "kiosk": False, "browser": "edge"},
+    {"name": "Spotify Web", "url": "https://open.spotify.com", "kiosk": False, "browser": "edge"},
+    {"name": "Twitch", "url": "https://www.twitch.tv", "kiosk": False, "browser": "edge"},
+    {"name": "Crunchyroll", "url": "https://www.crunchyroll.com", "kiosk": False, "browser": "edge"},
+    {"name": "Plex Web", "url": "https://app.plex.tv", "kiosk": False, "browser": "edge"},
+    {"name": "Stremio Web", "url": "https://web.stremio.com", "kiosk": False, "browser": "edge"},
     {"name": "Hulu", "url": "https://www.hulu.com", "kiosk": False, "browser": "edge"},
     {"name": "AniWatch", "url": "https://aniwatchtv.to/", "kiosk": False, "browser": "edge"},
-    {"name": "Disney+", "url": "https://www.disneyplus.com", "kiosk": False, "browser": "edge"},
     {"name": "Max (HBO)", "url": "https://max.com", "kiosk": False, "browser": "edge"},
-    {"name": "Prime Video", "url": "https://www.amazon.com/luna/play", "kiosk": False, "browser": "edge"},
     {"name": "Peacock", "url": "https://www.peacocktv.com", "kiosk": False, "browser": "edge"},
     {"name": "Paramount+", "url": "https://www.paramountplus.com", "kiosk": False, "browser": "edge"},
     {"name": "Apple TV+", "url": "https://tv.apple.com", "kiosk": False, "browser": "edge"},
-    {"name": "YouTube", "url": "https://www.youtube.com", "kiosk": False, "browser": "edge"},
-    {"name": "YouTube Music", "url": "https://music.youtube.com", "kiosk": False, "browser": "edge"},
-    {"name": "Spotify Web", "url": "https://open.spotify.com", "kiosk": False, "browser": "edge"},
-    {"name": "Twitch", "url": "https://www.twitch.tv", "kiosk": False, "browser": "edge"},
     {"name": "Kick", "url": "https://kick.com", "kiosk": False, "browser": "edge"},
-    {"name": "Crunchyroll", "url": "https://www.crunchyroll.com", "kiosk": False, "browser": "edge"},
+    {"name": "Rumble", "url": "https://rumble.com", "kiosk": False, "browser": "edge"},
+    {"name": "Hianime", "url": "https://hianime.to/", "kiosk": False, "browser": "edge"},
+    {"name": "Capcut", "url": "https://www.capcut.com/", "kiosk": False, "browser": "edge"},
 
-    # ------------------- News & Reference -------------------
-    {"name": "Wikipedia", "url": "https://www.wikipedia.org", "kiosk": False, "browser": "edge"},
-    {"name": "BBC News", "url": "https://www.bbc.com/news", "kiosk": False, "browser": "edge"},
-    {"name": "CNN", "url": "https://edition.cnn.com", "kiosk": False, "browser": "edge"},
-    {"name": "The New York Times", "url": "https://www.nytimes.com", "kiosk": False, "browser": "edge"},
-    {"name": "The Washington Post", "url": "https://www.washingtonpost.com", "kiosk": False, "browser": "edge"},
-    {"name": "Forbes", "url": "https://www.forbes.com", "kiosk": False, "browser": "edge"},
+    # =================== Gaming & Cloud Gaming (Actively Working 2025) ===================
+    {"name": "Xbox Cloud Gaming", "url": "https://www.xbox.com/play", "kiosk": True, "browser": "edge"},
+    {"name": "GeForce NOW", "url": "https://play.geforcenow.com", "kiosk": True, "browser": "firefox"},
+    {"name": "Amazon Luna", "url": "https://luna.amazon.com", "kiosk": True, "browser": "firefox"},
+    {"name": "Boosteroid", "url": "https://boosteroid.com/go", "kiosk": True, "browser": "firefox"},
+    {"name": "AirGPU", "url": "https://airgpu.com", "kiosk": True, "browser": "firefox"},
 
-    # ------------------- Shopping & Travel -------------------
-    {"name": "Amazon", "url": "https://www.amazon.com", "kiosk": False, "browser": "edge"},
-    {"name": "eBay", "url": "https://www.ebay.com", "kiosk": False, "browser": "edge"},
-    {"name": "Walmart", "url": "https://www.walmart.com", "kiosk": False, "browser": "edge"},
-    {"name": "Target", "url": "https://www.target.com", "kiosk": False, "browser": "edge"},
-    {"name": "Etsy", "url": "https://www.etsy.com", "kiosk": False, "browser": "edge"},
-    {"name": "Airbnb", "url": "https://www.airbnb.com", "kiosk": False, "browser": "edge"},
-    {"name": "Trivago", "url": "https://www.trivago.com", "kiosk": False, "browser": "edge"},
-    {"name": "Uber Web", "url": "https://m.uber.com", "kiosk": False, "browser": "edge"},
+    # =================== Art, Design & Creation ===================
+    {"name": "Photopea (Photoshop)", "url": "https://www.photopea.com", "kiosk": False, "browser": "edge"},
+    {"name": "Figma", "url": "https://www.figma.com", "kiosk": False, "browser": "edge"},
+    {"name": "Clip Studio Paint Web", "url": "https://www.clipstudio.net", "kiosk": False, "browser": "edge"},
+    {"name": "Sketchfab", "url": "https://sketchfab.com", "kiosk": False, "browser": "edge"},
+    {"name": "Pixlr Editor", "url": "https://pixlr.com", "kiosk": False, "browser": "edge"},
+    {"name": "Remove.bg", "url": "https://www.remove.bg", "kiosk": False, "browser": "edge"},
 
-    # ------------------- Utilities & Education -------------------
+    # =================== VTuber & Streaming Tools ===================
+    {"name": "Streamlabs OBS Web", "url": "https://streamlabs.com", "kiosk": False, "browser": "edge"},
+    {"name": "Ko-fi", "url": "https://ko-fi.com", "kiosk": False, "browser": "edge"},
+    {"name": "Patreon", "url": "https://www.patreon.com", "kiosk": False, "browser": "edge"},
+    {"name": "Throne (Wishlist)", "url": "https://throne.com", "kiosk": False, "browser": "edge"},
+    {"name": "Streamelements", "url": "https://streamelements.com", "kiosk": False, "browser": "edge"},
+    {"name": "Streamlabs Dashboard", "url": "https://streamlabs.com/dashboard", "kiosk": False, "browser": "edge"},
+    {"name": "youtube Studio", "url": "https://studio.youtube.com", "kiosk": False, "browser": "edge"},
+
+    # =================== Utilities Everyone Needs ===================
     {"name": "Google Translate", "url": "https://translate.google.com", "kiosk": False, "browser": "edge"},
-    {"name": "Photopea (Web Editor)", "url": "https://www.photopea.com", "kiosk": False, "browser": "edge"},
+    {"name": "DeepL Translate", "url": "https://www.deepl.com/translator", "kiosk": False, "browser": "edge"},
+    {"name": "Speedtest.net", "url": "https://www.speedtest.net", "kiosk": False, "browser": "edge"},
+    {"name": "Fast.com", "url": "https://fast.com", "kiosk": False, "browser": "edge"},
+    {"name": "Pomofocus Timer", "url": "https://pomofocus.io", "kiosk": False, "browser": "edge"},
+    {"name": "myNoise.net", "url": "https://mynoise.net", "kiosk": False, "browser": "edge"},
+    {"name": "Rainy Mood", "url": "https://www.rainymood.com", "kiosk": False, "browser": "edge"},
+    {"name": "Radio Garden", "url": "https://radio.garden", "kiosk": False, "browser": "edge"},
+    {"name": "ILovePDF", "url": "https://www.ilovepdf.com", "kiosk": False, "browser": "edge"},
+    {"name": "TinyPNG", "url": "https://tinypng.com", "kiosk": False, "browser": "edge"},
     {"name": "Khan Academy", "url": "https://www.khanacademy.org", "kiosk": False, "browser": "edge"},
     {"name": "Duolingo", "url": "https://www.duolingo.com", "kiosk": False, "browser": "edge"},
     {"name": "Yummly (Recipes)", "url": "https://www.yummly.com", "kiosk": False, "browser": "edge"},
     {"name": "Starbucks Order", "url": "https://app.starbucks.com", "kiosk": False, "browser": "edge"},
 
-    # ------------------- Cloud Gaming (Kiosk Mode Recommended) -------------------
-    {"name": "xCloud (Xbox)", "url": "https://www.xbox.com/play", "kiosk": True, "browser": "firefox","force_browser": "firefox"},
-    {"name": "GeForce Now", "url": "https://play.geforcenow.com", "kiosk": True, "browser": "flatpak run org.mozilla.firefox"},
-    {"name": "Amazon Luna", "url": "https://www.amazon.com/luna/play", "kiosk": True, "browser": "flatpak run org.mozilla.firefox"},
+    # =================== Shopping (Big Global Players) ===================
+    {"name": "Amazon", "url": "https://www.amazon.com", "kiosk": False, "browser": "edge"},
+    {"name": "eBay", "url": "https://www.ebay.com", "kiosk": False, "browser": "edge"},
+    {"name": "AliExpress", "url": "https://www.aliexpress.com", "kiosk": False, "browser": "edge"},
+    {"name": "Walmart", "url": "https://www.walmart.com", "kiosk": False, "browser": "edge"},
+    {"name": "Target", "url": "https://www.target.com", "kiosk": False, "browser": "edge"},
+    {"name": "Best Buy", "url": "https://www.bestbuy.com", "kiosk": False, "browser": "edge"},
+    {"name": "Etsy", "url": "https://www.etsy.com", "kiosk": False, "browser": "edge"},
+    {"name": "Trivago", "url": "https://www.trivago.com", "kiosk": False, "browser": "edge"},
+    {"name": "Uber Web", "url": "https://m.uber.com", "kiosk": False, "browser": "edge"},
+
+    # =================== News & Knowledge ===================
+    {"name": "Wikipedia", "url": "https://www.wikipedia.org", "kiosk": False, "browser": "edge"},
+    {"name": "BBC News", "url": "https://www.bbc.com/news", "kiosk": False, "browser": "edge"},
+    {"name": "Reuters", "url": "https://www.reuters.com", "kiosk": False, "browser": "edge"},
+    {"name": "The Verge", "url": "https://www.theverge.com", "kiosk": False, "browser": "edge"},
+    {"name": "TechCrunch", "url": "https://techcrunch.com", "kiosk": False, "browser": "edge"},
+    {"name": "Hacker News", "url": "https://news.ycombinator.com", "kiosk": False, "browser": "edge"},
+    {"name": "Wolfram Alpha", "url": "https://www.wolframalpha.com", "kiosk": False, "browser": "edge"},
+    {"name": "CNN", "url": "https://edition.cnn.com", "kiosk": False, "browser": "edge"},
+    {"name": "The New York Times", "url": "https://www.nytimes.com", "kiosk": False, "browser": "edge"},
+    {"name": "The Washington Post", "url": "https://www.washingtonpost.com", "kiosk": False, "browser": "edge"},
+    {"name": "Forbes", "url": "https://www.forbes.com", "kiosk": False, "browser": "edge"},
 ]
     
 DEFAULT_CONFIG = {
@@ -959,7 +1267,7 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         # --- END CLONE FEATURE ---
         self.refresh_btn = Gtk.Button(label="Refresh")
         self.refresh_btn.connect("clicked", self.on_refresh)
-        self.remove_btn = Gtk.Button(label="Remove Entry")
+        self.remove_btn = Gtk.Button(label="Delete App")
         self.remove_btn.connect("clicked", self.on_remove_app)
         
         # Added self.clone_btn to the list of buttons
@@ -1175,34 +1483,98 @@ class PWAManagerWindow(Adw.ApplicationWindow):
             self.status_push(f"Launch failed: {e}")
         # --- END FIX ---
 
-
+    #FIX: Presets Now Show In Extensions Window
     def populate_extensions(self, app):
+        # Clear existing rows
         while row := self.ext_listbox.get_row_at_index(0):
             self.ext_listbox.remove(row)
-            
-        if not app: # If no app is selected (e.g., search returns no results)
-            return
-            
-        exts = load_installed_extensions(app)
-        
-        # The complex ID verification logic is removed  now only link to homepages.
-        for ext in exts:
-            row = Gtk.ListBoxRow()
-            hbox = Gtk.Box(spacing=6)
-            label = ext["name"]
-            
-            hbox.append(Gtk.Label(label=label, halign=Gtk.Align.START))
-            
-            # Add a button to quickly open the URL again
-            open_btn = Gtk.Button(label="Open Page")
-            open_btn.connect("clicked", lambda b, u=ext.get('web_url'): self._launch_url_in_browser(app, u))
-            hbox.append(open_btn)
 
-            remove_btn = Gtk.Button(label="Remove")
-            remove_btn.connect("clicked", lambda b, e=ext: self.on_remove_ext(app, e))
-            hbox.append(remove_btn)
-            row.set_child(hbox)
+        if not app:
+            return
+
+        # 1. Load installed extensions (current behavior)
+        installed_exts = load_installed_extensions(app)
+        installed_names = {ext["name"] for ext in installed_exts}
+
+        # 2. Detect preset group for this app
+        preset_key = get_app_key(app)
+        preset_exts = DEFAULT_EXT_PRESETS.get(preset_key, [])
+
+        # ------------------------
+        # SECTION 1: INSTALLED EXTENSIONS
+        # ------------------------
+        if installed_exts:
+            header = Gtk.Label(
+                label="Installed Extensions",
+                halign=Gtk.Align.START,
+                use_markup=True
+            )
+            header.set_markup("<b>Installed Extensions</b>")
+            row = Gtk.ListBoxRow()
+            row.set_child(header)
             self.ext_listbox.append(row)
+    
+            for ext in installed_exts:
+                row = Gtk.ListBoxRow()
+                hbox = Gtk.Box(spacing=6)
+                hbox.append(Gtk.Label(label=ext["name"], halign=Gtk.Align.START))
+
+                open_btn = Gtk.Button(label="Open Page")
+                open_btn.connect("clicked", lambda b, u=ext.get("web_url"):
+                                 self._launch_url_in_browser(app, u))
+                hbox.append(open_btn)
+
+                remove_btn = Gtk.Button(label="Remove")
+                remove_btn.connect("clicked", lambda b, e=ext:
+                                   self.on_remove_ext(app, e))
+                hbox.append(remove_btn)
+
+                row.set_child(hbox)
+                self.ext_listbox.append(row)
+
+        # ------------------------
+       # SECTION 2: AVAILABLE PRESETS
+        # ------------------------
+        if preset_exts:
+            header = Gtk.Label(
+                label="Available Presets",
+                halign=Gtk.Align.START,
+                use_markup=True
+            )
+            header.set_markup("<b>Available Presets</b>")
+            row = Gtk.ListBoxRow()
+            row.set_child(header)
+            self.ext_listbox.append(row)
+
+            for ext in preset_exts:
+                # Only show presets that are NOT already installed
+                if ext["name"] in installed_names:
+                    continue
+
+                row = Gtk.ListBoxRow()
+                hbox = Gtk.Box(spacing=6)
+
+                hbox.append(Gtk.Label(label=ext["name"], halign=Gtk.Align.START))
+
+                # Button to launch this preset's webpage
+                open_btn = Gtk.Button(label="Open Page")
+                open_btn.connect("clicked", lambda b, u=ext.get("web_url"):
+                                 self._launch_url_in_browser(app, u))
+                hbox.append(open_btn)
+
+                # Button to add this preset to installed list
+                def on_add_single(b, e=ext):
+                    installed_exts.append(e)
+                    save_installed_extensions(app, installed_exts)
+                    self.populate_extensions(app)
+
+                add_btn = Gtk.Button(label="Add")
+                add_btn.connect("clicked", on_add_single)
+                hbox.append(add_btn)
+
+                row.set_child(hbox)
+                self.ext_listbox.append(row)
+    #-----END OF FIX-------
 
     def on_app_selected(self, dropdown, _):
         idx = dropdown.get_selected()
@@ -1325,6 +1697,17 @@ class PWAManagerWindow(Adw.ApplicationWindow):
                     idx = self.app_combo.get_selected()
                     if idx != Gtk.INVALID_LIST_POSITION:
                         app = self.sorted_apps_list[idx] # FIX: Get app from the sorted list
+                        # --- START FIX: Save custom extension and refresh UI ---
+                        exts = load_installed_extensions(app) # 1. Load existing
+                    
+                        new_ext = {"name": name, "web_url": web_url}
+                        exts.append(new_ext) # 2. Add the new one
+                    
+                        save_installed_extensions(app, exts) # 3. Save the list
+                    
+                        self.populate_extensions(app) # 4. Refresh UI
+                        self.status_push(f"Added custom extension '{name}' for {app['name']}.")
+                        # --- END FIX ---
                         
                         # Use the web_url for installation redirect
                         browser_key = self.browser_combo.get_selected_item().get_string().lower() if self.browser_combo.get_selected_item() else "edge"
