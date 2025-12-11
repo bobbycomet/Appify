@@ -7,6 +7,8 @@
 
 ![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/Appify1.png)
 
+![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/Extensionsview.png)
+
 **VERSION 1.0.5 UPDATES: Presets now show in the extensions window, and fixed a minor bug that was not updating the config folder in the .pwa_manager folder. If you have issues with the config file not updating, you must delete the profile and reinstall the PWA you made.** 
 
 **NEW ADDITIONs: More sites in the presets, and more extensions in the presets. Some Google Docs add-ons that are from Google, not the Chrome store.**
