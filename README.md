@@ -7,14 +7,17 @@
 
 ![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/Appify1.png)
 
-**VERSION 1.0.4 UPDATES: Fixed some issues where Brave native was not launching. Cleaned up the Brave logic for better Flatpak, snap, and native browser launching. Brave Browser now allows icons, but the Flatpak version does not. This is due to the sandboxing, not the tool.**
+**VERSION 1.0.5 UPDATES: Presets now show in the extensions window, and fixed a minor bug that was not updating the config folder in the .pwa_manager folder. If you have issues with the config file not updating, you must delete the profile and reinstall the PWA you made.** 
+
+**NEW ADDITIONs: More sites in the presets, and more extensions in the presets. Some Google Docs add-ons that are from Google, not the Chrome store.**
+
+**Keeps the fixed issues where Brave native was not launching. Cleaned up the Brave logic for better Flatpak, snap, and native browser launching. Brave Browser now allows icons, but the Flatpak version does not. This is due to the sandboxing, not the tool.**
 
 **Added tooltips, just hover over nice, ionice, GPU acceleration, and Kiok mode, and it will give you a rundown on what it does.**
 
 **Added an about page, which has all the normal legal license stuff, but also has how to raise an issue with the tool, Discord, how to support the project, and so on.**
 
-**You must use the system package of Firefox stable to have controller support; this is because Flatpak browser does not support it out of the box. Again, a Flatpak sandboxing issue.**
-
+**You must use the system package of Firefox stable to have controller support; this is because the Flatpak browser does not support it out of the box. Again, a Flatpak sandboxing issue.**
 
 
 **Appify** (formerly known as PWA Manager) is a beautiful, powerful, and free Progressive Web App (PWA) creator for Linux. Designed with **Windows switchers** in mind, it makes web apps feel native — complete with their own window, taskbar icon, isolated profiles, extensions, and performance controls.
@@ -142,7 +145,7 @@ Just search, tweak, install.
 Install
 Download the Deb directly from the releases page or from the source. Here is how to set the environment.
 ```
-wget -O pwamanager.deb https://github.com/bobbycomet/Appify/releases/download/v1.0.2/pwamanager-1.0.4.deb
+wget -O pwamanager.deb https://github.com/bobbycomet/Appify/releases/download/v1.0.2/pwamanager-1.0.5.deb
 sudo dpkg -i pwamanager.deb 
 sudo apt --fix-broken install -y 
 rm pwamanager.deb
