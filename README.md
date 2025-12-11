@@ -7,9 +7,15 @@
 
 ![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/Appify1.png)
 
-**VERSION 1.0.3 UPDATEs: Fixed some issues where Firefox native was not launching in kiosk, you must use the system package of Firefox stable to have controller support, this is because Flatpak browser does not support it as well.**
+**VERSION 1.0.4 UPDATES: Fixed some issues where Brave native was not launching. Cleaned up the Brave logic for better Flatpak, snap, and native browser launching. Brave Browser now allows icons, but the Flatpak version does not. This is due to the sandboxing, not the tool.**
 
-**Brave browser now allows icons, but the Flatpak version does not. This is due to the sandboxing.**
+**Added tooltips, just hover over nice, ionice, GPU acceleration, and Kiok mode, and it will give you a rundown on what it does.**
+
+**Added an about page, which has all the normal legal license stuff, but also has how to raise an issue with the tool, Discord, how to support the project, and so on.**
+
+**You must use the system package of Firefox stable to have controller support; this is because Flatpak browser does not support it out of the box. Again, a Flatpak sandboxing issue.**
+
+
 
 **Appify** (formerly known as PWA Manager) is a beautiful, powerful, and free Progressive Web App (PWA) creator for Linux. Designed with **Windows switchers** in mind, it makes web apps feel native — complete with their own window, taskbar icon, isolated profiles, extensions, and performance controls.
 
