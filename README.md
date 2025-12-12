@@ -35,19 +35,19 @@ Whether you're turning Gmail into a desktop app, running multiple Twitch account
 
 ## Key Features
 
-Isolated Profiles for Every App
+- Isolated Profiles for Every App
 
-Each PWA gets its own sandboxed environment:
+- Each PWA gets its own sandboxed environment:
 
-Unique logins
+- Unique logins
 
-Separate cookies and site data
+- Separate cookies and site data
 
-Independent extensions & settings
+- Independent extensions & settings
 
-Uninstalling an app does not erase its data. Simply reinstall later and everything returns.
+- Uninstalling an app does not erase its data. Simply reinstall later and everything returns.
 
-You can nuke the entire pwa and profile with delete app and choosing delete profile.
+- You can nuke the entire pwa and profile with delete app and choosing delete profile.
 
 ### To back up or migrate profiles, copy the hidden directory:
 
@@ -55,109 +55,109 @@ You can nuke the entire pwa and profile with delete app and choosing delete prof
 ~/.pwa_manager
 ```
 
-Smart Icons & Native Desktop Integration
+- Smart Icons & Native Desktop Integration
 
-No more “another Chrome window.”
+- No more “another Chrome window.”
 
 ## Each PWA gets:
 
-Correct icon & branding (favicon → icon.horse → Google fallback)
+- Correct icon & branding (favicon → icon.horse → Google fallback)
 
-Proper .desktop file
+- Proper .desktop file
 
-Correct WM_CLASS and D-Bus names
+- Correct WM_CLASS and D-Bus names
 
-Full integration with GNOME, KDE, XFCE, etc.
+- Full integration with GNOME, KDE, XFCE, etc.
 
 ## Cloud Gaming Ready:
 
-Console-style kiosk presets for:
+- Console-style kiosk presets for:
 
-Xbox Cloud Gaming (xCloud)
+- Xbox Cloud Gaming (xCloud)
 
-GeForce Now
+- GeForce Now
 
-Amazon Luna
+- Amazon Luna
 
 ## Use Firefox stable version by default for:
 
-Native gamepad support
+- Native gamepad support
 
-Better Wayland behavior
+- Better Wayland behavior
 
-Certain anti-cheat workarounds
+- Certain anti-cheat workarounds
 
-Multi-Account Made Simple
+- Multi-Account Made Simple
 
 ## Clone any app instantly:
 
-Multiple Twitch accounts
+- Multiple Twitch accounts
 
-Personal + Work Gmail
+- Personal + Work Gmail
 
-Streaming dashboards
+- Streaming dashboards
 
-Multiple Discord or YouTube logins
+- Multiple Discord or YouTube logins
 
-Each clone runs in its own isolated environment.
+- Each clone runs in its own isolated environment.
 
 ## Extension Presets:
 
-One-click extension bundles for:
+- One-click extension bundles for:
 
-Twitch (BTTV, FFZ, 7TV)
+- Twitch (BTTV, FFZ, 7TV)
 
-Kick (NipahTV, 7TV)
+- Kick (NipahTV, 7TV)
 
-YouTube (SponsorBlock, uBlock, Return YouTube Dislike)
+- YouTube (SponsorBlock, uBlock, Return YouTube Dislike)
 
-Google Docs add-ons (Google-native only)
+- Google Docs add-ons (Google-native only)
 
-You can add as many as you want, and is not limited to just ome browser
+- You can add as many as you want, and is not limited to just ome browser
 
-You can also install any Chrome-compatible extension manually inside each isolated profile.
+- You can also install any Chrome-compatible extension manually inside each isolated profile.
 
 ## Complete Browser Support:
 
-Native browser installations
+- Native browser installations
 
-Flatpak
+- Flatpak
 
-Snap
+- Snap
 
 ## Supported browsers:
 
-Microsoft Edge (default)
+- Microsoft Edge (default)
 
-Brave
+- Brave
 
-Vivaldi
+- Vivaldi
 
-Chrome/Chromium
+- Chrome/Chromium
 
-Firefox
+- Firefox
 
-Opera
+- Opera
 
 ## Performance Controls (Advanced)
 
-Every PWA can be tuned individually:
+- Every PWA can be tuned individually:
 
-Toggle GPU acceleration
+- Toggle GPU acceleration
 
-Set CPU priority (nice)
+- Set CPU priority (nice)
 
-Set I/O priority (ionice)
+- Set I/O priority (ionice)
 
-Defaults are optimized for mainstream usage, but power users can fine-tune cloud gaming, streaming, or background apps.
+- Defaults are optimized for mainstream usage, but power users can fine-tune cloud gaming, streaming, or background apps.
 
 ## Wayland & X11 Support
 
-Appify detects your environment automatically.
+- Appify detects your environment automatically.
 
-**Version 1.0.6 introduces stricter Wayland/X11 detection, but due to minor delays on startup, 1.0.5 remains the stable release, and still supports Wayland. Wayland being the thing to replace X11, I am only preparing the app for that, but Wayland is still not fully reliable for everything, just yet.**
+- **Version 1.0.6 introduces stricter Wayland/X11 detection, but due to minor delays on startup, 1.0.5 remains the stable release, and still supports Wayland. Wayland being the thing to replace X11, I am only preparing the app for that, but Wayland is still not fully reliable for everything, just yet.**
 
-**1.0.6 is available early on Patreon for beta testers.**
+- **1.0.6 is available early on Patreon for beta testers.**
 
 ## Install
 
