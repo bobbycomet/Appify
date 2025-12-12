@@ -28,8 +28,9 @@ Whether you're turning Gmail into a desktop app, running multiple Twitch account
 
 
 <div align="center">
-  <img src="[https://github.com/bobbycomet/Appify/blob/main/Griffin-G.png]" alt="Griffin Screenshot" width="25%"/>
+  <img src="[https://githubusercontent.com/bobbycomet/Appify/blob/main/Griffin-G.png]" alt="Griffin Screenshot" width="25%"/>
 </div>
+
 
 > Built for **Griffin Linux aka Griffin OS** — soon to be available for everyone. 
 
