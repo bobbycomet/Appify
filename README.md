@@ -12,8 +12,6 @@ Appify is ideal for Windows switchers, streamers, multi-account users, and anyon
 
 ![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/Extensionsview.png)
 
-**I have a version 1.0.6, but the reason I am not releasing it yet is due to the Wayland and X11 hotfix. While it works, it does have a delay because of the logic checks your environment for Wayland and falls back to X11. The current version supports Wayland, but not strictly Wayland or strictly X11, which version 1.0.6 does. It might be put into the beta builds on my Patreon for anyone who wants it, but for now, version 1.0.5 is the safest option, at least until X11 is replaced. Socials are at the bottom of this page.**
-
 
 **VERSION 1.0.5 UPDATES: Presets now show in the extensions window, and fixed a minor bug that was not updating the config folder in the .pwa_manager folder. If you have issues with the config file not updating, you must delete the profile and reinstall the PWA you made.** 
 
@@ -162,12 +160,13 @@ Defaults are optimized for mainstream usage, but power users can fine-tune cloud
 
 Appify detects your environment automatically.
 
-Version 1.0.6 introduces stricter Wayland/X11 control, but due to minor delays on startup, 1.0.5 remains the stable release.
+**Version 1.0.6 introduces stricter Wayland/X11 detection, but due to minor delays on startup, 1.0.5 remains the stable release, and still supports Wayland. Wayland being the thing to replace X11, I am only preparing the app for that, but Wayland is still not fully reliable for everything, just yet.**
 
-1.0.6 is available early on Patreon for beta testers.
+**1.0.6 is available early on Patreon for beta testers.**
 
-Install
-Download the AppImage or Deb directly from the releases page or from the source. Here is how to set the environment.
+## Install
+
+Download the AppImage or Deb directly from the releases page or from the source.
 
 AppImage, be sure to check your permissions that you set it to launch as an application.
 
@@ -176,7 +175,7 @@ wget https://github.com/bobbycomet/Appify/releases/download/v1.0.5.1/Appify-x86_
 chmod +x Appify-x86_64.AppImage
 ```
 
-Deb download, you can use the wget method or download from the releases and use your distro's package installer or gdebi (best method to make sure dependencies are fulfilled)
+**Deb download, you can use the wget method or download from the releases and use your distro's package installer or gdebi (best method to make sure dependencies are fulfilled)**
 
 ```
 sudo apt update
@@ -191,6 +190,7 @@ sudo dpkg -i pwamanager.deb
 sudo apt --fix-broken install -y 
 rm Appify.deb
 ```
+**If you use it from source, here is how to build the environment.**
 
 For Fedora, CentOS, RHEL, etc...
 ```
