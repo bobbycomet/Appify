@@ -103,7 +103,7 @@ Whether you're turning Gmail into a desktop app, running multiple Twitch account
 
 ## Extension Presets:
 
-- One-click extension bundles for:
+**One-click extension bundles for:**
 
 - Twitch (BTTV, FFZ, 7TV)
 
@@ -157,7 +157,7 @@ Whether you're turning Gmail into a desktop app, running multiple Twitch account
 
 - **Version 1.0.6 introduces stricter Wayland/X11 detection, but due to minor delays on startup, 1.0.5 remains the stable release, and still supports Wayland. Wayland being the thing to replace X11, I am only preparing the app for that, but Wayland is still not fully reliable for everything, just yet.**
 
-- **1.0.6 is available early on Patreon for beta testers.**
+- **1.0.6 is available early on Patreon for beta testers. Check the bottom of the page.**
 
 ## Install
 
@@ -224,19 +224,19 @@ StartupNotify=true
 
 ## Why No Flatpak Version?
 
-A Flatpak build would break core functionality due to sandbox restrictions, including:
+- A Flatpak build would break core functionality due to sandbox restrictions, including:
 
-Browser detection would break
+- Browser detection would break
 
-Extension installation would break
+- Extension installation would break
 
-Profile isolation would break
+- Profile isolation would break
 
-Wayland/X11 switching would break
+- Wayland/X11 switching would break
 
-Controller support would break
+- Controller support would break
 
-And more issues that flat seal would not be able to fix
+- And more issues that flat seal would not be able to fix
 
 Until these limitations can be resolved, a Flatpak package is not planned.
 
@@ -246,13 +246,13 @@ Until these limitations can be resolved, a Flatpak package is not planned.
   <img src="https://raw.githubusercontent.com/bobbycomet/Appify/main/Griffin-G.png" alt="Griffin Screenshot" width="25%"/>
 </p>
 
-Coming soon:
+**Coming soon:**
 
-Griffin Linux
+- Griffin Linux
 
-Built-in update checker for deb an AppImage
+- Built-in update checker for deb an AppImage
 
-Windows version
+- Windows version
 
 
 ## Community & Support
