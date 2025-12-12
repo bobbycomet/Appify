@@ -40,7 +40,8 @@ Whether you're turning Gmail into a desktop app, running multiple Twitch account
 </p>
 
 
-Key Features
+## Key Features
+
 Isolated Profiles for Every App
 
 Each PWA gets its own sandboxed environment:
@@ -53,15 +54,19 @@ Independent extensions & settings
 
 Uninstalling an app does not erase its data. Simply reinstall later and everything returns.
 
-To back up or migrate profiles, copy the hidden directory:
+You can nuke the entire pwa and profile with delete app and choosing delete profile.
 
-~/.pwamanager
+### To back up or migrate profiles, copy the hidden directory:
+
+```
+~/.pwa_manager
+```
 
 Smart Icons & Native Desktop Integration
 
 No more “another Chrome window.”
 
-Each PWA gets:
+## Each PWA gets:
 
 Correct icon & branding (favicon → icon.horse → Google fallback)
 
@@ -71,7 +76,7 @@ Correct WM_CLASS and D-Bus names
 
 Full integration with GNOME, KDE, XFCE, etc.
 
-Cloud Gaming Ready
+## Cloud Gaming Ready:
 
 Console-style kiosk presets for:
 
@@ -81,7 +86,7 @@ GeForce Now
 
 Amazon Luna
 
-Use Firefox stable version by default for:
+## Use Firefox stable version by default for:
 
 Native gamepad support
 
@@ -91,7 +96,7 @@ Certain anti-cheat workarounds
 
 Multi-Account Made Simple
 
-Clone any app instantly:
+## Clone any app instantly:
 
 Multiple Twitch accounts
 
@@ -103,7 +108,7 @@ Multiple Discord or YouTube logins
 
 Each clone runs in its own isolated environment.
 
-Extension Presets
+## Extension Presets:
 
 One-click extension bundles for:
 
@@ -115,11 +120,11 @@ YouTube (SponsorBlock, uBlock, Return YouTube Dislike)
 
 Google Docs add-ons (Google-native only)
 
+You can add as many as you want, and is not limited to just ome browser
+
 You can also install any Chrome-compatible extension manually inside each isolated profile.
 
-Complete Browser Support
-
-Works with:
+## Complete Browser Support:
 
 Native browser installations
 
@@ -127,7 +132,7 @@ Flatpak
 
 Snap
 
-Supported browsers:
+## Supported browsers:
 
 Microsoft Edge (default)
 
@@ -141,7 +146,7 @@ Firefox
 
 Opera
 
-Performance Controls (Advanced)
+## Performance Controls (Advanced)
 
 Every PWA can be tuned individually:
 
@@ -153,7 +158,7 @@ Set I/O priority (ionice)
 
 Defaults are optimized for mainstream usage, but power users can fine-tune cloud gaming, streaming, or background apps.
 
-Wayland & X11 Support
+## Wayland & X11 Support
 
 Appify detects your environment automatically.
 
