@@ -154,17 +154,25 @@ Just search, tweak, install.
 Install
 Download the AppImage or Deb directly from the releases page or from the source. Here is how to set the environment.
 
-AppImage
+AppImage, be sure to check your permissions that you set it to launch as an application.
+
 ```
 wget https://github.com/bobbycomet/Appify/releases/download/v1.0.5.1/Appify-x86_64.AppImage
 chmod +x Appify-x86_64.AppImage
 ```
-Deb
+
+Deb download, you can use the wget method or download from the releases and use your distro's package installer or gdebi (best method to make sure dependencies are fulfilled)
+
+```
+sudo apt update
+sudo apt install gdebi
+```
+
 ```
 wget https://github.com/bobbycomet/Appify/releases/download/v1.0.5/Appify-1.0.5.deb
 sudo dpkg -i pwamanager.deb 
 sudo apt --fix-broken install -y 
-rm pwamanager.deb
+rm Appify.deb
 ```
 
 For Fedora, CentOS, RHEL, etc...
@@ -186,7 +194,7 @@ sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-4.0 gir1.2-adw-1 curl xd
 ```
 Don't forget to (the py file name will update in the future)
 ```
-chmod +x PWAmanager.py
+chmod +x Appify.py
 ```
 For the desktop file (use the icon in the files above)
 ```
