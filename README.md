@@ -142,7 +142,7 @@ Perfect for gaming, streaming, or background apps.
 - Correct icon in dock/taskbar
 - Works perfectly on GNOME, KDE, XFCE, etc.
 
-#### Search + 61 Preconfigured Apps
+#### Search + Preconfigured Apps
 Including:
 - Gmail, Google Docs, Office 365
 - Discord, Slack, Zoom
