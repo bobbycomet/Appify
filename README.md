@@ -27,9 +27,9 @@
 Whether you're turning Gmail into a desktop app, running multiple Twitch accounts, or playing cloud games with anti-cheat bypasses — **Appify does it all**.
 
 
-<div align="center">
-  <img src="https://raw.githubusercontent.com/bobbycomet/Appify/main/Griffin-G.png" alt="Griffin Screenshot" width="25%"/>
-</div>
+<p align="center">
+  <img src="https://raw.githubusercontent.com/bobbycomet/Appify/main/Griffin-G.png" alt="Griffin Screenshot" width="10%"/>
+</p>
 
 
 > Built for **Griffin Linux aka Griffin OS** — soon to be available for everyone. 
