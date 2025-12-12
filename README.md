@@ -33,11 +33,6 @@ Appify is ideal for Windows switchers, streamers, multi-account users, and anyon
 Whether you're turning Gmail into a desktop app, running multiple Twitch accounts, or playing cloud games with anti-cheat bypasses — **Appify does it all**.
 
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/bobbycomet/Appify/main/Griffin-G.png" alt="Griffin Screenshot" width="25%"/>
-</p>
-
-
 ## Key Features
 
 Isolated Profiles for Every App
@@ -246,6 +241,10 @@ And more issues that flat seal would not be able to fix
 Until these limitations can be resolved, a Flatpak package is not planned.
 
 ## Roadmap
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/bobbycomet/Appify/main/Griffin-G.png" alt="Griffin Screenshot" width="25%"/>
+</p>
 
 Coming soon:
 
