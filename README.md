@@ -23,7 +23,7 @@
 **You must use the system package of Firefox stable to have controller support; this is because the Flatpak browser does not support it out of the box. Again, a Flatpak sandboxing issue.**
 
 
-**Appify** is a beautiful, powerful, and free Progressive Web App (PWA) creator for Linux. Designed with **Windows switchers** in mind, it makes web apps feel native — complete with their own window, taskbar icon, isolated profiles, extensions, and performance controls.
+**Appify** is a beautiful, powerful, and free Progressive Web App (PWA) creator for Linux. Designed with **Windows switchers** in mind, it makes web apps feel native — complete with their own window, taskbar icon, isolated profiles, extensions, and performance controls. No electron eating your RAM here.
 
 Whether you're turning Gmail into a desktop app, running multiple Twitch accounts, or playing cloud games with anti-cheat bypasses — **Appify does it all**.
 
@@ -49,7 +49,7 @@ Whether you're turning Gmail into a desktop app, running multiple Twitch account
 | Kiosk mode (perfect for cloud gaming)   | Yes                              | Limited             | Limited          |
 | Extension presets (Twitch, YouTube, etc.) | Yes                            | No                  | No               |
 | Clone apps (multi-account support)      | Yes                              | No                  | No               |
-| Search + 61 curated app presets         | Yes                              | No                  | No               |
+| Search + curated app presets            | Yes                              | No                  | No               |
 | Works after uninstall (profile kept)    | Yes                              | No                  | No               |
 
 ---
