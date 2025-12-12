@@ -213,4 +213,6 @@ Why?
 It would break many of the functions because of their sandboxing. This is not something I could readily fix, even with flatseal. I'll keep searching for solutions, but with making the distro and updating my tools, it is already a lot.
 
 Discord- https://discord.gg/7fEt5W7DPh
+
+
 Want to support me and the Griffin project? https://ko-fi.com/bobby60908
