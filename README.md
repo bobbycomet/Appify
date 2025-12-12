@@ -2,7 +2,7 @@
   <img src="https://raw.githubusercontent.com/bobbycomet/Appify/main/appify.png" alt="Appify Screenshot" width="25%"/>
 </div>
 
-# Appify – The Ultimate Linux PWA Manager
+# Appify – The Ultimate Linux PWA Manager NOW HAS AN APPIMAGE AND DEB
 
 **Turn any website into a first-class desktop app — instantly.**
 
