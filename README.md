@@ -1,6 +1,7 @@
 <div align="center">
   <img src="https://raw.githubusercontent.com/bobbycomet/Appify/main/appify.png" alt="Appify Screenshot" width="25%"/>
 </div>
+
 # Appify – The Ultimate Linux PWA Manager
 
 **Turn any website into a first-class desktop app — instantly.**
@@ -32,7 +33,7 @@ Whether you're turning Gmail into a desktop app, running multiple Twitch account
 </p>
 
 
-> Built for **Griffin Linux aka Griffin OS** — soon to be available for everyone. 
+# **Built for **Griffin Linux aka Griffin OS** — soon to be available for everyone.** 
 
 ---
 
