@@ -109,8 +109,9 @@ Auto-open extension pages in the correct isolated profile:
 - **Twitch**: BetterTTV, FrankerFaceZ, 7TV
 - **Kick**: NipahTV, 7TV
 - **YouTube**: SponsorBlock, uBlock Origin, Return YouTube Dislike
+- **And many more presets**
 
-Or add **any extension** manually — just click "Open Store" and install (PWA must be installed for manual to work).
+Or add **any extension** manually — just click **"Open Store"** and install (PWA must be installed for the manual option to work). You can also add custom add-ons, like Google Workspace add-ons. Don't want a preset? You can add them or remove them individually, or install them all with the **"install preset"** button. 
 
 #### Full Browser Support
 Works with:
