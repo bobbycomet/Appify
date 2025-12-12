@@ -2,7 +2,7 @@
   <img src="https://raw.githubusercontent.com/bobbycomet/Appify/main/appify.png" alt="Appify Screenshot" width="25%"/>
 </div>
 
-# Appify – The Ultimate Linux PWA Manager NOW HAS AN APPIMAGE AND DEB
+# Appify – The Ultimate Linux PWA Manager Now Has An APPIMAGE And DEB
 
 **Turn any website into a first-class desktop app — instantly.**
 
@@ -152,9 +152,16 @@ Including:
 Just search, tweak, install.
 
 Install
-Download the Deb directly from the releases page or from the source. Here is how to set the environment.
+Download the AppImage or Deb directly from the releases page or from the source. Here is how to set the environment.
+
+AppImage
 ```
-wget -O pwamanager.deb https://github.com/bobbycomet/Appify/releases/download/v1.0.2/pwamanager-1.0.5.deb
+wget https://github.com/bobbycomet/Appify/releases/download/v1.0.5.1/Appify-x86_64.AppImage
+chmod +x Appify-x86_64.AppImage
+```
+Deb
+```
+wget https://github.com/bobbycomet/Appify/releases/download/v1.0.5/Appify-1.0.5.deb
 sudo dpkg -i pwamanager.deb 
 sudo apt --fix-broken install -y 
 rm pwamanager.deb
@@ -196,16 +203,14 @@ StartupNotify=true
 ```
 
 Coming soon
-More updates for tool tips, YouTube videos (not really needed, but some people understand better with visuals), and more PWA site presets.
-Griffin Repo, as stated, this is for a custom distro I am almost finished with. This tool will be a part of that repo. This tool might get an update checker, ot I might turn it into its own repo for updates. Have yet to decide.
-Windows version
+Griffin Repo, as stated, this is for a custom distro I am almost finished with. This tool will be a part of that repo. This tool might get an update checker, or I might turn it into its own repo for updates. Have yet to decide.
+
+A Windows version.
 
 What is not coming soon
-Appimage
-Why?
-I tried it multiple times, but I can't seem to grasp how to make them. It might be a while before I have an AppImage. For now works on Debian/Ubuntu systems.
 Flatpak
 Why?
-It would break many of the functions because of their sandboxing.
+It would break many of the functions because of their sandboxing. This is not something I could readily fix, even with flatseal. I'll keep searching for solutions, but with making the distro and updating my tools, it is already a lot.
 
 Discord- https://discord.gg/7fEt5W7DPh
+Want to support me and the Griffin project? https://ko-fi.com/bobby60908
