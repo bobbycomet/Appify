@@ -28,7 +28,7 @@ Whether you're turning Gmail into a desktop app, running multiple Twitch account
 
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/bobbycomet/Appify/main/Griffin-G.png" alt="Griffin Screenshot" width="10%"/>
+  <img src="https://raw.githubusercontent.com/bobbycomet/Appify/main/Griffin-G.png" alt="Griffin Screenshot" width="25%"/>
 </p>
 
 
