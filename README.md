@@ -2,9 +2,13 @@
   <img src="https://raw.githubusercontent.com/bobbycomet/Appify/main/appify.png" alt="Appify Screenshot" width="25%"/>
 </div>
 
-# Appify – The Ultimate Linux PWA Manager Now Has An APPIMAGE And DEB
+# Appify – The Ultimate Linux PWA Manager
 
-**Turn any website into a first-class desktop app — instantly.**
+Turn any website into a first-class desktop application — instantly.
+
+Appify creates isolated, native-feeling PWAs on Linux using your existing browser engines. No Electron overhead, no memory-hungry wrappers. Just clean, integrated desktop apps.
+
+Appify is ideal for Windows switchers, streamers, multi-account users, and anyone who wants cloud gaming or productivity apps to behave like true native applications.
 
 ![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/Extensionsview.png)
 
@@ -36,123 +40,126 @@ Whether you're turning Gmail into a desktop app, running multiple Twitch account
 </p>
 
 
-# **Built for **Griffin Linux aka Griffin OS** — soon to be available for everyone.** 
+Key Features
+Isolated Profiles for Every App
 
----
+Each PWA gets its own sandboxed environment:
 
-### Why Appify?
+Unique logins
 
-| Feature                                 | Appify                          | Native Browser PWA | Edge/Chrome SSBs |
-|---------------------------------------- |----------------------------------|---------------------|------------------|
-| Isolated profiles (logins preserved)    | Yes                              | Yes                 | Yes              |
-| Custom icons per app                    | Yes                              | Sometimes           | No               |
-| Flatpak/Snap/Native browser support     | Yes                              | No                  | No               |
-| GPU acceleration toggle                 | Yes                              | No                  | No               |
-| nice/ionice tuning                      | Yes                              | No                  | No               |
-| Kiosk mode (perfect for cloud gaming)   | Yes                              | Limited             | Limited          |
-| Extension presets (Twitch, YouTube, etc.) | Yes                            | No                  | No               |
-| Clone apps (multi-account support)      | Yes                              | No                  | No               |
-| Search + curated app presets            | Yes                              | No                  | No               |
-| Works after uninstall (profile kept)    | Yes                              | No                  | No               |
+Separate cookies and site data
 
----
+Independent extensions & settings
 
-### Key Features
+Uninstalling an app does not erase its data. Simply reinstall later and everything returns.
 
-#### Fully Isolated Profiles
-Each PWA gets its own browser profile:
-- Saved logins
-- Cookies & site data
-- Extensions
-- Settings
-- No data leaks to other profiles
+To back up or migrate profiles, copy the hidden directory:
 
-**Uninstall an app? Your data stays safe.** Reinstall later — everything is still there.
+~/.pwamanager
 
-**Light/Dark modes**
+Smart Icons & Native Desktop Integration
 
-**Want to take the data with you?** Just copy your folder .pwamanager (should be in your home directory, just choose show hidden files), and you can place it in a new computer for your profiles and everything else to work. This is for safety. I could add an import/export, but this way, if something broke in the import/export, you lose data; it will not mess up your data by doing it this way.
+No more “another Chrome window.”
 
-#### Per-App Icons & Taskbar Identity
-No more "another Chrome window" confusion.
+Each PWA gets:
 
-- Twitch → Purple Twitch icon
-- YouTube → Red YouTube icon
-- Discord → Discord icon
-- Even custom sites get smart icons (via icon.horse + favicon + Google fallbacks)
+Correct icon & branding (favicon → icon.horse → Google fallback)
 
-#### Cloud Gaming Ready
-Dedicated kiosk presets for:
-- Xbox Cloud Gaming (xCloud)
-- GeForce Now
-- Amazon Luna
+Proper .desktop file
 
-Uses **Firefox Flatpak** by default for:
-- Native gamepad support
-- Better Wayland compatibility
-- Anti-cheat workarounds (when needed)
+Correct WM_CLASS and D-Bus names
 
-V1.0.2 fixed the kiosk mode issue. All cloud gaming will launch in a console-like mode now.
+Full integration with GNOME, KDE, XFCE, etc.
 
-#### Multi-Account Heaven
-**Clone any app** in one click:
-- Main + Alt Twitch accounts
-- Work + Personal Gmail
-- Two YouTube Music instances
-- Two Discord logins
+Cloud Gaming Ready
 
-#### Streamer and Moderator heaven
-- Copy the link of your streaming tools (chat, mod tools, events, etc.)
-- Panel them how you want
+Console-style kiosk presets for:
 
-All run simultaneously with isolated profiles.
+Xbox Cloud Gaming (xCloud)
 
-#### Extension Presets (One-Click Setup)
-Auto-open extension pages in the correct isolated profile:
-- **Twitch**: BetterTTV, FrankerFaceZ, 7TV
-- **Kick**: NipahTV, 7TV
-- **YouTube**: SponsorBlock, uBlock Origin, Return YouTube Dislike
-- **And many more presets**
+GeForce Now
 
-Or add **any extension** manually — just click **"Open Store"** and install (PWA must be installed for the manual option to work). You can also add custom add-ons, like Google Workspace add-ons. Don't want a preset? You can add them or remove them individually, or install them all with the **"install preset"** button. 
+Amazon Luna
 
-#### Full Browser Support
+Use Firefox stable version by default for:
+
+Native gamepad support
+
+Better Wayland behavior
+
+Certain anti-cheat workarounds
+
+Multi-Account Made Simple
+
+Clone any app instantly:
+
+Multiple Twitch accounts
+
+Personal + Work Gmail
+
+Streaming dashboards
+
+Multiple Discord or YouTube logins
+
+Each clone runs in its own isolated environment.
+
+Extension Presets
+
+One-click extension bundles for:
+
+Twitch (BTTV, FFZ, 7TV)
+
+Kick (NipahTV, 7TV)
+
+YouTube (SponsorBlock, uBlock, Return YouTube Dislike)
+
+Google Docs add-ons (Google-native only)
+
+You can also install any Chrome-compatible extension manually inside each isolated profile.
+
+Complete Browser Support
+
 Works with:
-- Native installs
-- Flatpak (Firefox, Brave, Edge, etc.)
-- Snap packages
 
-Supports:
-- Microsoft Edge (default, but you can swap it to your favorite)
-- Brave · Vivaldi · Chrome · Firefox · Opera
+Native browser installations
 
-#### Performance Controls
-Fine-tune every PWA:
-- GPU acceleration on/off
-- `nice` priority (-20 to 19)
-- `ionice` class (realtime, best-effort, idle)
-- Already configured for most uses, so many of you will never need to touch this.
+Flatpak
 
-Perfect for gaming, streaming, or background apps.
+Snap
 
-#### Smart Desktop Integration
-- Real `.desktop` files
-- Proper WM_CLASS & DBus names
-- Shows up in app menu
-- Correct icon in dock/taskbar
-- Works perfectly on GNOME, KDE, XFCE, etc.
+Supported browsers:
 
-#### Search + Preconfigured Apps
-Including:
-- Gmail, Google Docs, Office 365
-- Discord, Slack, Zoom
-- Netflix, YouTube, Spotify, Twitch
-- Notion, Trello, ClickUp
-- Amazon, Reddit, X/Twitter
-- Cloud gaming platforms
-- And many more!
+Microsoft Edge (default)
 
-Just search, tweak, install.
+Brave
+
+Vivaldi
+
+Chrome/Chromium
+
+Firefox
+
+Opera
+
+Performance Controls (Advanced)
+
+Every PWA can be tuned individually:
+
+Toggle GPU acceleration
+
+Set CPU priority (nice)
+
+Set I/O priority (ionice)
+
+Defaults are optimized for mainstream usage, but power users can fine-tune cloud gaming, streaming, or background apps.
+
+Wayland & X11 Support
+
+Appify detects your environment automatically.
+
+Version 1.0.6 introduces stricter Wayland/X11 control, but due to minor delays on startup, 1.0.5 remains the stable release.
+
+1.0.6 is available early on Patreon for beta testers.
 
 Install
 Download the AppImage or Deb directly from the releases page or from the source. Here is how to set the environment.
@@ -215,29 +222,39 @@ Categories=Utility;Network;
 StartupNotify=true
 ```
 
+## Why No Flatpak Version?
+
+A Flatpak build would break core functionality due to sandbox restrictions, including:
+
+Browser detection would break
+
+Extension installation would break
+
+Profile isolation would break
+
+Wayland/X11 switching would break
+
+Controller support would break
+
+And more issues that flat seal would not be able to fix
+
+Until these limitations can be resolved, a Flatpak package is not planned.
+
+## Roadmap
+
 Coming soon:
 
+Griffin Linux
 
-Griffin Repo, as stated, this is for a custom distro I am almost finished with. This tool will be a part of that repo. This tool might get an update checker, or I might turn it into its own repo for updates. Have yet to decide.
+Built-in update checker for deb an AppImage
 
-
-A Windows version.
-
-
-What is not coming soon:
+Windows version
 
 
-Flatpak
+## Community & Support
 
+Discord: https://discord.gg/7fEt5W7DPh
 
-Why?
+Patreon (Beta Builds): https://www.patreon.com/c/BobbyComet/membership
 
-
-It would break many of the functions because of their sandboxing. This is not something I could readily fix, even with flatseal. I'll keep searching for solutions, but with making the distro and updating my tools, it is already a lot.
-
-Patreon- https://www.patreon.com/c/BobbyComet/membership
-
-Discord- https://discord.gg/7fEt5W7DPh
-
-
-Want to support me and the Griffin project? https://ko-fi.com/bobby60908
+Support the Griffin Project: https://ko-fi.com/bobby60908
