@@ -183,6 +183,18 @@ sudo dpkg -i pwamanager.deb
 sudo apt --fix-broken install -y 
 rm Appify.deb
 ```
+
+## Forks & Derivatives
+
+If you build a project using XKM as a base
+Or in your distribution
+please credit the original project:
+
+> Forks “Based on XKM – Multi-Kernel Manager by Bobby Comet”
+> Distros "Uses XKM - Multi-Kernel-Manager by Bobby Comet"
+This is not legally required beyond GPL,
+but is requested out of respect for the work involved.
+
 **If you use it from source, here is how to build the environment.**
 
 For Fedora, CentOS, RHEL, etc...
