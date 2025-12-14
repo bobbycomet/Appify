@@ -20,6 +20,16 @@ License: GPL 3.0
 Project: https://github.com/bobbycomet/Appify
 Discord: https://discord.gg/7fEt5W7DPh
 """
+# Appify
+# Copyright (C) 2025 Bobby Comet
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, version 3.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 import gi
 gi.require_version("Gtk", "4.0")
