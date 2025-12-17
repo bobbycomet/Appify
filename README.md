@@ -12,6 +12,7 @@ Appify is ideal for Windows switchers, streamers, multi-account users, and anyon
 
 ![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/Extensionsview.png)
 
+**NIPAHTV EXTENSION ISSUE:** This is not caused by the tool, but what is happening is that when you tile Kick, NipahTV will not work properly. This has to do with an issue between Chromium browsers and being in app mode. This is only when tiled; otherwise, it is fine, and the extension will work.
 
 **VERSION 1.0.5 UPDATES: Presets now show in the extensions window, and fixed a minor bug that was not updating the config folder in the .pwa_manager folder. If you have issues with the config file not updating, you must delete the profile and reinstall the PWA you made.** 
 
