@@ -4,6 +4,8 @@
 
 # Appify – The Ultimate Linux PWA Manager
 
+**Version 1.0.5.2 is out in AppImage for now. I will make the deb file after Christmas.**
+
 Turn any website into a first-class desktop application — instantly.
 
 Appify creates isolated, native-feeling PWAs on Linux using your existing browser engines. No Electron overhead, no memory-hungry wrappers. Just clean, integrated desktop apps.
@@ -14,19 +16,21 @@ Appify is ideal for Windows switchers, streamers, multi-account users, and anyon
 
 **NIPAHTV EXTENSION ISSUE:** This is not caused by the tool, but what is happening is that when you tile Kick, NipahTV will not work properly. This has to do with an issue between Chromium browsers and being in app mode. This is only when tiled; otherwise, it is fine, and the extension will work.
 
-**VERSION 1.0.5 UPDATES: Presets now show in the extensions window, and fixed a minor bug that was not updating the config folder in the .pwa_manager folder. If you have issues with the config file not updating, you must delete the profile and reinstall the PWA you made.** 
+**VERSION 1.0.5.2 UPDATES:**
 
-**NEW ADDITIONS: More sites in the presets, and more extensions in the presets. Extensions show what is installed or available. Some Google Docs add-ons that are from Google, not the Chrome store.**
+**Bug fixes:**
 
-**Changed the Remove entry to Delete profile for clarity.**
+**Fixed a bug that caused the extensions to open in Edge by default and sometimes provided incorrect links, replacing them with correct links for Chrome extensions.**
 
-**Keeps the fixed issues where Brave native was not launching. Cleaned up the Brave logic for better Flatpak, snap, and native browser launching. Brave Browser now allows icons, but the Flatpak version does not. This is due to the sandboxing, not the tool.**
+**Fixed a bug where attempting to add extensions one by one resulted in a URL error. You can now add or remove extensions individually.**
 
-**Added tooltips, just hover over nice, ionice, GPU acceleration, and Kiok mode, and it will give you a rundown on what it does.**
+**Removed old links that no longer work for extensions.**
 
-**Added an about page, which has all the normal legal license stuff, but also has how to raise an issue with the tool, Discord, how to support the project, and so on.**
+**Fixed the name, as I made a typo, where it said Applify, and not Appify.**
 
-**You must use the system package of Firefox stable to have controller support; this is because the Flatpak browser does not support it out of the box. Again, a Flatpak sandboxing issue.**
+**New feature:**
+
+**Added an update banner when a newer version is out.**
 
 
 Whether you're turning Gmail into a desktop app, running multiple Twitch accounts, or playing cloud games with anti-cheat bypasses — **Appify does it all**.
