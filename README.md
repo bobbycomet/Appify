@@ -269,8 +269,6 @@ Until these limitations can be resolved, a Flatpak package is not planned.
 
 - Griffin Linux
 
-- Built-in update checker for deb an AppImage
-
 - Windows version
 
 
