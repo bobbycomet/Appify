@@ -32,6 +32,9 @@ Appify is ideal for Windows switchers, streamers, multi-account users, and anyon
 
 **Added an update banner when a newer version is out.**
 
+**Firefox specific:**
+
+**You must use the system package of Firefox stable to have controller support; this is because the Flatpak browser does not support it out of the box. Again, a Flatpak sandboxing issue.**
 
 Whether you're turning Gmail into a desktop app, running multiple Twitch accounts, or playing cloud games with anti-cheat bypasses — **Appify does it all**.
 
