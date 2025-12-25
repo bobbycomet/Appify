@@ -15,7 +15,7 @@ Appify – The Ultimate Linux PWA Manager
 Progressive Web Apps, finally done right on Linux.
 
 Author: BobbyComet[](https://github.com/bobbycomet)
-Version: 1.0.3
+Version: 1.0.5.2
 License: GPL 3.0
 Project: https://github.com/bobbycomet/Appify
 Discord: https://discord.gg/7fEt5W7DPh
@@ -30,6 +30,8 @@ Discord: https://discord.gg/7fEt5W7DPh
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+#!/usr/bin/env python3
 
 import gi
 gi.require_version("Gtk", "4.0")
@@ -48,6 +50,10 @@ import shlex
 import threading
 from urllib.parse import urlparse
 from pathlib import Path
+import requests 
+from packaging.version import Version 
+
+CURRENT_VERSION = "1.0.5.2"
 
 # ---------------- Utilities (MOVED TO TOP TO FIX NAMEREF) ----------------
 def slugify(text: str) -> str:
@@ -92,6 +98,33 @@ def get_hostname_from_url(url: str) -> str:
     except Exception:
         return ""
 
+def check_for_updates(callback):
+    """Check GitHub for newer release in a thread, then call callback with message or None."""
+    def _check():
+        try:
+            response = requests.get("https://api.github.com/repos/bobbycomet/Appify/releases/latest", timeout=8)
+            if response.status_code != 200:
+                return
+
+            data = response.json()
+            if data.get("prerelease"):
+                return  # Ignore pre-releases
+
+            latest_tag = data["tag_name"].lstrip("v")  # Handle "v1.0.5" → "1.0.5"
+            latest_version = Version(latest_tag)
+
+            current_version = Version(CURRENT_VERSION)
+
+            if latest_version > current_version:
+                msg = f"New version available: {data['tag_name']}!\nDownload from GitHub Releases."
+                GLib.idle_add(callback, msg)
+            # else: no update, do nothing
+
+        except Exception as e:
+            # Silent fail – network issues, missing requests, etc.
+            print(f"Update check failed: {e}")
+
+    threading.Thread(target=_check, daemon=True).start()
 # ---------------- Extension Helpers (Modified for better presets) ----------------
 
 def get_app_key(app):
@@ -349,7 +382,7 @@ def create_desktop_file(app: dict, script_path: str, status_callback=None):
     # --- END CRITICAL PATCH ---
 
     desktop_content = f"""[Desktop Entry]
-Version=1.0
+Version=1.0.51
 Type=Application
 Name={app_name}
 Exec={str(wrapper)}
@@ -523,24 +556,21 @@ PRESET_DOMAIN_MAP = {
 
 DEFAULT_EXT_PRESETS = {
     "twitch": [
-        {"name": "BetterTTV", "web_url": "https://betterttv.com/"},
-        {"name": "FrankerFaceZ", "web_url": "https://www.frankerfacez.com/"}, 
-        {"name": "7TV", "web_url": "https://7tv.app/"}, 
-        {"name": "Twitch Auto-Claim Drops & Points", "web_url": "https://chromewebstore.google.com/detail/auto-channel-points-claim/ijcbjbkdaamjmmkckomkjpnbjljpfmpd"},
-        {"name": "Twitch Chat Cleaner", "web_url": "https://chromewebstore.google.com/detail/twitch-chat-filter/llonbigblcfnjplgihpkhoaadbabgkib"},
-        {"name": "Twitch Bonus Auto-clicker", "web_url": "https://chromewebstore.google.com/detail/twitch-points-autoclicker/lpmkeomaogcpodnaicnfdgngmkibjbmb"},
+        {"name": "BetterTTV", "web_url": "https://chromewebstore.google.com/detail/betterttv/ajopnjidmegmdimjlfnijceegpefgped"},
+        {"name": "FrankerFaceZ", "web_url": "https://chromewebstore.google.com/detail/frankerfacez/fadndhdgpmmaapbmfcknlfgcflmmmieb"},
+        {"name": "7TV", "web_url": "https://chromewebstore.google.com/detail/7tv/ammjkodgmmoknidbanneddgankgfejfh"},
     ],
     "kick": [
-        {"name": "NipahTV", "web_url": "https://nipahtv.com/"}, 
-        {"name": "7TV", "web_url": "https://7tv.app/"},
+        {"name": "NipahTV (Emotes + Chat Enhancements)", "web_url": "https://chromewebstore.google.com/detail/nipahtv/bjggmgekoncaaalaalhchepgkjoahjln"},
+        {"name": "7TV", "web_url": "https://chromewebstore.google.com/detail/7tv/ammjkodgmmoknidbanneddgankgfejfh"},
     ],
     "youtube": [
-        {"name": "SponsorBlock", "web_url": "https://sponsor.ajay.app/"},
-        {"name": "uBlock Origin", "web_url": "https://github.com/gorhill/uBlock#ublock-origin"},
-        {"name": "Return YouTube Dislike", "web_url": "https://returnyoutubedislike.com/"},
+        {"name": "SponsorBlock", "web_url": "https://chromewebstore.google.com/detail/sponsorblock-for-youtube/mnjggcdmjocbbbhaepdhchncahnbgone"},
+        {"name": "uBlock Origin", "web_url": "https://chromewebstore.google.com/detail/ublock-origin/cjpalhdlnbpafiamejdnhcphjbkeiagm"},
+        {"name": "Return YouTube Dislike", "web_url": "https://chromewebstore.google.com/detail/return-youtube-dislike/gebbhagfogifgggkldgodflihgfeippi"},
         {"name": "Unhook for YouTube", "web_url": "https://chromewebstore.google.com/detail/unhook-remove-youtube-rec/agbjjhcakilocfjoidcmclcoidipnnhl"},
         {"name": "Enhancer for YouTube", "web_url": "https://chromewebstore.google.com/detail/enhancer-for-youtube/ponfelnnbfdgchaoffdenecfgkfklngg"},
-        {"name": "DeArrow (Title/Thumbnail Cleaner)", "web_url": "https://chromewebstore.google.com/detail/dearrow-title-thumbnail-f/ibgpcpbhkbhjcmfnhiepghebomnipido"},
+        {"name": "DeArrow", "web_url": "https://chromewebstore.google.com/detail/dearrow-title-thumbnail-f/ibgpcpbhkbhjcmfnhiepghebomnipido"},
         {"name": "YouTube NonStop", "web_url": "https://chromewebstore.google.com/detail/youtube-nonstop/ajioplkfknbldfggjllgmojioedcjhkf"},
     ],
     "Google Docs": [
@@ -1028,8 +1058,14 @@ def launch_extension_manager(browser_key: str, preset_key: str, profile_dir: Pat
         if not browser_config:
             print(f"ERROR: Browser config not found for {browser_key}")
             return
-
-        extensions = DEFAULT_EXT_PRESETS.get(preset_key)
+# --- NORMALIZATION  FIX---
+        # Find the actual key case-insensitively
+        normalized_key = next((
+            k for k in DEFAULT_EXT_PRESETS.keys()
+            if k.lower() == preset_key.lower()
+        ), preset_key)  # fallback to original if not found
+        extensions = DEFAULT_EXT_PRESETS.get(normalized_key, [])
+        # --- END ADD ---
         if not extensions:
             # Fallback to store_url if no preset is found
             url = browser_config["store_url"]
@@ -1043,13 +1079,24 @@ def launch_extension_manager(browser_key: str, preset_key: str, profile_dir: Pat
             # -----------------------------------------------------------------
             return
 
-        # SIMPLIFIED FIX: Extract the direct web_url for every extension.
+# SIMPLIFIED FIX: Extract only valid, non-empty web_url strings
         urls = [
-            ext.get('web_url')
+            ext["web_url"]
             for ext in extensions
-            if ext.get('web_url')
+            if isinstance(ext.get("web_url"), str) and ext["web_url"].strip()
         ]
         
+        if not urls:
+            # Fallback to store_url if no valid extension URLs
+            url = browser_config["store_url"]
+            print(f"INFO: No valid extension install pages found for preset '{preset_key}'. Opening store: {url}")
+            if browser_key.lower() == "firefox":
+                cmd_list = [browser_config["cmd"], "--profile", str(profile_dir), "--no-remote", url]
+            else:
+                cmd_list = [browser_config["cmd"], f"--user-data-dir={str(profile_dir)}", url]
+            subprocess.Popen(cmd_list)
+            return
+
         # --- FIX: Determine profile argument for isolated launch ---
         profile_arg = []
         if browser_key.lower() == "firefox":
@@ -1073,7 +1120,7 @@ Adw.init()
 
 class PWAManagerApp(Adw.Application):
     def __init__(self):
-        super().__init__(application_id="com.applify", flags=Gio.ApplicationFlags.FLAGS_NONE)
+        super().__init__(application_id="com.appify", flags=Gio.ApplicationFlags.FLAGS_NONE)
         self.win = None
         self.sorted_apps_list = [] # Store the sorted list of apps for UI indexing
     def do_activate(self):
@@ -1084,9 +1131,9 @@ class PWAManagerApp(Adw.Application):
 class PWAManagerWindow(Adw.ApplicationWindow):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.set_title("Applify")
+        self.set_title("Appify")
         self.set_default_size(900, 700)
-        self.sorted_apps_list = [] # Initialize this in the window as well
+        self.sorted_apps_list = []  # Initialize this in the window as well
 
         self.statusbar = Gtk.Label()
         self.statusbar.set_xalign(0)
@@ -1097,7 +1144,7 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         header.set_show_start_title_buttons(True)
         header.set_show_end_title_buttons(True)
         title = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        title.append(Gtk.Label(label="Applify"))
+        title.append(Gtk.Label(label="Appify"))
         title.append(Gtk.Label(label="Progressive Web Apps Made Easy"))
         header.set_title_widget(title)
 
@@ -1108,7 +1155,7 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         # Simple menu with just "About"
         popover = Gtk.PopoverMenu()
         menu = Gio.Menu()
-        menu.append("About Applify", "app.about")
+        menu.append("About Appify", "app.about")
         popover.set_menu_model(menu)
         menu_btn.set_popover(popover)
         
@@ -1290,17 +1337,39 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         content_box.append(btn_box)
         content_box.append(self.statusbar)
 
+        # --- UPDATE CHECK BANNER (CORRECTED & FINAL) ---
+        self.update_banner = Adw.Banner()
+        self.update_banner.set_title("Update Available")
+        self.update_banner.set_button_label("View Releases")
+        self.update_banner.connect(
+            "button-clicked",
+            lambda b: subprocess.run(["xdg-open", "https://github.com/bobbycomet/Appify/releases"])
+        )
+        self.update_banner.set_revealed(False)
+
+        # Add the banner to the UI (only once!)
+        content_box.append(self.update_banner)
+
+        def show_update_message(msg):
+            if not msg:
+                return
+            # Extract the first line: "New version available: v1.0.6!"
+            version_line = msg.split("\n")[0]
+            GLib.idle_add(self.update_banner.set_title, version_line)
+            GLib.idle_add(self.update_banner.set_revealed, True)
+            self.status_push("Update available!")
+
+        # Check for updates 2 seconds after launch
+        GLib.timeout_add_seconds(2, lambda: check_for_updates(show_update_message) or False)
+        # --- END UPDATE CHECK ---
+
         # --- START TOOLTIP ADDITIONS ---
-        
-        # Nice spinbutton tooltip
         self.nice_spin.set_tooltip_text(
             "Nice value (−20 to +19)\n"
             "• Lower number = higher CPU priority (needs root for < 0)\n"
             "• Higher number = lower priority (politer to the system)\n"
             "Default: 0"
         )
-
-        # Ionice spinbutton tooltip
         self.ionice_spin.set_tooltip_text(
             "Ionice class (0–3)\n"
             "• 0 = Real-time (root only)\n"
@@ -1308,19 +1377,14 @@ class PWAManagerWindow(Adw.ApplicationWindow):
             "• 2 = Best-effort (default for normal users) ← recommended\n"
             "• 3 = Idle (only runs when disk is otherwise idle)"
         )
-
-        # GPU checkbox tooltip
         self.gpu_check.set_tooltip_text(
             "Enable/disable GPU hardware acceleration for the browser.\n"
             "Turn OFF only if you experience crashes or black screens on very old hardware."
         )
-
-        # Kiosk checkbox tooltip
         self.kiosk_check.set_tooltip_text(
             "Kiosk mode = fullscreen, no address bar, no tabs, no context menu.\n"
             "Perfect for cloud gaming (xCloud, GeForce Now, Luna) and digital signage."
         )
-
         # --- END TOOLTIP ADDITIONS ---
 
         self.style_manager = Adw.StyleManager.get_default()
@@ -1330,14 +1394,14 @@ class PWAManagerWindow(Adw.ApplicationWindow):
             self.app_combo.set_selected(0)
             self.populate_app_fields(self.sorted_apps_list[0])
         self.update_button_states()
-    
+
     # --- ADDED: About Dialog function for the Menu Button ---
     def show_about_dialog(self, action=None, param=None):
         about = Adw.AboutDialog(
             application_name="Appify",
             application_icon="appify",
             developer_name="BobbyComet",
-            version="1.0.4",
+            version="1.0.51",
             website="https://github.com/bobbycomet/Appify",
             issue_url="https://github.com/bobbycomet/Appify/issues",
             license_type=Gtk.License.GPL_3_0,
@@ -1382,8 +1446,10 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         self.status_push(f"Switched to {'Dark' if dark else 'Light'} mode")
 
     def status_push(self, msg):
-        # We need to use GLib.idle_add for thread safety if called from a worker thread
+        """Thread-safe update of the status label. Clears after 5 seconds."""
         GLib.idle_add(self.statusbar.set_text, msg)
+        # Auto-clear the status message after 5 seconds
+        GLib.timeout_add_seconds(5, self.statusbar.set_text, "")
 
     # --- START SEARCH FILTERING LOGIC ---
     def populate_app_combo(self, search_term=""):
@@ -1719,9 +1785,14 @@ class PWAManagerWindow(Adw.ApplicationWindow):
                         self.status_push(f"Added custom extension '{name}' for {app['name']}.")
                         # --- END FIX ---
                         
-                        # Use the web_url for installation redirect
-                        browser_key = self.browser_combo.get_selected_item().get_string().lower() if self.browser_combo.get_selected_item() else "edge"
-                        browser_config = get_browsers().get(browser_key)
+                        # Use the web_url for installation redirect fixed
+                        profile_cfg = load_profile_config(app)
+                        browser_key = (profile_cfg.get("browser") or app.get("browser") or CONFIG.get("browser", "edge")).lower()
+                        browser_config = get_browsers().get(browser_key, {})
+                        
+                        if not browser_config:
+                            self.status_push(f"Error: No config found for browser '{browser_key}'.")
+                            return
                         
                         profile_dir = get_profile_dir(app) # <-- NEW: Get profile dir
 
