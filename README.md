@@ -13,7 +13,15 @@ Appify creates isolated, native-feeling PWAs on Linux using your existing browse
 Appify is ideal for Windows switchers, streamers, multi-account users, and anyone who wants cloud gaming or productivity apps to behave like true native applications.
 
 ![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/Extensionsview.png)
-![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/Updatebanner.png) 
+
+![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/appifyfiles.png)
+
+![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/appifyprofiles.png)
+
+![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/appifyprofileinards.png)
+
+![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/appify-shfiles.png)
+
 
 **NIPAHTV EXTENSION ISSUE:** This is not caused by the tool, but what is happening is that when you tile Kick, NipahTV will not work properly. This has to do with an issue between Chromium browsers and being in app mode. This is only when tiled; otherwise, it is fine, and the extension will work.
 
