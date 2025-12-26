@@ -4,7 +4,7 @@
 
 # Appify – The Ultimate Linux PWA Manager
 
-**Version 1.0.5.2 is out in AppImage for now. I will make the deb file after Christmas.**
+**Version 1.0.5.2 is out in AppImage and deb file.**
 
 Turn any website into a first-class desktop application — instantly.
 
@@ -40,6 +40,10 @@ Appify is ideal for Windows switchers, streamers, multi-account users, and anyon
 **New feature:**
 
 **Added an update banner when a newer version is out.**
+
+**Deb bug fix:**
+
+Fixed where the app was not showing due to a messed-up exec=
 
 **Firefox specific:**
 
@@ -195,7 +199,7 @@ sudo apt install gdebi
 sudo gdebi Appify-1.0.5.deb
 ```
 ```
-wget https://github.com/bobbycomet/Appify/releases/download/v1.0.5/Appify-1.0.5.deb
+wget https://github.com/bobbycomet/Appify/releases/download/v1.0.5/Appify-1.0.5.2deb
 sudo dpkg -i pwamanager.deb 
 sudo apt --fix-broken install -y 
 rm Appify.deb
