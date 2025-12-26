@@ -185,7 +185,7 @@ Download the AppImage or Deb directly from the releases page or from the source.
 AppImage, be sure to check your permissions that you set it to launch as an application.
 
 ```
-wget https://github.com/bobbycomet/Appify/releases/download/v1.0.5.1/Appify-x86_64.AppImage
+wget https://github.com/bobbycomet/Appify/releases/download/v1.0.5.2/Appify-x86_64.AppImage
 chmod +x Appify-x86_64.AppImage
 ```
 
