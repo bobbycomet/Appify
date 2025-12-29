@@ -58,7 +58,7 @@ Whether you're turning Gmail into a desktop app, running multiple Twitch account
 
 - Uninstalling an app does not erase its data. Simply reinstall later and everything returns.
 
-- You can nuke the entire pwa and profile with delete app and choosing delete profile.
+- You can nuke the entire PWA and profile with delete app and choosing delete profile.
 
 ### To back up or migrate profiles, copy the hidden directory:
 
@@ -223,7 +223,7 @@ sudo apt update
 sudo apt install gdebi
 ```
 ```
-sudo gdebi Appify-1.0.5.2deb
+sudo gdebi Appify-1.0.5.2.deb
 ```
 ```
 wget https://github.com/bobbycomet/Appify/releases/download/v1.0.5/Appify-1.0.5.2.deb
