@@ -227,7 +227,7 @@ sudo gdebi Appify-1.0.5.2.deb
 ```
 ```
 wget https://github.com/bobbycomet/Appify/releases/download/v1.0.5/Appify-1.0.5.2.deb
-sudo dpkg -i pwamanager.deb 
+sudo dpkg -i Appify-1.0.5.2.deb
 sudo apt --fix-broken install -y 
 rm Appify-1.0.5.2.deb
 ```
