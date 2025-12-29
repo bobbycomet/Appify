@@ -14,14 +14,6 @@ Appify is ideal for Windows switchers, streamers, multi-account users, and anyon
 
 ![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/Extensionsview.png)
 
-![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/appifyfiles.png)
-
-![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/appifyprofiles.png)
-
-![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/appifyprofileinards.png)
-
-![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/appify-shfiles.png)
-
 
 **NIPAHTV EXTENSION ISSUE:** This is not caused by the tool, but what is happening is that when you tile Kick, NipahTV will not work properly. This has to do with an issue between Chromium browsers and being in app mode. This is only when tiled; otherwise, it is fine, and the extension will work.
 
@@ -70,9 +62,44 @@ Whether you're turning Gmail into a desktop app, running multiple Twitch account
 
 ### To back up or migrate profiles, copy the hidden directory:
 
+- Smart Icons & Native Desktop Integration
+
+- No more “another Chrome window.”
+
 ```
 ~/.pwa_manager
 ```
+
+## Why Appify Stays Always Up-to-Date & Lightweight
+
+Unlike Electron-based tools (e.g., Nativefier) that bundle an outdated Chromium engine, Appify uses your **existing system browser** as the engine.
+
+- Each PWA is launched with an **isolated profile** (`--user-data-dir` for Chromium-based, `--profile` for Firefox).
+- When you update your browser (Edge, Firefox, Chrome, Brave, etc. — via apt, dnf, Flatpak, or Snap), **every Appify PWA automatically gets the latest version**.
+  - Instant security patches
+  - New performance improvements
+  - Latest web standards (e.g., better AV1 decoding, WebGPU)
+  - Updated extension support
+- No waiting for Appify updates to "refresh" the embedded browser.
+- Extremely low overhead: Only per-app profiles are added (a few MB each), sharing the single browser engine.
+
+This "pseudo-browser" approach keeps Appify secure, fast, and future-proof — while delivering a truly native feel.
+
+| Aspect                  | Appify (System Browser Engine)                  | Electron Wrappers (e.g., Nativefier)           |
+|-------------------------|-------------------------------------------------|------------------------------------------------|
+| Browser Updates         | Automatic & immediate                           | Delayed (bundled old version)                  |
+| Security Patches        | Always current                                  | Only when wrapper is rebuilt                   |
+| Disk/Memory Usage       | Minimal (shared engine)                         | High (50–200+ MB per app)                      |
+| Hardware Acceleration   | Full access to latest drivers/features          | Often outdated or broken                       |
+| Gamepad/Wayland Support | Native (especially Firefox)                     | Frequently lags behind                         |
+
+![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/appifyfiles.png)
+
+![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/appifyprofiles.png)
+
+![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/appifyprofileinards.png)
+
+![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/appify-shfiles.png)
 
 - Smart Icons & Native Desktop Integration
 
@@ -132,7 +159,7 @@ Whether you're turning Gmail into a desktop app, running multiple Twitch account
 
 - Google Docs add-ons (Google-native only)
 
-- You can add as many as you want, and is not limited to just ome browser
+- You can add as many as you want, and it is not limited to just one browser
 
 - You can also install any Chrome-compatible extension manually inside each isolated profile.
 
@@ -182,7 +209,7 @@ Whether you're turning Gmail into a desktop app, running multiple Twitch account
 
 Download the AppImage or Deb directly from the releases page or from the source.
 
-AppImage, be sure to check your permissions that you set it to launch as an application.
+AppImage, be sure to check your permissions so that you set it launches as an application.
 
 ```
 wget https://github.com/bobbycomet/Appify/releases/download/v1.0.5.2/Appify-x86_64.AppImage
@@ -199,18 +226,11 @@ sudo apt install gdebi
 sudo gdebi Appify-1.0.5.2deb
 ```
 ```
-wget https://github.com/bobbycomet/Appify/releases/download/v1.0.5/Appify-1.0.5.2deb
+wget https://github.com/bobbycomet/Appify/releases/download/v1.0.5/Appify-1.0.5.2.deb
 sudo dpkg -i pwamanager.deb 
 sudo apt --fix-broken install -y 
 rm Appify-1.0.5.2.deb
 ```
-
-## Forks & Derivatives
-
-If you build a project using XKM as a base
-Or in your distribution
-please credit the original project:
-
 
 **If you use it from source, here is how to build the environment.**
 
