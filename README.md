@@ -93,21 +93,21 @@ This "pseudo-browser" approach keeps Appify secure, fast, and future-proof — w
 | Hardware Acceleration   | Full access to latest drivers/features          | Often outdated or broken                       |
 | Gamepad/Wayland Support | Native (especially Firefox)                     | Frequently lags behind                         |
 
-![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/appifyfiles.png)
+![pwa files Screenshot](https://github.com/bobbycomet/Appify/blob/main/appifyfiles.png)
 
-![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/appifyprofiles.png)
+![profiles Screenshot](https://github.com/bobbycomet/Appify/blob/main/appifyprofiles.png)
 
-![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/appifyprofileinards.png)
+![profile innards files screenshot](https://github.com/bobbycomet/Appify/blob/main/appifyprofileinards.png)
 
-![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/appify-shfiles.png)
+![sh files screenshot](https://github.com/bobbycomet/Appify/blob/main/appify-shfiles.png)
 
-- Smart Icons & Native Desktop Integration
-
-- No more “another Chrome window.”
 
 ## Each PWA gets:
 
 - Correct icon & branding (favicon → icon.horse → Google fallback)
+The image below has a theme installed; icons do not look like some of the others that are themed. I will try to get the icons to work with themes.
+
+![sh files screenshot](https://github.com/bobbycomet/Appify/blob/main/Icons.png)
 
 - Proper .desktop file
 
