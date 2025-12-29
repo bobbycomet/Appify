@@ -93,58 +93,40 @@ This "pseudo-browser" approach keeps Appify secure, fast, and future-proof — w
 | Hardware Acceleration   | Full access to latest drivers/features          | Often outdated or broken                       |
 | Gamepad/Wayland Support | Native (especially Firefox)                     | Frequently lags behind                         |
 
-![pwa files Screenshot](https://github.com/bobbycomet/Appify/blob/main/appifyfiles.png)
+![Generated Files](https://raw.githubusercontent.com/bobbycomet/Appify/main/appifyfiles.png)
+![Profiles Folder](https://raw.githubusercontent.com/bobbycomet/Appify/main/appifyprofiles.png)
+![Profile Contents](https://raw.githubusercontent.com/bobbycomet/Appify/main/appifyprofileinards.png)
+![Launcher Scripts](https://raw.githubusercontent.com/bobbycomet/Appify/main/appify-shfiles.png)
 
-![profiles Screenshot](https://github.com/bobbycomet/Appify/blob/main/appifyprofiles.png)
+## Smart Icons & Native Desktop Integration
+No more “another Chrome window.”
 
-![profile innards files screenshot](https://github.com/bobbycomet/Appify/blob/main/appifyprofileinards.png)
-
-![sh files screenshot](https://github.com/bobbycomet/Appify/blob/main/appify-shfiles.png)
-
-
-## Each PWA gets:
-
+Each PWA gets:
 - Correct icon & branding (favicon → icon.horse → Google fallback)
-The image below has a theme installed; icons do not look like some of the others that are themed. I will try to get the icons to work with themes.
-
-![sh files screenshot](https://github.com/bobbycomet/Appify/blob/main/Icons.png)
-
+![App Icons Example](https://raw.githubusercontent.com/bobbycomet/Appify/main/Icons.png)
+*The image above shows themed icons — working on full theme support!*
 - Proper .desktop file
-
 - Correct WM_CLASS and D-Bus names
-
-- Full integration with GNOME, KDE, XFCE, etc.
+- Full integration with GNOME, KDE, XFCE, e
 
 ## Cloud Gaming Ready:
 
 - Console-style kiosk presets for:
-
 - Xbox Cloud Gaming (xCloud)
-
 - GeForce Now
-
 - Amazon Luna
 
 ## Use Firefox stable version by default for:
-
 - Native gamepad support
-
 - Better Wayland behavior
-
 - Certain anti-cheat workarounds
-
 - Multi-Account Made Simple
 
 ## Clone any app instantly:
-
 - Multiple Twitch accounts
-
 - Personal + Work Gmail
-
 - Streaming dashboards
-
 - Multiple Discord or YouTube logins
-
 - Each clone runs in its own isolated environment.
 
 ## Extension Presets:
@@ -152,57 +134,39 @@ The image below has a theme installed; icons do not look like some of the others
 **One-click extension bundles for:**
 
 - Twitch (BTTV, FFZ, 7TV)
-
 - Kick (NipahTV, 7TV)
-
 - YouTube (SponsorBlock, uBlock, Return YouTube Dislike)
-
 - Google Docs add-ons (Google-native only)
-
 - You can add as many as you want, and it is not limited to just one browser
-
 - You can also install any Chrome-compatible extension manually inside each isolated profile.
 
 ## Complete Browser Support:
 
 - Native browser installations
-
 - Flatpak
-
 - Snap
 
 ## Supported browsers:
 
 - Microsoft Edge (default)
-
 - Brave
-
 - Vivaldi
-
 - Chrome/Chromium
-
 - Firefox
-
 - Opera
 
 ## Performance Controls (Advanced)
 
 - Every PWA can be tuned individually:
-
 - Toggle GPU acceleration
-
 - Set CPU priority (nice)
-
 - Set I/O priority (ionice)
-
 - Defaults are optimized for mainstream usage, but power users can fine-tune cloud gaming, streaming, or background apps.
 
 ## Wayland & X11 Support
 
 - Appify detects your environment automatically.
-
 - **Version 1.0.6 introduces stricter Wayland/X11 detection, but due to minor delays on startup, 1.0.5 remains the stable release, and still supports Wayland. Wayland being the thing to replace X11, I am only preparing the app for that, but Wayland is still not fully reliable for everything, just yet.**
-
 - **1.0.6 is available early on Patreon for beta testers. Check the bottom of the page.**
 
 ## Install
@@ -272,17 +236,11 @@ StartupNotify=true
 ## Why No Flatpak Version?
 
 - A Flatpak build would break core functionality due to sandbox restrictions, including:
-
 - Browser detection would break
-
 - Extension installation would break
-
 - Profile isolation would break
-
 - Wayland/X11 switching would break
-
 - Controller support would break
-
 - And more issues that flat seal would not be able to fix
 
 Until these limitations can be resolved, a Flatpak package is not planned.
@@ -293,12 +251,24 @@ Until these limitations can be resolved, a Flatpak package is not planned.
   <img src="https://raw.githubusercontent.com/bobbycomet/Appify/main/Griffin-G.png" alt="Griffin Screenshot" width="25%"/>
 </p>
 
-**Coming soon:**
+**Appify is just the beginning.** Upcoming projects aim to make Linux the ultimate platform for gaming, productivity, and Windows switchers:
 
-- Griffin Linux
+- **Windows Appify version** – Bring isolated PWAs to Windows users.
+- **Griffin Linux** – A gaming-first, user-friendly distro built around these tools.
+- **Grix** – The ultimate system-aware AI assistant (what Copilot wishes it could be). Diagnoses hardware/software issues, suggests and applies fixes, teaches Linux basics step-by-step, and can securely install packages (apt, Flatpak) with user approval. Features opt-in Python plugins for power users to extend its capabilities. Deeply integrated with Griffin Linux for full system context and intelligence. If demand is high, a standalone version for broader Ubuntu-based distros may follow.
+- **ControllerHub** – Auto-detects controllers, applies optimal profiles/firmware (Xbox, PS, Nintendo, wheels, Bluetooth/wired).
+- **RealtekHub** – GUI for fixing notorious Realtek WiFi driver issues.
+- **Windows Migrate** – GUI tool to transfer files/settings from Windows (including Unity/Unreal projects).
+- **Sentry** – Smart resource manager using cgroups (with nice/ionice fallbacks); learns habits for smoother performance. Includes config.yaml for advanced app detection.
+- **kernel-autotune** – Detects hardware (desktop/laptop, RAM size, kernel type like Xanmod/Liquorix); applies optimal baselines (preload, earlyoom, Zram/Zswap, swappiness, BBR TCP, fq queuing, tuned buffers). Sets governors (performance on desktops, schedutil on laptops) with editable config.
+- **Noatime-autotune** – Simple script for SSD health optimization.
+- **Auto-Gamemode** – Integrates with Steam/Lutris/Heroic; triggers Sentry to throttle background apps for stutter-free gaming.
+- **FanHub** – Windows-style fan/RGB control: curves, profiles, OpenRGB integration.
+- **CpuHub** – Simple GUI for CPU governors (performance, balanced, powersave) + kernel-specific tweaks.
+- **Postinstaller** – One-click category installs (Gaming, Productivity, etc.) – no more forum hunting.
+- **Griffin Linux Repo** – Curated packages for seamless setup.
 
-- Windows version
-
+Stay tuned — these tools will make switching to Linux feel effortless and powerful. The first true Windows killer?
 
 ## Community & Support
 
