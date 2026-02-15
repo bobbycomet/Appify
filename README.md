@@ -4,7 +4,7 @@
 
 # Appify – The Ultimate Linux PWA Manager
 
-**If you use Pie ad blocker or another such tool, YouTube has hardened its ad block again. I have used pie and when I hit F5, it works just fine after that, but you have to do this for every single video. So, I would just leave it off, unless you know an ad blocker you can add. Sponsor block is also caught in this.** 
+**If you use a sponsor blocker or another such tool, YouTube has hardened its ad block again (pie ad block seems to be working again). I have used pie and when I hit F5, it works just fine after that, but you have to do this for every single video. So, I would just leave it off, unless you know an ad blocker you can add. Sponsor block is also caught in this.** 
 
 **Version 1.0.5.2 is out in AppImage and deb file.**
 
