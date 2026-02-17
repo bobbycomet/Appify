@@ -2,6 +2,8 @@
   <img src="https://raw.githubusercontent.com/bobbycomet/Appify/main/appify.png" alt="Appify Logo" width="25%"/>
 </div>
 
+Version 2.0.3 Firefox bug fix. The logic for the auto-detection for Wayland and X11 was causing a mix-up. Now it should be working properly. 
+
 Version 2.0.2 bug fix. Removed dead-linked extensions, fixed Google extension logic, before Google Docs extensions were showing up under Google Sheets and Google Slides. Now they appear under the proper PWA to be made; this was because of how the links were set up. All three have the hostname docs.google.com. The fix: the more-specific path-based entries need to be checked before the hostname-only docs.google.com entry. The solution was to reorder PRESET_DOMAIN_MAP so path-based keys come first, OR better yet, update get_app_key to check path-based keys first.
 
 It now has multilingual support. It checks for your .mo file and on their system, and then uses a process to apply the system language and translates; if that fails, it then reverts to English.
