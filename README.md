@@ -6,6 +6,9 @@
 
 Appify 2.0 is not just a bug fix release — it's a ground-up rethinking of how Appify detects, manages, and launches browsers. This page explains exactly what changed, what's new, and what stayed the same so you can decide whether to upgrade.
 
+Read the wiki for how Appify handles the update to browser settings.
+
+https://github.com/bobbycomet/Appify/wiki#overview
 ---
 
 ## What's New in 2.0
