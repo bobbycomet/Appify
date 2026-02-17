@@ -1,6 +1,6 @@
-[<div align="center">
+<div align="center">
   <img src="https://raw.githubusercontent.com/bobbycomet/Appify/main/appify.png" alt="Appify Logo" width="25%"/>
-</div>]
+</div>
 
 # Appify 2.0 – Why It's a Major Upgrade Over 1.x
 
@@ -22,9 +22,9 @@ In 2.0, Appify runs a real detection system at startup. For every browser, it ch
 
 The result is that Appify now shows you only the browsers actually present on your system, tells you *how* each one is installed (native, Flatpak, or Snap), and generates the correct launch command automatically. No more editing configs or wondering why Edge won't open.
 
-[<div align="center">
+<div align="center">
   <img src="https://github.com/bobbycomet/Appify/blob/main/Appify2.0.png">
-</div>]
+</div>
 
 ### Default Browser Auto-Detection
 
