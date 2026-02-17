@@ -144,7 +144,7 @@ Works on any modern Linux distribution with FUSE support, including:
 - Any other `x86_64` Linux distro with glibc 2.31+
 
 ```bash
-wget https://github.com/bobbycomet/Appify/releases/download/v2.0.0/Appify-x86_64.AppImage
+wget https://github.com/bobbycomet/Appify/releases/download/v2.0.0/Appify-2.0.0-x86_64.AppImage
 chmod +x Appify-x86_64.AppImage
 ./Appify-x86_64.AppImage
 ```
@@ -161,6 +161,7 @@ Works on Debian/Ubuntu-based distributions:
 - Raspberry Pi OS (Bullseye and newer, arm64)
 
 ```bash
+wget https://github.com/bobbycomet/Appify/releases/download/v2.0.0/Appify-2.0.0.deb
 # Recommended: use gdebi to auto-resolve dependencies
 sudo apt install gdebi
 sudo gdebi Appify-2.0.0.deb
