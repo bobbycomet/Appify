@@ -2,6 +2,8 @@
   <img src="https://raw.githubusercontent.com/bobbycomet/Appify/main/appify.png" alt="Appify Logo" width="25%"/>
 </div>
 
+2.0.1 Fixed a bug where installing a custom PWA was trying to install the PWA in your list rather than adding a link. I fixed a bug where WebHID wasn't activating, and Xcloud is still not working with WebHID. For better controller support on Xcloud, please use Firefox. I tried using Better Xcloud, but no luck. Your mileage may vary.
+
 # Appify 2.0 – Why It's a Major Upgrade Over 1.x
 
 Appify 2.0 is not just a bug fix release — it's a ground-up rethinking of how Appify detects, manages, and launches browsers. This page explains exactly what changed, what's new, and what stayed the same so you can decide whether to upgrade.
