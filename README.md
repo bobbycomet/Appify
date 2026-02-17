@@ -1,281 +1,237 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/bobbycomet/Appify/main/appify.png" alt="Appify Screenshot" width="25%"/>
+  <img src="https://raw.githubusercontent.com/bobbycomet/Appify/main/appify.png" alt="Appify Logo" width="25%"/>
 </div>
 
-# Appify – The Ultimate Linux PWA Manager
+# Appify 2.0 – Why It's a Major Upgrade Over 1.x
 
-**If you use a sponsor blocker or another such tool, YouTube has hardened its ad block again (pie ad block seems to be working again). I have used pie and when I hit F5, it works just fine after that, but you have to do this for every single video. So, I would just leave it off, unless you know an ad blocker you can add. Sponsor block is also caught in this.** 
+Appify 2.0 is not just a bug fix release — it's a ground-up rethinking of how Appify detects, manages, and launches browsers. This page explains exactly what changed, what's new, and what stayed the same so you can decide whether to upgrade.
 
-**Version 1.0.5.2 is out in AppImage and deb file.**
+---
 
-Turn any website into a first-class desktop application — instantly.
+## What's New in 2.0
 
-Appify creates isolated, native-feeling PWAs on Linux using your existing browser engines. No Electron overhead, no memory-hungry wrappers. Just clean, integrated desktop apps.
+### Intelligent Browser Detection
 
-Appify is ideal for Windows switchers, streamers, multi-account users, and anyone who wants cloud gaming or productivity apps to behave like true native applications.
+The biggest change in 2.0 is how Appify finds and uses browsers. In 1.x, browser commands were hardcoded strings in the config — for example, Firefox was always `env GDK_BACKEND=x11 /usr/bin/firefox` and Edge was always `microsoft-edge`. If your browser was installed differently, things could break silently.
 
-![Appify Screenshot](https://github.com/bobbycomet/Appify/blob/main/Extensionsview.png)
+In 2.0, Appify runs a real detection system at startup. For every browser, it checks:
 
+1. **Native installation** — searches your `PATH` and known binary locations
+2. **Flatpak** — queries `flatpak info` to confirm the app is installed
+3. **Snap** — queries `snap list` to confirm the app is installed
 
-**NIPAHTV EXTENSION ISSUE:** This is not caused by the tool, but what is happening is that when you tile Kick, NipahTV will not work properly. This has to do with an issue between Chromium browsers and being in app mode. This is only when tiled; otherwise, it is fine, and the extension will work.
+The result is that Appify now shows you only the browsers actually present on your system, tells you *how* each one is installed (native, Flatpak, or Snap), and generates the correct launch command automatically. No more editing configs or wondering why Edge won't open.
 
-**VERSION 1.0.5.2 UPDATES:**
+### Default Browser Auto-Detection
 
-**Bug fixes:**
+In 1.x, the default browser was hardcoded to Edge regardless of what you had set on your system. In 2.0, Appify reads your actual system default using `xdg-settings`, `mimeapps.list`, and the `gio` tool as fallbacks. When you install a new PWA without manually picking a browser, Appify uses the browser your system already considers the default.
 
-**Fixed a bug that caused the extensions to open in Edge by default and sometimes provided incorrect links, replacing them with correct links for Chrome extensions.**
+### True Wayland/X11 Detection and Optimization
 
-**Fixed a bug where attempting to add extensions one by one resulted in a URL error. You can now add or remove extensions individually.**
+In 1.x, the Wayland/X11 situation was a known rough edge — Firefox was forced to launch with `GDK_BACKEND=x11` regardless of whether you were actually running X11 or Wayland. Chromium-based browsers used `--ozone-platform-hint=auto` as a guess.
 
-**Removed old links that no longer work for extensions.**
+In 2.0, Appify detects your session type by checking `$WAYLAND_DISPLAY` and `$DISPLAY` environment variables, then applies the correct flags per-browser:
 
-**Fixed the name, as I made a typo, where it said Applify, and not Appify.**
+- On **Wayland**, Chromium-based browsers get `--ozone-platform=wayland --enable-features=UseOzonePlatform,WaylandWindowDecorations`
+- On **X11**, no extra flags are needed and none are added
+- On unknown sessions, `--ozone-platform-hint=auto` is used as a safe fallback
+- Firefox on Wayland no longer gets forced to X11
 
-**New feature:**
+Each generated launcher script also embeds a comment showing the detected session type and browser installation type, making debugging far easier.
 
-**Added an update banner when a newer version is out.**
+### Expanded Browser Support (Now 8 Browsers)
 
-**Deb bug fix:**
+1.x supported Firefox, Edge, Brave, and Vivaldi in its config — Chrome and Chromium existed as entries but weren't reliably configured. Opera was listed as supported in the readme but absent from the default config.
 
-Fixed where the app was not showing due to a messed-up exec=
+2.0 fully supports all **8 browsers** with complete detection, correct launch arguments, extension store URLs, and Wayland flags:
 
-**Firefox specific:**
+| Browser | Native | Flatpak | Snap |
+|---|---|---|---|
+| Firefox | ✅ | ✅ | ✅ |
+| Microsoft Edge | ✅ | ✅ | ✅ |
+| Brave | ✅ | ✅ | ✅ |
+| Vivaldi | ✅ | ✅ | ✅ |
+| Google Chrome | ✅ | ✅ | ✅ |
+| Chromium | ✅ | ✅ | ✅ |
+| Opera | ✅ | ✅ | ✅ |
+| Ungoogled Chromium | ✅ | — | — |
 
-**You must use the system package of Firefox stable to have controller support; this is because the Flatpak browser does not support it out of the box. Again, a Flatpak sandboxing issue.**
+### Enhanced WebHID and Gamepad Support
 
-Whether you're turning Gmail into a desktop app, running multiple Twitch accounts, or playing cloud games with anti-cheat bypasses — **Appify does it all**.
-
-
-## Key Features
-
-- Isolated Profiles for Every App
-
-- Each PWA gets its own sandboxed environment:
-
-- Unique logins
-
-- Separate cookies and site data
-
-- Independent extensions & settings
-
-- Uninstalling an app does not erase its data. Simply reinstall later and everything returns.
-
-- You can nuke the entire PWA and profile with delete app and choosing delete profile.
-
-### To back up or migrate profiles, copy the hidden directory:
-
-- Smart Icons & Native Desktop Integration
-
-- No more “another Chrome window.”
+1.x added basic WebHID support as an enhancement in its final release. 2.0 expands this into a full set of flags for cloud gaming on Chromium-based browsers:
 
 ```
-~/.pwa_manager
+--enable-features=WebHID
+--enable-gamepad-button-axis-events
+--disable-features=WebHidBlocklist
 ```
 
-## Why Appify Stays Always Up-to-Date & Lightweight
+These flags are applied alongside the correct Wayland or X11 display backend flags, rather than separately, so cloud gaming apps receive the full stack of optimizations in a single launch.
 
-Unlike Electron-based tools (e.g., Nativefier) that bundle an outdated Chromium engine, Appify uses your **existing system browser** as the engine.
+### Browser Selection No Longer Defaults Everything to Edge
 
-- Each PWA is launched with an **isolated profile** (`--user-data-dir` for Chromium-based, `--profile` for Firefox).
-- When you update your browser (Edge, Firefox, Chrome, Brave, etc. — via apt, dnf, Flatpak, or Snap), **every Appify PWA automatically gets the latest version**.
-  - Instant security patches
-  - New performance improvements
-  - Latest web standards (e.g., better AV1 decoding, WebGPU)
-  - Updated extension support
-- No waiting for Appify updates to "refresh" the embedded browser.
-- Extremely low overhead: Only per-app profiles are added (a few MB each), sharing the single browser engine.
+In 1.x, every preset app in the default list had `"browser": "edge"` hardcoded into its entry. This meant that even if Edge wasn't installed, new installs would attempt to use it. In 2.0, the default browser field is `null` and resolved at runtime by the detection system, so you always get a browser that's actually on your machine.
 
-This "pseudo-browser" approach keeps Appify secure, fast, and future-proof — while delivering a truly native feel.
+### Smarter Launcher Scripts
 
-| Aspect                  | Appify (System Browser Engine)                  | Electron Wrappers (e.g., Nativefier)           |
-|-------------------------|-------------------------------------------------|------------------------------------------------|
-| Browser Updates         | Automatic & immediate                           | Delayed (bundled old version)                  |
-| Security Patches        | Always current                                  | Only when wrapper is rebuilt                   |
-| Disk/Memory Usage       | Minimal (shared engine)                         | High (50–200+ MB per app)                      |
-| Hardware Acceleration   | Full access to latest drivers/features          | Often outdated or broken                       |
-| Gamepad/Wayland Support | Native (especially Firefox)                     | Frequently lags behind                         |
+The `.sh` launcher scripts that Appify generates for each PWA are improved in 2.0. They now include:
 
-![Generated Files](https://raw.githubusercontent.com/bobbycomet/Appify/main/appifyfiles.png)
-![Profiles Folder](https://raw.githubusercontent.com/bobbycomet/Appify/main/appifyprofiles.png)
-![Profile Contents](https://raw.githubusercontent.com/bobbycomet/Appify/main/appifyprofileinards.png)
-![Launcher Scripts](https://raw.githubusercontent.com/bobbycomet/Appify/main/appify-shfiles.png)
+- A comment header showing the detected session type and browser display name
+- Correct `setsid` wrapping to fully detach from the terminal
+- `set -euo pipefail` and `set -x` for cleaner error handling and logging
+- Session-type-aware GDK backend for Firefox kiosk mode (X11 vs Wayland)
 
-## Smart Icons & Native Desktop Integration
-No more “another Chrome window.”
+---
 
-Each PWA gets:
-- Correct icon & branding (favicon → icon.horse → Google fallback)
-![App Icons Example](https://raw.githubusercontent.com/bobbycomet/Appify/main/Icons.png)
-*The image above shows themed icons — working on full theme support!*
-- Proper .desktop file
-- Correct WM_CLASS and D-Bus names
-- Full integration with GNOME, KDE, XFCE, e
+## What's Improved in 2.0
 
-## Cloud Gaming Ready:
+### No More Hardcoded `GDK_BACKEND=x11` for Firefox
 
-- Console-style kiosk presets for:
-- Xbox Cloud Gaming (xCloud)
-- GeForce Now
-- Amazon Luna
+In 1.x, Firefox always launched with `env GDK_BACKEND=x11 /usr/bin/firefox` baked into the config. This caused issues on pure Wayland sessions. In 2.0, the GDK backend is only set for kiosk mode when you're actually on X11, and is left unset on Wayland so Firefox handles the session natively.
 
-## Use Firefox stable version by default for:
-- Native gamepad support
-- Better Wayland behavior
-- Certain anti-cheat workarounds
-- Multi-Account Made Simple
+### Extension Preset Expansion for YouTube
 
-## Clone any app instantly:
-- Multiple Twitch accounts
-- Personal + Work Gmail
-- Streaming dashboards
-- Multiple Discord or YouTube logins
-- Each clone runs in its own isolated environment.
+1.x had 3 YouTube extensions (SponsorBlock, uBlock Origin, Return YouTube Dislike). 2.0 adds 4 more: Unhook for YouTube, Enhancer for YouTube, DeArrow, and YouTube NonStop.
 
-## Extension Presets:
+### AI Apps Added to Preset List
 
-**One-click extension bundles for:**
+2.0 adds a dedicated AI & Search category to the preset app list with entries for ChatGPT, Claude, Grok, Gemini, and Perplexity — none of which were in 1.x.
 
-- Twitch (BTTV, FFZ, 7TV)
-- Kick (NipahTV, 7TV)
-- YouTube (SponsorBlock, uBlock, Return YouTube Dislike)
-- Google Docs add-ons (Google-native only)
-- You can add as many as you want, and it is not limited to just one browser
-- You can also install any Chrome-compatible extension manually inside each isolated profile.
+### Streamlabs Dashboard Added
 
-## Complete Browser Support:
+2.0 adds a separate "Streamlabs Dashboard" entry alongside the existing Streamlabs OBS Web preset, useful for streamers who want quick access to their dashboard separately from the full OBS interface.
 
-- Native browser installations
-- Flatpak
-- Snap
+### Config Structure Modernized
 
-## Supported browsers:
+In 1.x, the config stored `"browser": "edge"` as a fixed string at the top level. In 2.0, the config stores `"browser": null` (auto-detected at launch) plus a new `"available_browsers"` dict and `"session_type"` field that are populated on first run. Existing 1.x configs continue to work through the migration system that was already in place.
 
-- Microsoft Edge (default)
-- Brave
-- Vivaldi
-- Chrome/Chromium
-- Firefox
-- Opera
+---
 
-## Performance Controls (Advanced)
+## What Stayed the Same
 
-- Every PWA can be tuned individually:
-- Toggle GPU acceleration
-- Set CPU priority (nice)
-- Set I/O priority (ionice)
-- Defaults are optimized for mainstream usage, but power users can fine-tune cloud gaming, streaming, or background apps.
+Everything that made Appify useful in 1.x is still here and unchanged in 2.0:
 
-## Wayland & X11 Support
+- **Isolated profiles** — every PWA gets its own `~/.pwa_manager/profiles/<slug>/` directory with separate cookies, logins, and extensions
+- **Profile data is preserved on uninstall** — reinstalling a PWA brings back all your data; choosing "Delete Profile" is the only way to wipe it
+- **The GTK4/Adwaita UI** — same dark mode, same layout, same app combo, kiosk toggle, GPU toggle, nice/ionice spinners
+- **Extension presets** — Twitch (BTTV, FFZ, 7TV), Kick (NipahTV, 7TV), YouTube, Google Docs/Sheets/Slides, Reddit, Discord, Netflix, and many more
+- **Custom PWA installation** — paste any URL and give it a name
+- **App cloning** — duplicate any PWA with its own isolated profile
+- **Cloud gaming presets** — Xbox Cloud Gaming, GeForce NOW, Amazon Luna, Boosteroid, AirGPU with kiosk mode and Firefox-first recommendations
+- **Auto icon download** — icon.horse → Google favicons → direct favicon.ico fallback chain
+- **Correct `.desktop` files** — `StartupWMClass`, `X-DBus-Name`, `TryExec`, and proper category flags
+- **Update banner** — checks GitHub Releases on launch and notifies you of newer versions (skips pre-releases)
+- **Full logging** — all launches write to `~/.pwa_manager/launch.log`
+- **No Flatpak version of Appify itself** — sandboxing still breaks browser detection, extension installation, profile isolation, Wayland/X11 switching, and controller support
 
-- Appify detects your environment automatically.
-- **Version 1.0.6 introduces stricter Wayland/X11 detection, but due to minor delays on startup, 1.0.5 remains the stable release, and still supports Wayland. Wayland being the thing to replace X11, I am only preparing the app for that, but Wayland is still not fully reliable for everything, just yet.**
-- **1.0.6 is available early on Patreon for beta testers. Check the bottom of the page.**
+---
 
-## Install
+## Distro Compatibility
 
-Download the AppImage or Deb directly from the releases page or from the source.
+Appify is distributed as an **AppImage** and a **.deb** package.
 
-AppImage, be sure to check your permissions so that you set it launches as an application.
+### AppImage
+Works on any modern Linux distribution with FUSE support, including:
+- Ubuntu 20.04 and newer (and all Ubuntu flavors: Kubuntu, Xubuntu, Lubuntu, etc.)
+- Linux Mint 20 and newer
+- Pop!_OS 20.04 and newer
+- Zorin OS 16 and newer
+- elementary OS 6 and newer
+- Debian 11 (Bullseye) and newer
+- Fedora 35 and newer
+- openSUSE Leap 15.3 and newer / Tumbleweed
+- Arch Linux / Manjaro / EndeavourOS
+- Any other `x86_64` Linux distro with glibc 2.31+
 
-```
-wget https://github.com/bobbycomet/Appify/releases/download/v1.0.5.2/Appify-x86_64.AppImage
+```bash
+wget https://github.com/bobbycomet/Appify/releases/download/v2.0.0/Appify-x86_64.AppImage
 chmod +x Appify-x86_64.AppImage
+./Appify-x86_64.AppImage
 ```
 
-**Deb download, you can use the wget method or download from the releases and use your distro's package installer or gdebi (best method to make sure dependencies are fulfilled)**
+### Deb Package
+Works on Debian/Ubuntu-based distributions:
+- Ubuntu 20.04 LTS and newer
+- Debian 11 (Bullseye) and newer
+- Linux Mint 20 and newer
+- Pop!_OS 20.04 and newer
+- Zorin OS 16 and newer
+- elementary OS 6 and newer
+- Kali Linux (rolling)
+- Raspberry Pi OS (Bullseye and newer, arm64)
 
-```
-sudo apt update
+```bash
+# Recommended: use gdebi to auto-resolve dependencies
 sudo apt install gdebi
-```
-```
-sudo gdebi Appify-1.0.5.2.deb
-```
-```
-wget https://github.com/bobbycomet/Appify/releases/download/v1.0.5/Appify-1.0.5.2.deb
-sudo dpkg -i Appify-1.0.5.2.deb
-sudo apt --fix-broken install -y 
-rm Appify-1.0.5.2.deb
+sudo gdebi Appify-2.0.0.deb
 ```
 
-**If you use it from source, here is how to build the environment.**
+```bash
+# Alternative: dpkg + fix-broken
+sudo dpkg -i Appify-2.0.0.deb
+sudo apt --fix-broken install -y
+```
 
-For Fedora, CentOS, RHEL, etc...
-```
-sudo dnf install python3-gobject gtk4 libadwaita curl xdg-utils
-```
-For Arch, Manjaro, etc... 
-```
-sudo pacman -S python-gobject gtk4 libadwaita curl xdg-utils
-```
-For OpenSUSE, Tumbleweed, etc...
-```
-sudo zypper install python3-gobject typelib-1_0-Gtk-4_0 typelib-1_0-Adw-1 curl xdg-utils
-```
-Debian/Ubuntu
-```
+### Running from Source
+For distros not covered above, run directly from the Python source. Install the required dependencies for your distro first:
+
+**Debian / Ubuntu / Mint / Pop!_OS / Zorin:**
+```bash
 sudo apt update
 sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-4.0 gir1.2-adw-1 curl xdg-utils
 ```
-Don't forget to (the py file name will update in the future)
+
+**Fedora / RHEL / CentOS:**
+```bash
+sudo dnf install python3-gobject gtk4 libadwaita curl xdg-utils
 ```
+
+**Arch / Manjaro / EndeavourOS:**
+```bash
+sudo pacman -S python-gobject gtk4 libadwaita curl xdg-utils
+```
+
+**openSUSE Leap / Tumbleweed:**
+```bash
+sudo zypper install python3-gobject typelib-1_0-Gtk-4_0 typelib-1_0-Adw-1 curl xdg-utils
+```
+
+Then:
+```bash
 chmod +x Appify.py
-```
-For the desktop file (use the icon in the files above)
-```
-[Desktop Entry]
-Version=1.0
-Type=Application
-Name=PWA Manager (Appify)
-Comment=Manage and launch isolated Progressive Web Apps
-Exec=pwamanager
-Icon=appify
-Terminal=false
-Categories=Utility;Network;
-StartupNotify=true
+python3 Appify.py
 ```
 
-## Why No Flatpak Version?
+---
 
-- A Flatpak build would break core functionality due to sandbox restrictions, including:
-- Browser detection would break
-- Extension installation would break
-- Profile isolation would break
-- Wayland/X11 switching would break
-- Controller support would break
-- And more issues that flat seal would not be able to fix
+## Quick Comparison: 1.x vs 2.0
 
-Until these limitations can be resolved, a Flatpak package is not planned.
+| Feature | 1.x | 2.0 |
+|---|---|---|
+| Browser detection | Hardcoded commands | Runtime detection (native/Flatpak/Snap) |
+| Default browser | Always Edge | Reads your system default |
+| Wayland support | `--ozone-platform-hint=auto` guess | Proper per-session, per-browser flags |
+| Firefox on Wayland | Forced to X11 | Native Wayland |
+| Supported browsers | 4 configured, 6 listed | 8 fully configured and detected |
+| Ungoogled Chromium | ❌ | ✅ |
+| WebHID flags | Basic (`--enable-features=WebHID`) | Full 3-flag stack + display backend |
+| Preset apps: AI | ❌ | ChatGPT, Claude, Grok, Gemini, Perplexity |
+| YouTube extensions | 3 | 7 |
+| Launcher script debug info | None | Session type + browser name in header |
+| Per-app browser lock to Edge | Yes (hardcoded) | No (auto-detected at runtime) |
+| Profile isolation | ✅ | ✅ |
+| Extension presets | ✅ | ✅ (expanded) |
+| Cloud gaming presets | ✅ | ✅ |
+| App cloning | ✅ | ✅ |
+| Auto icon download | ✅ | ✅ |
+| Update banner | ✅ | ✅ |
+| GTK4 / Adwaita UI | ✅ | ✅ |
+| Dark mode | ✅ | ✅ |
 
-## Roadmap
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/bobbycomet/Appify/main/Griffin-G.png" alt="Griffin Screenshot" width="25%"/>
-</p>
-
-**Appify is just the beginning.** Upcoming projects aim to make Linux the ultimate platform for gaming, productivity, and Windows switchers:
-
-- **Windows Appify version** – Bring isolated PWAs to Windows users.
-- **Griffin Linux** – A gaming-first, user-friendly distro built around these tools.
-- **Grix** – The ultimate system-aware AI assistant (what Copilot wishes it could be). Diagnoses hardware/software issues, suggests and applies fixes, teaches Linux basics step-by-step, and can securely install packages (apt, Flatpak) with user approval. Features opt-in Python plugins for power users to extend its capabilities. Deeply integrated with Griffin Linux for full system context and intelligence. If demand is high, a standalone version for broader Ubuntu-based distros may follow.
-- **ControllerHub** – Auto-detects controllers, applies optimal profiles/firmware (Xbox, PS, Nintendo, wheels, Bluetooth/wired).
-- **RealtekHub** – GUI for fixing notorious Realtek WiFi driver issues.
-- **Windows Migrate** – GUI tool to transfer files/settings from Windows (including Unity/Unreal projects).
-- **Sentry** – Smart resource manager using cgroups (with nice/ionice fallbacks); learns habits for smoother performance. Includes config.yaml for advanced app detection.
-- **kernel-autotune** – Detects hardware (desktop/laptop, RAM size, kernel type like Xanmod/Liquorix); applies optimal baselines (preload, earlyoom, Zram/Zswap, swappiness, BBR TCP, fq queuing, tuned buffers). Sets governors (performance on desktops, schedutil on laptops) with editable config.
-- **Noatime-autotune** – Simple script for SSD health optimization.
-- **Auto-Gamemode** – Integrates with Steam/Lutris/Heroic; triggers Sentry to throttle background apps for stutter-free gaming.
-- **FanHub** – Windows-style fan/RGB control: curves, profiles, OpenRGB integration.
-- **CpuHub** – Simple GUI for CPU governors (performance, balanced, powersave) + kernel-specific tweaks.
-- **Postinstaller** – One-click category installs (Gaming, Productivity, etc.) – no more forum hunting.
-- **Griffin Linux Repo** – Curated packages for seamless setup.
-
-Stay tuned — these tools will make switching to Linux feel effortless and powerful. The first true Windows killer?
+---
 
 ## Community & Support
 
-Discord: https://discord.gg/7fEt5W7DPh
-
-Patreon (Beta Builds): https://www.patreon.com/c/BobbyComet/membership
-
-Support the Griffin Project: https://ko-fi.com/bobby60908
+- **Discord:** https://discord.gg/7fEt5W7DPh
+- **Patreon (Beta Builds):** https://www.patreon.com/c/BobbyComet/membership
+- **Support the Griffin Project:** https://ko-fi.com/bobby60908
