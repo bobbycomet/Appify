@@ -45,8 +45,84 @@ from urllib.parse import urlparse
 from pathlib import Path
 import requests 
 from packaging.version import Version 
+import locale
+import gettext
 
-CURRENT_VERSION = "2.0.0"
+CURRENT_VERSION = "2.0.3"
+
+# ---------------- Internationalization (i18n) ----------------
+
+def setup_i18n():
+    """
+    Detects the system language and loads a matching appify.mo translation file.
+    Searches all standard locale directories used across Linux distros:
+      - Debian/Ubuntu:        /usr/share/locale/
+      - Arch Linux:           /usr/share/locale/
+      - Fedora/RHEL:          /usr/share/locale/
+      - AppImage (bundled):   $APPDIR/usr/share/locale/
+      - User-local override:  ~/.local/share/locale/
+      - Next to this script:  ./locale/  (dev/testing)
+
+    If no .mo file is found for the detected language, silently falls back
+    to English (identity function) — no errors, no crashes.
+
+    To add a translation:
+      1. Extract strings:  xgettext -L Python -o appify.pot Appify.py
+      2. Create .po:       msginit -l de_DE -o locale/de_DE/LC_MESSAGES/appify.po
+      3. Compile .mo:      msgfmt locale/de_DE/LC_MESSAGES/appify.po -o locale/de_DE/LC_MESSAGES/appify.mo
+      4. Install .mo to:   /usr/share/locale/de_DE/LC_MESSAGES/appify.mo
+    """
+    lang = (
+        os.environ.get("LC_ALL")
+        or os.environ.get("LANGUAGE")
+        or os.environ.get("LANG")
+        or ""
+    ).split(".")[0].split(":")[0]
+
+    if not lang or lang.lower().startswith("c") or lang.lower() == "posix":
+        return lambda s: s
+
+    search_dirs = []
+    search_dirs.append(Path.home() / ".local" / "share" / "locale")
+
+    appdir = os.environ.get("APPDIR")
+    if appdir:
+        search_dirs.append(Path(appdir) / "usr" / "share" / "locale")
+
+    for p in [
+        "/usr/share/locale",
+        "/usr/local/share/locale",
+        "/var/lib/flatpak/exports/share/locale",
+        "/snap/core/current/usr/share/locale",
+    ]:
+        search_dirs.append(Path(p))
+
+    search_dirs.append(Path(__file__).parent / "locale")
+
+    lang_variants = [lang]
+    if "_" in lang:
+        lang_variants.append(lang.split("_")[0])
+
+    for locale_dir in search_dirs:
+        for lang_code in lang_variants:
+            mo_path = locale_dir / lang_code / "LC_MESSAGES" / "appify.mo"
+            if mo_path.exists():
+                try:
+                    translation = gettext.translation(
+                        domain="appify",
+                        localedir=str(locale_dir),
+                        languages=[lang_code],
+                        fallback=False,
+                    )
+                    print(f"[Appify] Loaded translation: {mo_path}")
+                    return translation.gettext
+                except Exception as e:
+                    print(f"[Appify] Translation load failed ({mo_path}): {e}")
+                    continue
+
+    return lambda s: s
+
+_ = setup_i18n()
 
 # ---------------- Browser Detection System ----------------
 
@@ -434,7 +510,7 @@ def check_for_updates(callback):
 # ---------------- Extension Helpers ----------------
 
 def get_app_key(app):
-    hostname = get_hostname_from_url(app["url"])
+    hostname = get_hostname_from_url(app.get("url", ""))
     for domain_substring, preset_key in PRESET_DOMAIN_MAP.items():
         if domain_substring in hostname:
             return preset_key
@@ -552,11 +628,16 @@ def make_launcher_wrapper(app: dict, browser_key: str, nice: int, ionice: int, g
         display_flags = get_display_backend_flags(browser_key)
         
         if app.get("gamepad", False):
-            webhid_flags = "--enable-features=WebHID"
-            webhid_flags += " --enable-gamepad-button-axis-events"
-            webhid_flags += " --disable-features=WebHidBlocklist"
-            
-            extra_flags = f"{webhid_flags} {display_flags}".strip()
+            # Pull WebHID flags from the browser config (where they are defined),
+            # falling back to sensible defaults if missing
+            cfg_extra = browser_cfg.get("extra_flags", "").strip()
+            if not cfg_extra:
+                cfg_extra = (
+                    "--enable-features=WebHID"
+                    " --enable-gamepad-button-axis-events"
+                    " --disable-features=WebHidBlocklist"
+                )
+            extra_flags = f"{cfg_extra} {display_flags}".strip()
         else:
             extra_flags = display_flags
             
@@ -581,11 +662,23 @@ def make_launcher_wrapper(app: dict, browser_key: str, nice: int, ionice: int, g
         # Special handling for Firefox kiosk mode
         if browser_key == "firefox" and app.get('kiosk', False):
             session_type = get_session_type()
-            gdk_backend = "GDK_BACKEND=x11" if session_type == "x11" else ""
-            
+            # On X11 force the GTK backend so Firefox kiosk fills the screen
+            # correctly.  On Wayland Firefox handles kiosk natively - no backend
+            # override is needed and passing GDK_BACKEND=x11 would actually
+            # prevent it from launching.
+            # env_prefix uses the POSIX `env VAR=val cmd` form so that the
+            # variable is set in the child's environment rather than being
+            # passed as a literal argument to setsid.
+            if session_type == "x11":
+                env_prefix = "env GDK_BACKEND=x11"
+            else:
+                env_prefix = "env"
+
+            cmd_esc = cmd.replace('"', '\\"')
+
             lines = [
                 '#!/usr/bin/env bash',
-                '# Generated by PWA Manager – Firefox kiosk mode',
+                '# Generated by Appify – Firefox kiosk mode',
                 'set -euo pipefail',
                 'source "$HOME/.profile" 2>/dev/null || true',
                 '',
@@ -600,7 +693,7 @@ def make_launcher_wrapper(app: dict, browser_key: str, nice: int, ionice: int, g
                 f'URL="{app_url}"',
                 f'export GTK_APPLICATION_ID="{unique_wm_class}"',
                 '',
-                f'exec setsid $NICE_CMD $IONICE_CMD {gdk_backend} {cmd} \\',
+                f'exec setsid $NICE_CMD $IONICE_CMD {env_prefix} "{cmd_esc}" \\',
                 '  --profile="$PROFILE_DIR" \\',
                 '  --no-remote \\',
                 '  --kiosk \\',
@@ -779,10 +872,6 @@ PRESET_DOMAIN_MAP = {
     "capcut.com": "Capcut",
 
     # =================== Cloud Gaming ===================
-    "xbox.com": "Xbox Cloud Gaming",
-    "geforcenow.com": "GeForce NOW",
-    "luna.amazon.com": "Amazon Luna",
-    "boosteroid.com": "Boosteroid",
     "airgpu.com": "AirGPU",
 
     # =================== Art & Creation ===================
@@ -1091,8 +1180,8 @@ DEFAULT_CONFIG = {
     "available_browsers": {},  # Will be populated
     "browsers": {
         "firefox": {
-            "args": "--profile={profile_dir} --no-remote {kiosk_flag} {url}",
-            "kiosk_flag": "--kiosk",
+            "args": "--profile={profile_dir} --no-remote {kiosk_flag}{url}",
+            "kiosk_flag": "--kiosk ",
             "app_mode": False,
             "ext_base": "https://addons.mozilla.org/en-US/firefox/addon/",
             "store_url": "https://addons.mozilla.org/en-US/firefox/", 
@@ -1223,6 +1312,112 @@ print(f"[Appify] Available browsers: {', '.join(CONFIG['available_browsers'].key
 
 # ---------------- Install/Uninstall ----------------
 
+def init_firefox_profile(profile_dir: Path, app: dict):
+    """
+    Pre-initialises a Firefox profile directory so it behaves as an isolated PWA.
+
+    Firefox only populates its profile with .db files and other data the first
+    time the binary actually runs against that directory.  Without this seed
+    file the profile folder is empty, the --no-remote guard fails to isolate
+    it properly, and the PWA opens inside whatever Firefox window is already
+    on screen instead of in its own dedicated instance.
+
+    Writing user.js is the standard, documented way to pre-configure a Firefox
+    profile.  Firefox reads it on every startup and copies every preference
+    listed there into prefs.js, which is the live preferences file.  We set:
+
+      • A unique profile name so the OS window list shows the app name.
+      • browser.startup.homepage set to the PWA URL so it opens on first launch.
+      • All first-run / welcome / telemetry / sync UI disabled — these would
+        hijack the first window and break the PWA experience.
+      • toolkit.singletonWindowType cleared so multiple isolated profiles can
+        each open their own top-level window at the same time.
+      • browser.tabs.warnOnClose / warnOnQuit disabled for clean exit.
+    """
+    profile_dir.mkdir(parents=True, exist_ok=True)
+
+    app_name = app.get("name", "PWA")
+    app_url  = app.get("url", "about:blank")
+
+    user_js_content = f"""\
+// Generated by Appify – do not edit by hand.
+// This file is re-read by Firefox on every startup and merged into prefs.js.
+
+// ── Identity ──────────────────────────────────────────────────────────────
+user_pref("profile.name", "{app_name}");
+
+// ── Startup ───────────────────────────────────────────────────────────────
+// 0 = blank, 1 = home page, 2 = last session, 3 = resume previous session
+user_pref("browser.startup.page", 1);
+user_pref("browser.startup.homepage", "{app_url}");
+
+// ── First-run / welcome UI (suppress completely) ───────────────────────
+user_pref("browser.startup.firstrunSkipsHomepage", true);
+user_pref("browser.startup.homepage_override.mstone", "ignore");
+user_pref("startup.homepage_welcome_url", "");
+user_pref("startup.homepage_welcome_url.additional", "");
+user_pref("startup.homepage_override_url", "");
+user_pref("browser.laterrun.enabled", false);
+user_pref("browser.uitour.enabled", false);
+user_pref("trailhead.firstrun.didSeeAboutWelcome", true);
+user_pref("browser.aboutwelcome.enabled", false);
+
+// ── New-tab page (keep it minimal, not a distraction) ─────────────────
+user_pref("browser.newtabpage.enabled", false);
+user_pref("browser.newtab.preload", false);
+user_pref("browser.newtabpage.activity-stream.feeds.telemetry", false);
+user_pref("browser.newtabpage.activity-stream.telemetry", false);
+user_pref("browser.newtabpage.activity-stream.feeds.snippets", false);
+user_pref("browser.newtabpage.activity-stream.feeds.section.topstories", false);
+user_pref("browser.newtabpage.activity-stream.feeds.discoverystreamfeed", false);
+user_pref("browser.newtabpage.activity-stream.showSponsored", false);
+user_pref("browser.newtabpage.activity-stream.showSponsoredTopSites", false);
+
+// ── Telemetry / data collection ────────────────────────────────────────
+user_pref("toolkit.telemetry.reportingpolicy.firstRun", false);
+user_pref("toolkit.telemetry.unified", false);
+user_pref("toolkit.telemetry.enabled", false);
+user_pref("toolkit.telemetry.server", "");
+user_pref("toolkit.telemetry.archive.enabled", false);
+user_pref("toolkit.telemetry.newProfilePing.enabled", false);
+user_pref("toolkit.telemetry.shutdownPingSender.enabled", false);
+user_pref("toolkit.telemetry.updatePing.enabled", false);
+user_pref("toolkit.telemetry.bhrPing.enabled", false);
+user_pref("toolkit.telemetry.firstShutdownPing.enabled", false);
+user_pref("datareporting.healthreport.uploadEnabled", false);
+user_pref("datareporting.policy.dataSubmissionEnabled", false);
+user_pref("datareporting.policy.firstRunURL", "");
+
+// ── Sync / accounts (not needed for a PWA profile) ────────────────────
+user_pref("identity.fxaccounts.enabled", false);
+
+// ── Extension recommendations (noisy, irrelevant for PWA) ─────────────
+user_pref("extensions.getAddons.showPane", false);
+user_pref("extensions.htmlaboutaddons.recommendations.enabled", false);
+user_pref("browser.discovery.enabled", false);
+
+// ── Window behaviour ──────────────────────────────────────────────────
+// Allows multiple independent Firefox profiles to each have their own
+// top-level window open simultaneously (required for --no-remote).
+user_pref("toolkit.singletonWindowType", "");
+user_pref("browser.tabs.warnOnClose", false);
+user_pref("browser.tabs.warnOnCloseOtherTabs", false);
+user_pref("browser.warnOnQuit", false);
+user_pref("browser.sessionstore.resume_from_crash", false);
+
+// ── Security defaults (keep sensible values) ─────────────────────────
+user_pref("security.sandbox.content.level", 2);
+"""
+
+    user_js_path = profile_dir / "user.js"
+    # Only write if the file doesn't already exist, so manual edits are preserved.
+    if not user_js_path.exists():
+        try:
+            user_js_path.write_text(user_js_content, encoding="utf-8")
+        except Exception as e:
+            print(f"[Appify] Warning: could not write user.js for Firefox profile: {e}")
+
+
 def install_app(app, browser_key, kiosk, nice, ionice, gpu, status_callback=None):
     if 'url' in app and ('name' not in app or not app['name']):
         parsed_url = urlparse(app['url'])
@@ -1239,6 +1434,18 @@ def install_app(app, browser_key, kiosk, nice, ionice, gpu, status_callback=None
     
     profile_dir = get_profile_dir(app)
     profile_dir.mkdir(parents=True, exist_ok=True)
+
+    # Firefox needs its profile directory pre-seeded with a user.js so that
+    # it launches as a proper isolated PWA instance.  Chromium-based browsers
+    # build their full profile structure automatically on first launch via
+    # --user-data-dir; Firefox does not do this until the binary actually runs,
+    # which means without this step the profile folder stays empty and Firefox
+    # ignores --no-remote, opening URLs inside an existing window instead.
+    if browser_key.lower() == "firefox":
+        init_firefox_profile(profile_dir, app)
+        if status_callback:
+            status_callback(f"Firefox profile initialised for {app['name']}")
+
     profile_cfg = load_profile_config(app)
     profile_cfg["browser"] = browser_key.lower()
     profile_cfg["gamepad"] = app.get("gamepad", False)
@@ -1422,7 +1629,7 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         
         # Display session info in title
         session_info = f" • {CONFIG['session_type'].upper()}" if CONFIG.get('session_type') else ""
-        self.set_title(f"Appify 2.0.0{session_info}")
+        self.set_title(_(f"Appify {CURRENT_VERSION}{session_info}"))
         self.set_default_size(1000, 1050)
         self.sorted_apps_list = []
 
@@ -1435,7 +1642,7 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         header.set_show_start_title_buttons(True)
         header.set_show_end_title_buttons(True)
         title = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        title.append(Gtk.Label(label="Appify 2...0"))
+        title.append(Gtk.Label(label=_(f"Appify {CURRENT_VERSION}")))
         subtitle_text = f"Smart Browser Detection • {CONFIG['session_type'].upper() if CONFIG.get('session_type') else 'Unknown'} Session"
         title.append(Gtk.Label(label=subtitle_text))
         header.set_title_widget(title)
@@ -1443,9 +1650,9 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         menu_btn = Gtk.MenuButton()
         menu_btn.set_icon_name("open-menu-symbolic")
         menu = Gio.Menu()
-        menu.append("About", "win.about")
-        menu.append("Rescan Browsers", "win.rescan")
-        menu.append("Restore Default Apps", "win.restore_defaults")
+        menu.append(_("About"), "win.about")
+        menu.append(_("Rescan Browsers"), "win.rescan")
+        menu.append(_("Restore Default Apps"), "win.restore_defaults")
         menu_btn.set_menu_model(menu)
         header.pack_end(menu_btn)
 
@@ -1462,7 +1669,7 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         self.add_action(restore_action)
 
         mode_box = Gtk.Box(spacing=6)
-        mode_box.append(Gtk.Label(label="Dark"))
+        mode_box.append(Gtk.Label(label=_("Dark")))
         self.mode_switch = Gtk.Switch()
         self.mode_switch.set_active(CONFIG.get("dark_mode", True))
         self.mode_switch.connect("notify::active", self.on_mode_toggled)
@@ -1520,7 +1727,7 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         search_frame.set_child(search_box)
         
         self.search_entry = Gtk.Entry()
-        self.search_entry.set_placeholder_text("Search apps...")
+        self.search_entry.set_placeholder_text(_("Search apps..."))
         self.search_entry.connect("changed", self.on_search_changed)
         search_box.append(self.search_entry)
         content_box.append(search_frame)
@@ -1648,17 +1855,17 @@ class PWAManagerWindow(Adw.ApplicationWindow):
 
         btn_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         btn_box.set_homogeneous(True)
-        self.install_btn = Gtk.Button(label="Install")
+        self.install_btn = Gtk.Button(label=_("Install"))
         self.install_btn.connect("clicked", self.on_install)
-        self.install_custom_btn = Gtk.Button(label="Install Custom")
+        self.install_custom_btn = Gtk.Button(label=_("Install Custom"))
         self.install_custom_btn.connect("clicked", self.on_install_custom)
-        self.uninstall_btn = Gtk.Button(label="Uninstall")
+        self.uninstall_btn = Gtk.Button(label=_("Uninstall"))
         self.uninstall_btn.connect("clicked", self.on_uninstall)
-        self.clone_btn = Gtk.Button(label="Clone App")
+        self.clone_btn = Gtk.Button(label=_("Clone App"))
         self.clone_btn.connect("clicked", self.on_clone)
-        self.refresh_btn = Gtk.Button(label="Refresh")
+        self.refresh_btn = Gtk.Button(label=_("Refresh"))
         self.refresh_btn.connect("clicked", self.on_refresh)
-        self.remove_btn = Gtk.Button(label="Delete App")
+        self.remove_btn = Gtk.Button(label=_("Delete App"))
         self.remove_btn.connect("clicked", self.on_remove_app)
         
         for b in [self.install_btn, self.install_custom_btn, self.uninstall_btn, self.clone_btn, self.refresh_btn, self.remove_btn]: 
@@ -1686,7 +1893,7 @@ class PWAManagerWindow(Adw.ApplicationWindow):
             version_line = msg.split("\n")[0]
             GLib.idle_add(self.update_banner.set_title, version_line)
             GLib.idle_add(self.update_banner.set_revealed, True)
-            self.status_push("Update available!")
+            self.status_push(_("Update available!"))
 
         GLib.timeout_add_seconds(2, lambda: check_for_updates(show_update_message) or False)
 
@@ -1703,23 +1910,48 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         browser_list = '\n'.join([f"• {info['display_name']}" for info in available.values()])
         
         about = Adw.AboutDialog(
-            application_name="Appify",
+            application_name=_("Appify"),
             application_icon="appify",
             developer_name="BobbyComet",
-            version="2.0.0",
+            version=CURRENT_VERSION,
             website="https://github.com/bobbycomet/Appify",
             issue_url="https://github.com/bobbycomet/Appify/issues",
             license_type=Gtk.License.GPL_3_0,
-            copyright="© 2025 BobbyComet",
-            comments=f"Progressive Web Apps with Smart Detection\n\n"
-                     f"Session: {CONFIG.get('session_type', 'unknown').upper()}\n"
-                     f"Default Browser: {CONFIG.get('browser', 'none').title()}\n\n"
-                     f"Installed Browsers:\n{browser_list if browser_list else '• None detected'}",
+            copyright=_("© 2025 BobbyComet"),
+            comments=_(
+                "Progressive Web Apps with Smart Detection\n\n"
+                f"Session: {CONFIG.get('session_type', 'unknown').upper()}\n"
+                f"Default Browser: {CONFIG.get('browser', 'none').title()}\n\n"
+                f"Installed Browsers:\n{browser_list if browser_list else '• None detected'}"
+            ),
             developers=["BobbyComet"],
         )
-        about.add_link("Discord Community", "https://discord.gg/7fEt5W7DPh")
-        about.add_link("GitHub", "https://github.com/bobbycomet/Appify")
-        about.add_link("Support the project", "https://ko-fi.com/bobby60908")
+        about.add_link(_("Discord Community"), "https://discord.gg/7fEt5W7DPh")
+        about.add_link(_("GitHub"), "https://github.com/bobbycomet/Appify")
+        about.add_link(_("Support the project"), "https://ko-fi.com/bobby60908")
+
+        SECURITY_POLICY = _(
+        """Reporting a Vulnerability
+        If you find a security issue, please do not open a public issue. Instead, please report it via:
+
+        • Email: griffin.linux@gmail.com
+        • Discord: https://discord.gg/7fEt5W7DPh
+
+        Bounty Program
+        As a solo developer, I do not currently offer financial bounties. However, I am happy to provide credit in the project's contributors list.
+
+        How to Report
+        1. Type of Issue: (e.g., Buffer overflow)
+        2. Location: Which specific script or file?
+        3. Step-by-Step Instructions: How to reproduce.
+        4. Proof of Concept: Script or screenshot.
+        5. Upstream Check: Does this exist in standard Ubuntu?""")
+
+        about.add_legal_section(
+            _("Security Policy"),
+            SECURITY_POLICY,
+            Gtk.License.UNKNOWN
+        )
         about.present(self)
 
     def on_rescan_browsers(self, action=None, param=None):
@@ -1730,7 +1962,7 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         self.refresh_browser_combo()
         
         browser_count = len(CONFIG['available_browsers'])
-        self.status_push(f"Rescan complete: {browser_count} browser(s) found")
+        self.status_push(_(f"Rescan complete: {browser_count} browser(s) found"))
 
     def on_restore_defaults(self, action=None, param=None):
         """Restores any missing default apps"""
@@ -1793,7 +2025,14 @@ class PWAManagerWindow(Adw.ApplicationWindow):
 
     def status_push(self, msg):
         GLib.idle_add(self.statusbar.set_text, msg)
-        GLib.timeout_add_seconds(5, self.statusbar.set_text, "")
+        if hasattr(self, '_status_timeout_id') and self._status_timeout_id:
+            GLib.source_remove(self._status_timeout_id)
+        self._status_timeout_id = GLib.timeout_add_seconds(5, self._clear_status)
+
+    def _clear_status(self):
+        self.statusbar.set_text("")
+        self._status_timeout_id = None
+        return False  # Don't repeat
 
     def populate_app_combo(self, search_term=""):
         all_apps = CONFIG["apps"].values()
@@ -2002,7 +2241,7 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         browser_cfg = get_browsers().get(browser_key, {})
         store_url = browser_cfg.get("store_url", "https://chromewebstore.google.com/")
         subprocess.Popen(["xdg-open", store_url])
-        self.status_push("Opened extension store")
+        self.status_push(_("Opened extension store"))
 
     def on_add_custom_ext(self, btn):
         idx = self.app_combo.get_selected()
@@ -2170,7 +2409,7 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         current_search = self.search_entry.get_text().strip()
         self.populate_app_combo(current_search)
         self.update_button_states()
-        self.status_push("Refreshed")
+        self.status_push(_("Refreshed"))
 
     def on_remove_app(self, btn):
         idx = self.app_combo.get_selected()
