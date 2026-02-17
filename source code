@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Appify 2.0.0 - Smart Browser Detection Edition
+Appify 2.0.3 - Smart Browser Detection Edition
 - INTELLIGENT BROWSER DETECTION: Auto-detects native vs Flatpak installations
 - WAYLAND/X11 NATIVE SUPPORT: Automatically configures for your display server
 - DEFAULT BROWSER DETECTION: Uses your system's default browser
