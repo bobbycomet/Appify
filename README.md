@@ -10,7 +10,7 @@ Those create a shortcut that still runs inside your main browser profile — sam
 Completely separate profile folder, its own cookies, logins, history, storage.
 
 - Own extensions, install BTTV/7TV only on Twitch, uBlock only on YouTube, etc., your main browser stays lean
-- Own window, proper taskbar icon, groups independently, no "7 Edge icons" clutter
+- Own window, proper panel (task barfor Windows when that version is finished) icon, groups independently, no "7 Edge icons" clutter
 - Uses your real installed browser (Firefox, Brave, Edge, Ungoogled, etc.) with proper Wayland/X11 flags
 - Kiosk mode, WebHID/gamepad support, nice/ionice tuning for cloud gaming
 - no electron wrappers
