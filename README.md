@@ -314,37 +314,3 @@ Then:
 chmod +x Appify.py
 python3 Appify.py
 ```
-
----
-
-## Quick Comparison: 1.x vs 2.0
-
-| Feature | 1.x | 2.0 |
-|---|---|---|
-| Browser detection | Hardcoded commands | Runtime detection (native/Flatpak/Snap) |
-| Default browser | Always Edge | Reads your system default |
-| Wayland support | `--ozone-platform-hint=auto` guess | Proper per-session, per-browser flags |
-| Firefox on Wayland | Forced to X11 | Native Wayland |
-| Supported browsers | 4 configured, 6 listed | 8 fully configured and detected |
-| Ungoogled Chromium | ❌ | ✅ |
-| WebHID flags | Basic (`--enable-features=WebHID`) | Full 3-flag stack + display backend |
-| Preset apps: AI | ❌ | ChatGPT, Claude, Grok, Gemini, Perplexity |
-| YouTube extensions | 3 | 7 |
-| Launcher script debug info | None | Session type + browser name in header |
-| Per-app browser lock to Edge | Yes (hardcoded) | No (auto-detected at runtime) |
-| Profile isolation | ✅ | ✅ |
-| Extension presets | ✅ | ✅ (expanded) |
-| Cloud gaming presets | ✅ | ✅ |
-| App cloning | ✅ | ✅ |
-| Auto icon download | ✅ | ✅ |
-| Update banner | ✅ | ✅ |
-| GTK4 / Adwaita UI | ✅ | ✅ |
-| Dark mode | ✅ | ✅ |
-
----
-
-## Community & Support
-
-- **Discord:** https://discord.gg/7fEt5W7DPh
-- **Patreon (Beta Builds):** https://www.patreon.com/c/BobbyComet/membership
-- **Support the Griffin Project:** https://ko-fi.com/bobby60908
