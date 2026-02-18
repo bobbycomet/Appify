@@ -46,7 +46,7 @@ Still have questions about a specific browser or feature? Join the Discord or op
   <img src=https://github.com/bobbycomet/Appify/blob/main/Appify2.0.png
 </div>
 
-> **Windows port is coming soon.** Appify's isolation model, browser detection, and PWA launching are being adapted for Windows — stay tuned on Discord and Patreon for updates.
+**Windows port is coming soon.** Appify's isolation model, browser detection, and PWA launching are being adapted for Windows — stay tuned on Discord and Patreon for updates.
 
 Full Changelog: [channel log](https://github.com/bobbycomet/Appify/compare/v2.0.5...v2.1.0)
 
