@@ -2,11 +2,7 @@
   <img src="https://raw.githubusercontent.com/bobbycomet/Appify/main/appify.png" alt="Appify Logo" width="25%"/>
 </div>
 
-2.0.4 custom app bug fix. 2.0.3 reintroduced a custom app bug. The root cause: on_install_custom was reading the URL from self.url_entry, the shared URL field in the Options panel that displays whichever app is currently selected in the combo. So the only way it ever worked was if the user manually cleared that field and typed a fresh URL before clicking the button. If any app was selected (which is always the case on startup), the field would contain that app's URL instead. Now it has its own dialog box.
-
-Version 2.0.3 Firefox bug fix. The logic for the auto-detection for Wayland and X11 was causing a mix-up. Now it should be working properly. 
-
-Version 2.0.2 bug fix. Removed dead-linked extensions, fixed Google extension logic, before Google Docs extensions were showing up under Google Sheets and Google Slides. Now they appear under the proper PWA to be made; this was because of how the links were set up. All three have the hostname docs.google.com. The fix: the more-specific path-based entries need to be checked before the hostname-only docs.google.com entry. The solution was to reorder PRESET_DOMAIN_MAP so path-based keys come first, OR better yet, update get_app_key to check path-based keys first.
+2.1.0 is coming soon. It is the security update and better profile handling for safer data storage.
 
 It now has multilingual support. It checks for your .mo file and on their system, and then uses a process to apply the system language and translates; if that fails, it then reverts to English.
 
