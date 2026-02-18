@@ -43,7 +43,7 @@ Appify adds the best of both worlds:
 Still have questions about a specific browser or feature? Join the Discord or open an issue — happy to clarify!
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/bobbycomet/Appify/main/appify.png" alt="Appify Logo" width="25%"/>
+  <img src=https://github.com/bobbycomet/Appify/blob/main/Appify2.0.png
 </div>
 
 > **Windows port is coming soon.** Appify's isolation model, browser detection, and PWA launching are being adapted for Windows — stay tuned on Discord and Patreon for updates.
