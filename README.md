@@ -4,6 +4,8 @@
 
 2.1.0 is coming soon. It is the security update and better profile handling for safer data storage.
 
+Full Changelog: [channel log](https://github.com/bobbycomet/Appify/compare/v2.0.4...v2.0.5)
+
 Appify doesn't just "pin a website" as Chrome or Edge does.
 
 Those create a shortcut that still runs inside your main browser profile — same cookies, same extensions (loaded all the time), same telemetry, same taskbar grouping mess ("Edge is open 12 times"). Appify creates a real, isolated desktop app for each site:
