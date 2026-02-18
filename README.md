@@ -21,7 +21,7 @@ Completely separate profile folder, its own cookies, logins, history, storage.
 
 Appify launches your **real installed browser** (not a wrapper or limited engine), so you inherit **all** the native PWA capabilities that browser provides — including auto-updates from the site manifest, offline support via service workers, push notifications, and account/ecosystem sync.
 
-Here's exactly what is preserved for each supported browser:
+Here's exactly what is preserved for each supported browser: 
 
 | Browser                  | Auto-Updates from Manifest | Offline Handling (Service Worker) | Native Push Notifications | Account / Ecosystem Sync                  | Notes / Extra Perks in Appify                     |
 |--------------------------|----------------------------|------------------------------------|---------------------------|-------------------------------------------|---------------------------------------------------|
