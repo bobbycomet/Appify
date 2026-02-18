@@ -2,7 +2,7 @@
   <img src="https://raw.githubusercontent.com/bobbycomet/Appify/main/appify.png" alt="Appify Logo" width="25%"/>
 </div>
 
-2.1.0 is coming soon. It is the security update and better profile handling for safer data storage.
+2.1.0 is coming soon. It is the security update and better profile handling for safer data storage. 2.1.0 will also handle Wayland based on compositors (such as KDE, for example).
 
 Full Changelog: [channel log](https://github.com/bobbycomet/Appify/compare/v2.0.4...v2.0.5)
 
