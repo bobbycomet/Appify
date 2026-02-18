@@ -17,6 +17,32 @@ Completely separate profile folder, its own cookies, logins, history, storage.
 - Kiosk mode, WebHID/gamepad support, nice/ionice tuning for cloud gaming
 - no electron wrappers
 
+### What Modern PWA Features Do I Keep with Each Supported Browser?
+
+Appify launches your **real installed browser** (not a wrapper or limited engine), so you inherit **all** the native PWA capabilities that browser provides — including auto-updates from the site manifest, offline support via service workers, push notifications, and account/ecosystem sync.
+
+Here's exactly what is preserved for each supported browser:
+
+| Browser                  | Auto-Updates from Manifest | Offline Handling (Service Worker) | Native Push Notifications | Account / Ecosystem Sync                  | Notes / Extra Perks in Appify                     |
+|--------------------------|----------------------------|------------------------------------|---------------------------|-------------------------------------------|---------------------------------------------------|
+| **Firefox**              | Yes                        | Yes                                | Yes                       | Firefox Sync (passwords, history, tabs, add-ons) | Best WebHID/gamepad support for cloud gaming; native Wayland; per-app extensions shine here |
+| **Microsoft Edge**       | Yes                        | Yes                                | Yes                       | Microsoft account sync (passwords, history, extensions, collections) | Tight Windows integration (coming soon); good default for many users |
+| **Brave**                | Yes                        | Yes                                | Yes                       | Brave Sync (limited: bookmarks, passwords, settings) | Built-in ad/tracker blocking; privacy-focused; strong isolation synergy |
+| **Vivaldi**              | Yes                        | Yes                                | Yes                       | Vivaldi Sync (bookmarks, passwords, notes, tabs) | Highly customizable UI; tab stacking/notes carry over |
+| **Google Chrome**        | Yes                        | Yes                                | Yes                       | Google account sync (full: passwords, history, extensions, tabs, payments) | Widest extension ecosystem; seamless Google service integration |
+| **Chromium**             | Yes                        | Yes                                | Yes                       | Depends on distro/packages (often manual or via Google account if signed in) | Open-source base; no Google telemetry by default |
+| **Opera**                | Yes                        | Yes                                | Yes                       | Opera account sync (bookmarks, passwords, tabs, messengers) | Built-in VPN/messenger sidebar carries over |
+| **Ungoogled Chromium**   | Yes                        | Yes                                | Yes                       | Manual or via Google account if signed in (no forced sync) | Maximum privacy (no Google tracking); ideal for isolation purists |
+
+**Bottom line**:  
+No matter which browser you pick, Appify gives you **the full modern PWA experience** that browser supports — auto-updates, offline caching, push notifications, and account sync — **without** the shared-profile downsides of built-in Chrome/Edge PWAs (shared cookies/extensions/telemetry, no per-app extension control, taskbar clutter).
+
+Appify adds the best of both worlds:  
+- All the web-platform polish you expect  
+- True per-PWA isolation, per-site extensions, independent desktop windows/icons, sub-second installs, backup/restore, and deep Linux integration (compositor-aware Wayland flags, etc.)
+
+Still have questions about a specific browser or feature? Join the Discord or open an issue — happy to clarify!
+
 # Appify 2.0 – Why It's a Major Upgrade Over 1.x
 
 Appify 2.0 is not just a bug fix release — it's a ground-up rethinking of how Appify detects, manages, and launches browsers. This page explains exactly what changed, what's new, and what stayed the same so you can decide whether to upgrade.
