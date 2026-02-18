@@ -47,7 +47,8 @@ Still have questions about a specific browser or feature? Join the Discord or op
 
 Full Changelog: [channel log](https://github.com/bobbycomet/Appify/compare/v2.0.5...v2.1.0)
 
----
+---<img width="1920" height="1080" alt="Appify2 1" src="https://github.com/user-attachments/assets/7d50c4f8-481c-46e4-9fc7-46bff328b2ef" />
+
 
 # Appify 2.1.0 – What's New Over 2.0.5
 
