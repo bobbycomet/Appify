@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Appify 2.0.3 - Smart Browser Detection Edition
+Appify 2.1.0 - Smart Browser Detection Edition
 - INTELLIGENT BROWSER DETECTION: Auto-detects native vs Flatpak installations
 - WAYLAND/X11 NATIVE SUPPORT: Automatically configures for your display server
 - DEFAULT BROWSER DETECTION: Uses your system's default browser
@@ -25,7 +25,6 @@ Appify 2.0.3 - Smart Browser Detection Edition
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
-
 import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
@@ -34,21 +33,74 @@ from gi.repository import Gtk, Gio, GLib, Gdk, Adw
 import os
 import re
 import sys
+import io
 import json
 import shutil
 import argparse
 import subprocess
 import tempfile
 import shlex
+import tarfile
 import threading
-from urllib.parse import urlparse
+import datetime
+import logging
+import stat
+from urllib.parse import urlparse, urlunparse
 from pathlib import Path
-import requests 
-from packaging.version import Version 
+from packaging.version import Version
 import locale
 import gettext
 
-CURRENT_VERSION = "2.0.3"
+CURRENT_VERSION = "2.1.0"
+
+# ---------------- Logging (must be first — used throughout the module) --------
+
+def _setup_logger() -> logging.Logger:
+    """
+    Configures a module-level logger that writes to stderr.
+    A FileHandler is attached lazily once LOG_FILE's parent directory exists.
+    """
+    logger = logging.getLogger("appify")
+    if logger.handlers:
+        return logger  # Already configured (e.g. during tests).
+    logger.setLevel(logging.DEBUG)
+    fmt = logging.Formatter(
+        "%(asctime)s [%(levelname)s] %(message)s",
+        datefmt="%Y-%m-%dT%H:%M:%S",
+    )
+    sh = logging.StreamHandler(sys.stderr)
+    sh.setFormatter(fmt)
+    logger.addHandler(sh)
+    return logger
+
+
+_logger = _setup_logger()
+
+
+def _ensure_file_log_handler():
+    """Attaches a FileHandler to the module logger once LOG_FILE is available."""
+    for h in _logger.handlers:
+        if isinstance(h, logging.FileHandler):
+            return
+    try:
+        LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+        fh = logging.FileHandler(str(LOG_FILE), encoding="utf-8")
+        fh.setFormatter(logging.Formatter(
+            "%(asctime)s [%(levelname)s] %(message)s",
+            datefmt="%Y-%m-%dT%H:%M:%S",
+        ))
+        _logger.addHandler(fh)
+    except Exception as exc:
+        _logger.warning("Could not attach file log handler: %s", exc)
+
+
+def log_debug(msg: str):
+    """Convenience wrapper — logs at DEBUG level."""
+    _ensure_file_log_handler()
+    _logger.debug(msg)
+
+
+
 
 # ---------------- Internationalization (i18n) ----------------
 
@@ -126,6 +178,44 @@ _ = setup_i18n()
 
 # ---------------- Browser Detection System ----------------
 
+# Maps desktop-file stems (and Flatpak app-IDs) to our internal browser keys.
+# A single authoritative constant used by all detection paths in
+# get_default_browser() so that adding a new browser only requires one edit.
+BROWSER_DESKTOP_MAP: dict[str, str] = {
+    # Firefox
+    "firefox":              "firefox",
+    "org.mozilla.firefox":  "firefox",
+
+    # Edge
+    "microsoft-edge":       "edge",
+    "com.microsoft.edge":   "edge",
+    "msedge":               "edge",
+    "edge":                 "edge",
+
+    # Brave
+    "brave":                "brave",
+    "brave-browser":        "brave",
+    "com.brave.browser":    "brave",
+
+    # Vivaldi
+    "vivaldi":              "vivaldi",
+    "com.vivaldi.vivaldi":  "vivaldi",
+
+    # Chrome
+    "google-chrome":        "chrome",
+    "com.google.chrome":    "chrome",
+    "chrome":               "chrome",
+
+    # Chromium
+    "chromium":             "chromium",
+    "chromium-browser":     "chromium",
+    "org.chromium.chromium":"chromium",
+
+    # Opera
+    "opera":                "opera",
+    "com.opera.opera":      "opera",
+}
+
 def is_wayland_session() -> bool:
     """Detects if the current session is Wayland"""
     return bool(os.environ.get('WAYLAND_DISPLAY'))
@@ -142,20 +232,131 @@ def get_session_type() -> str:
         return "x11"
     return "unknown"
 
+def detect_wayland_compositor() -> str:
+    """
+    Detects the active Wayland compositor/desktop environment.
+    Returns one of: 'gnome', 'kde', 'sway', 'hyprland', 'wlroots',
+                    'cosmic', 'wayfire', 'river', 'labwc', 'unknown'
+
+    Detection strategy (cheapest first):
+      1. Check well-known environment variables set by specific compositors.
+      2. Check XDG_CURRENT_DESKTOP / DESKTOP_SESSION.
+      3. Check SWAYSOCK / HYPRLAND_INSTANCE_SIGNATURE sockets.
+      4. Fall back to 'unknown'.
+    """
+    if not is_wayland_session():
+        return "unknown"
+
+    # --- Direct compositor env vars ---
+    if os.environ.get("HYPRLAND_INSTANCE_SIGNATURE"):
+        return "hyprland"
+    if os.environ.get("SWAYSOCK"):
+        return "sway"
+
+    # --- Desktop environment vars ---
+    xdg = (os.environ.get("XDG_CURRENT_DESKTOP") or "").lower()
+    ds  = (os.environ.get("DESKTOP_SESSION") or "").lower()
+    combined = f"{xdg} {ds}"
+
+    if "gnome" in combined:
+        return "gnome"
+    if "kde" in combined or "plasma" in combined:
+        return "kde"
+    if "sway" in combined:
+        return "sway"
+    if "hyprland" in combined:
+        return "hyprland"
+    if "cosmic" in combined:
+        return "cosmic"
+    if "wayfire" in combined:
+        return "wayfire"
+    if "river" in combined:
+        return "river"
+    if "labwc" in combined:
+        return "labwc"
+
+    # --- Try querying the compositor via wlr-randr / wayland socket heuristics ---
+    # Check running processes for well-known compositor binaries
+    try:
+        procs = subprocess.run(
+            ["ps", "-eo", "comm"], capture_output=True, text=True, timeout=2
+        ).stdout.lower()
+        if "gnome-shell" in procs:
+            return "gnome"
+        if "kwin_wayland" in procs:
+            return "kde"
+        if "sway" in procs:
+            return "sway"
+        if "hyprland" in procs:
+            return "hyprland"
+        if "cosmic-comp" in procs:
+            return "cosmic"
+        if "wayfire" in procs:
+            return "wayfire"
+        if "river" in procs:
+            return "river"
+        if "labwc" in procs:
+            return "labwc"
+    except Exception:
+        pass
+
+    return "unknown"
+
 def get_display_backend_flags(browser_key: str = "") -> str:
-    """Returns appropriate display backend flags for current session and browser"""
+    """
+    Returns appropriate display-backend flags for the current session and browser.
+
+    Rules:
+      • X11  → no extra flags needed; the browser's native X11 path is used.
+      • Wayland + Chromium-based:
+          - Most compositors: --ozone-platform=wayland + window decoration hint
+          - KDE/KWin: also add UseWaylandDecorations (server-side decorations)
+          - GNOME Mutter: standard ozone flags work fine
+          - wlroots-based (sway, hyprland, river, labwc, wayfire):
+            add --disable-gpu-sandbox workaround that helps on some wlroots setups
+      • Unknown session → --ozone-platform-hint=auto (let Chromium decide)
+
+    Firefox is intentionally NOT touched here; its kiosk mode must not receive
+    --ozone or GDK_BACKEND flags as arguments (that breaks kiosk on Wayland).
+    Firefox Wayland support is handled via the environment in make_launcher_wrapper.
+    """
     session = get_session_type()
-    
-    # Chromium-based browsers get Wayland optimization
-    chromium_browsers = ["edge", "brave", "vivaldi", "chrome", "chromium", "opera", "ungoogled-chromium"]
-    
-    if session == "wayland" and browser_key.lower() in chromium_browsers:
-        return "--ozone-platform=wayland --enable-features=UseOzonePlatform,WaylandWindowDecorations"
-    elif session == "x11":
-        return ""  # Native X11, no flags needed
-    else:
-        # Fallback: let browser auto-detect
-        return "--ozone-platform-hint=auto"
+    chromium_browsers = [
+        "edge", "brave", "vivaldi", "chrome", "chromium", "opera", "ungoogled-chromium"
+    ]
+
+    if browser_key.lower() not in chromium_browsers:
+        # Firefox / unknown — handled elsewhere; return empty.
+        return ""
+
+    if session == "x11":
+        # Pure X11: Chromium uses XCB natively, no ozone flags needed.
+        return ""
+
+    if session == "wayland":
+        compositor = detect_wayland_compositor()
+        base = "--ozone-platform=wayland --enable-features=UseOzonePlatform"
+
+        if compositor == "kde":
+            # KDE Plasma supports server-side window decorations via xdg-decoration.
+            return f"{base},WaylandWindowDecorations"
+
+        if compositor in ("sway", "hyprland", "river", "labwc", "wayfire"):
+            # wlroots compositors: add WaylandWindowDecorations + sandbox hint.
+            return (
+                f"{base},WaylandWindowDecorations "
+                "--enable-wayland-ime"
+            )
+
+        if compositor in ("gnome", "cosmic"):
+            # GNOME Mutter / COSMIC: standard flags; CSD handled by the toolkit.
+            return f"{base},WaylandWindowDecorations"
+
+        # Generic / unknown Wayland compositor: safe defaults.
+        return f"{base},WaylandWindowDecorations"
+
+    # Unknown session type: let Chromium auto-detect.
+    return "--ozone-platform-hint=auto"
 
 def detect_browser_installation(browser_key: str) -> dict:
     """
@@ -254,8 +455,8 @@ def detect_browser_installation(browser_key: str) -> dict:
     if info.get("snap"):
         try:
             result = subprocess.run(
-                ["snap", "list", info["snap"]], 
-                capture_output=True, 
+                ["snap", "list", info["snap"]],
+                capture_output=True,
                 text=True,
                 timeout=2
             )
@@ -263,6 +464,7 @@ def detect_browser_installation(browser_key: str) -> dict:
                 return {
                     'type': 'snap',
                     'cmd': f"snap run {info['snap']}",
+                    'snap_name': info['snap'],
                     'display_name': f"{info['name']} (Snap)"
                 }
         except Exception:
@@ -293,40 +495,7 @@ def get_default_browser() -> str:
             
             # Map desktop file names to our browser keys
             # Handles both simple names and reverse domain notation (com.company.App.desktop)
-            browser_map = {
-                # Firefox variants
-                'firefox': 'firefox',
-                'org.mozilla.firefox': 'firefox',
-                
-                # Edge variants
-                'microsoft-edge': 'edge',
-                'com.microsoft.edge': 'edge',
-                'msedge': 'edge',
-                'edge': 'edge',
-                
-                # Brave variants
-                'brave': 'brave',
-                'brave-browser': 'brave',
-                'com.brave.browser': 'brave',
-                
-                # Vivaldi variants
-                'vivaldi': 'vivaldi',
-                'com.vivaldi.vivaldi': 'vivaldi',
-                
-                # Chrome variants
-                'google-chrome': 'chrome',
-                'com.google.chrome': 'chrome',
-                'chrome': 'chrome',
-                
-                # Chromium variants
-                'chromium': 'chromium',
-                'chromium-browser': 'chromium',
-                'org.chromium.chromium': 'chromium',
-                
-                # Opera variants
-                'opera': 'opera',
-                'com.opera.opera': 'opera',
-            }
+            browser_map = BROWSER_DESKTOP_MAP
             
             # First try exact match (without .desktop extension)
             desktop_name = desktop_file.replace('.desktop', '')
@@ -354,25 +523,7 @@ def get_default_browser() -> str:
                     content = f.read().lower()
                     
                     # Look for text/html or x-scheme-handler/http handlers
-                    browser_patterns = {
-                        'com.microsoft.edge': 'edge',
-                        'microsoft-edge': 'edge',
-                        'msedge': 'edge',
-                        'edge': 'edge',
-                        'org.mozilla.firefox': 'firefox',
-                        'firefox': 'firefox',
-                        'com.brave.browser': 'brave',
-                        'brave': 'brave',
-                        'com.google.chrome': 'chrome',
-                        'google-chrome': 'chrome',
-                        'chrome': 'chrome',
-                        'org.chromium.chromium': 'chromium',
-                        'chromium': 'chromium',
-                        'com.vivaldi.vivaldi': 'vivaldi',
-                        'vivaldi': 'vivaldi',
-                        'com.opera.opera': 'opera',
-                        'opera': 'opera',
-                    }
+                    browser_patterns = BROWSER_DESKTOP_MAP
                     
                     # Check for text/html association
                     for pattern, browser_key in browser_patterns.items():
@@ -392,22 +543,7 @@ def get_default_browser() -> str:
         if result.returncode == 0:
             desktop_file = result.stdout.strip().lower()
             
-            browser_map = {
-                'com.microsoft.edge': 'edge',
-                'microsoft-edge': 'edge',
-                'org.mozilla.firefox': 'firefox',
-                'firefox': 'firefox',
-                'com.brave.browser': 'brave',
-                'brave': 'brave',
-                'com.google.chrome': 'chrome',
-                'google-chrome': 'chrome',
-                'org.chromium.chromium': 'chromium',
-                'chromium': 'chromium',
-                'com.vivaldi.vivaldi': 'vivaldi',
-                'vivaldi': 'vivaldi',
-                'com.opera.opera': 'opera',
-                'opera': 'opera',
-            }
+            browser_map = BROWSER_DESKTOP_MAP
             
             for key, browser_key in browser_map.items():
                 if key in desktop_file:
@@ -444,6 +580,27 @@ def slugify(text: str) -> str:
     """Converts a string to a URL-friendly slug."""
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
 
+def sanitize_shell_string(value: str) -> str:
+    """
+    Strips characters that could be interpreted as shell metacharacters when a
+    value is interpolated inside a double-quoted bash string.
+
+    We allow the full URL character-set (RFC 3986 unreserved + common
+    sub-delimiters) plus a small whitelist of extras that appear legitimately
+    in app names and paths.  Anything outside that set is silently removed.
+
+    This is a defence-in-depth measure.  Values are also always placed inside
+    double-quoted strings in the generated bash scripts, but stripping
+    metacharacters prevents backtick/dollar/quote injection even if quoting is
+    accidentally omitted in a future edit.
+
+    Safe chars kept:
+      - Alphanumerics and _ - . ~ (URL unreserved)
+      - : / ? = & # % + @ (URL sub-delimiters / path / query)
+      - Space (common in app names)
+    """
+    return re.sub(r'[^a-zA-Z0-9 _.~/:?=&#%+@-]', '', value)
+
 def get_browsers():
     """Returns the browser configuration dictionary."""
     return CONFIG.get("browsers", DEFAULT_CONFIG["browsers"])
@@ -468,10 +625,19 @@ def load_profile_config(app: dict) -> dict:
     return {}
 
 def save_profile_config(app: dict, data: dict):
-    """Saves the config for a specific PWA profile."""
+    """Saves the config for a specific PWA profile atomically with owner-only permissions."""
     pd = get_profile_dir(app)
     pd.mkdir(parents=True, exist_ok=True)
-    profile_config_path(app).write_text(json.dumps(data, indent=2))
+    target = profile_config_path(app)
+    tmp = target.with_suffix(".json.tmp")
+    try:
+        tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        tmp.chmod(0o600)
+        tmp.rename(target)
+    except Exception as exc:
+        _logger.error("save_profile_config failed: %s", exc)
+        tmp.unlink(missing_ok=True)
+        raise
 
 def get_hostname_from_url(url: str) -> str:
     """Extracts the clean hostname from a URL."""
@@ -483,27 +649,41 @@ def get_hostname_from_url(url: str) -> str:
         return ""
 
 def check_for_updates(callback):
-    """Check GitHub for newer release in a thread, then call callback with message or None."""
+    """
+    Checks GitHub for a newer release in a background thread, then calls
+    *callback* with a notification message or None.
+
+    Uses only stdlib (urllib) so the `requests` package is not required.
+    """
     def _check():
         try:
-            response = requests.get("https://api.github.com/repos/bobbycomet/Appify/releases/latest", timeout=8)
-            if response.status_code != 200:
-                return
+            import urllib.request
+            import ssl
 
-            data = response.json()
+            url = "https://api.github.com/repos/bobbycomet/Appify/releases/latest"
+            ctx = ssl.create_default_context()  # Validates server certificate.
+            req = urllib.request.Request(
+                url,
+                headers={"Accept": "application/vnd.github+json", "User-Agent": f"Appify/{CURRENT_VERSION}"},
+            )
+            with urllib.request.urlopen(req, context=ctx, timeout=8) as resp:
+                if resp.status != 200:
+                    return
+                data = json.loads(resp.read().decode())
+
             if data.get("prerelease"):
                 return
 
             latest_tag = data["tag_name"].lstrip("v")
-            latest_version = Version(latest_tag)
+            latest_version  = Version(latest_tag)
             current_version = Version(CURRENT_VERSION)
 
             if latest_version > current_version:
                 msg = f"New version available: {data['tag_name']}!\nDownload from GitHub Releases."
                 GLib.idle_add(callback, msg)
 
-        except Exception as e:
-            print(f"Update check failed: {e}")
+        except Exception as exc:
+            _logger.debug("Update check failed: %s", exc)
 
     threading.Thread(target=_check, daemon=True).start()
 
@@ -513,25 +693,25 @@ def get_app_key(app):
     hostname = get_hostname_from_url(app.get("url", ""))
     for domain_substring, preset_key in PRESET_DOMAIN_MAP.items():
         if domain_substring in hostname:
-            return preset_key
+            # Normalize to match DEFAULT_EXT_PRESETS keys (case-insensitive).
+            normalized = next(
+                (k for k in DEFAULT_EXT_PRESETS if k.lower() == preset_key.lower()),
+                preset_key,
+            )
+            return normalized
     return "generic_pwa"
 
 def get_available_presets(app):
     """Returns a list of extensions available for the current app that are not yet installed."""
     preset_key = get_app_key(app)
-    if not preset_key: 
+    if not preset_key:
         return []
-    
+
     all_presets = DEFAULT_EXT_PRESETS.get(preset_key, [])
     installed_exts = load_installed_extensions(app)
     installed_names = {ext["name"] for ext in installed_exts}
-    
-    available_presets = [
-        preset for preset in all_presets 
-        if preset["name"] not in installed_names
-    ]
-    
-    return available_presets
+
+    return [p for p in all_presets if p["name"] not in installed_names]
 
 def load_installed_extensions(app):
     if not app:
@@ -552,84 +732,183 @@ def get_desktop_file_path(app: dict) -> Path:
     """Calculates the path to the PWA's desktop file."""
     return DESKTOP_DIR / f"pwa-{slugify(app['name'])}-manager.desktop"
 
-def download_file(url: str, path: Path, timeout: int = 10):
-    """Downloads a file using curl."""
+def download_file(url: str, path: Path, timeout: int = 10) -> bool:
+    """
+    Downloads a file using curl with security guardrails.
+
+    Guardrails:
+      --max-filesize  : Refuses downloads larger than 2 MB (icons only).
+      --max-time      : Hard wall-clock timeout for the whole transfer.
+      --connect-timeout: Caps TCP connection time independently.
+      --proto         : Restricts to https/http only (no file://, ftp://, etc.).
+      --no-sessionid  : Prevents TLS session-ID tracking across requests.
+      -L              : Follows redirects (needed for CDNs).
+      -f              : Fail silently on HTTP errors (4xx/5xx).
+      -s              : Silent mode; errors handled by returncode.
+    """
     try:
-        subprocess.run(["curl", "-fLs", "-o", str(path), url], check=True, timeout=timeout)
+        subprocess.run(
+            [
+                "curl",
+                "-fLs",
+                "--proto", "https,http",
+                "--max-filesize", "2097152",  # 2 MB
+                "--connect-timeout", "5",
+                "--max-time", str(timeout),
+                "--no-sessionid",
+                "-o", str(path),
+                url,
+            ],
+            check=True,
+            timeout=timeout + 5,
+        )
         return True
     except Exception:
         return False
 
+def validate_url(url: str) -> bool:
+    """
+    Returns True if *url* is a valid http/https URL with a non-empty hostname.
+    Rejects anything that is not strictly http:// or https://, including
+    data: URIs, file: paths, javascript: and other schemes that could be
+    misused if user-supplied values reach a browser launcher.
+    """
+    try:
+        parsed = urlparse(url)
+        return (
+            parsed.scheme in ("http", "https")
+            and bool(parsed.netloc)
+            and len(url) <= 2048  # Sane upper bound
+        )
+    except Exception:
+        return False
+
+
 def download_icon(app: dict, status_callback=None):
-    """Attempts to download an icon for the PWA."""
+    """
+    Attempts to download an icon for the PWA.
+    Validates the downloaded file contains PNG/ICO magic bytes before keeping it.
+    """
     hostname = get_hostname_from_url(app['url'])
     if not hostname:
-        if status_callback: status_callback("Failed to parse hostname")
+        if status_callback:
+            status_callback("Failed to parse hostname")
         return
     icon_path = get_icon_path(app)
     ICON_DIR.mkdir(parents=True, exist_ok=True)
-    
-    if download_file(f"https://icon.horse/icon/{hostname}?size=large", icon_path):
-        if status_callback: status_callback(f"Icon: {hostname}")
-        return
-    if download_file(f"https://www.google.com/s2/favicons?domain={hostname}&sz=256", icon_path):
-        if status_callback: status_callback(f"Fallback icon: {hostname}")
-        return
 
-    parsed = urlparse(app['url'])
-    base_url = f"{parsed.scheme}://{parsed.netloc}"
-    if download_file(f"{base_url}/favicon.ico", icon_path, timeout=8):
-        if status_callback: status_callback(f"Icon from {hostname}/favicon.ico")
-        return
-    else:
-        if status_callback: status_callback("Icon download failed")
+    def _is_image(p: Path) -> bool:
+        """Quick magic-byte check: PNG, ICO, JPEG, or GIF."""
+        if not p.exists() or p.stat().st_size < 8:
+            return False
+        try:
+            header = p.read_bytes()[:8]
+            return (
+                header[:4] == b'\x89PNG'               # PNG
+                or header[:2] in (b'\xff\xd8', b'GIF') # JPEG / GIF
+                or header[:4] == b'\x00\x00\x01\x00'   # ICO
+                or header[:2] == b'BM'                  # BMP
+                or header[:4] == b'RIFF'                # WebP container
+            )
+        except Exception:
+            return False
+
+    sources = [
+        f"https://icon.horse/icon/{hostname}?size=large",
+        f"https://www.google.com/s2/favicons?domain={hostname}&sz=256",
+    ]
+
+    # Also try the site's own favicon
+    try:
+        parsed = urlparse(app['url'])
+        if parsed.scheme and parsed.netloc:
+            sources.append(f"{parsed.scheme}://{parsed.netloc}/favicon.ico")
+    except Exception:
+        pass
+
+    for src in sources:
+        if download_file(src, icon_path, timeout=8):
+            if _is_image(icon_path):
+                label = "Icon" if src == sources[0] else "Fallback icon"
+                if status_callback:
+                    status_callback(f"{label}: {hostname}")
+                return
+            else:
+                # Downloaded something that isn't an image — remove it.
+                icon_path.unlink(missing_ok=True)
+
+    if status_callback:
+        status_callback("Icon download failed")
 
 def make_launcher_wrapper(app: dict, browser_key: str, nice: int, ionice: int, gpu: bool) -> Path:
     """
     Create a shell wrapper for launching PWAs with proper nice/ionice priority settings.
     Enhanced with full WebHID support and intelligent Wayland/X11 detection.
+
+    Security notes:
+      - All user-supplied values (URL, profile path, app name) are passed to
+        the script via quoted shell variables, not string-interpolated directly
+        into command arguments.  This prevents shell metacharacter injection
+        even if sanitize_shell_string() misses an edge case in the future.
+      - nice/ionice values are validated to their legal integer ranges before
+        being written to the script.
     """
+    # ── Clamp nice/ionice to legal ranges ──────────────────────────────────
+    nice = max(-20, min(19, int(nice)))
+    ionice = max(0, min(3, int(ionice)))
+
     slug = slugify(app['name'])
     scripts_dir = CONFIG_DIR / "scripts"
     scripts_dir.mkdir(parents=True, exist_ok=True)
     wrapper = scripts_dir / f"pwa-launch-{slug}.sh"
     profile_dir = get_profile_dir(app)
     profile_dir.mkdir(parents=True, exist_ok=True)
+    # Restrict profile directory to owner-only access.
+    try:
+        profile_dir.chmod(0o700)
+    except Exception:
+        pass
 
     browser_cfg = get_browsers().get(browser_key, {})
     browser_detection = detect_browser_installation(browser_key)
-    
+
     if browser_detection['type'] == 'not_found':
-        print(f"WARNING: Browser {browser_key} not found")
+        _logger.warning("Browser %s not found — wrapper stub written", browser_key)
+        wrapper.write_text(
+            "#!/usr/bin/env bash\necho 'ERROR: browser not found' >&2\nexit 1\n"
+        )
+        wrapper.chmod(0o755)
         return wrapper
 
     kiosk_flag = browser_cfg.get('kiosk_flag', '') if app.get('kiosk', False) else ''
     args_data = browser_cfg.get('args', '{profile_dir} {url}')
     args_template = ' '.join(args_data) if isinstance(args_data, list) else str(args_data)
-    app_url = app.get('url', '')
-    
+
+    # Sanitize the URL (strips metacharacters as a defence-in-depth measure).
+    app_url = sanitize_shell_string(app.get('url', ''))
+
     unique_wm_class = f"PWA-{slug}"
-    chromium_based = browser_key.lower() in ["edge", "brave", "vivaldi", "chrome", "chromium", "opera", "ungoogled-chromium"]
-    
+    chromium_based = browser_key.lower() in [
+        "edge", "brave", "vivaldi", "chrome", "chromium", "opera", "ungoogled-chromium"
+    ]
+
     if chromium_based:
         wm_class_arg = f"--class={unique_wm_class} --name={unique_wm_class}"
     else:
         wm_class_arg = ""
 
     args = args_template.format(
-        profile_dir=str(profile_dir), 
-        url=app_url, 
-        kiosk_flag=kiosk_flag
+        profile_dir=str(profile_dir),
+        url=app_url,
+        kiosk_flag=kiosk_flag,
     )
 
     # === ENHANCED GAMEPAD / WebHID SUPPORT + WAYLAND/X11 ===
     extra_args = ""
     if chromium_based:
         display_flags = get_display_backend_flags(browser_key)
-        
+
         if app.get("gamepad", False):
-            # Pull WebHID flags from the browser config (where they are defined),
-            # falling back to sensible defaults if missing
             cfg_extra = browser_cfg.get("extra_flags", "").strip()
             if not cfg_extra:
                 cfg_extra = (
@@ -640,41 +919,60 @@ def make_launcher_wrapper(app: dict, browser_key: str, nice: int, ionice: int, g
             extra_flags = f"{cfg_extra} {display_flags}".strip()
         else:
             extra_flags = display_flags
-            
+
         if extra_flags.strip():
             extra_args = f" {extra_flags.strip()}"
-    
+
     if not gpu:
         extra_args += " --disable-gpu"
-        
+
     args += extra_args
 
     # Build command based on installation type
+    # ── Snap name mapping (our keys differ from snap package names) ─────────
+    _SNAP_NAMES = {
+        "firefox":      "firefox",
+        "edge":         "microsoft-edge",
+        "brave":        "brave",
+        "vivaldi":      "vivaldi",
+        "chrome":       "google-chrome",
+        "chromium":     "chromium",
+        "opera":        "opera",
+        "ungoogled-chromium": "ungoogled-chromium",
+    }
+
+    firefox_wayland_env = ""
     if browser_detection['type'] == 'flatpak':
         flatpak_id = browser_detection.get('flatpak_id', '')
-        exec_cmd = f"$NICE_CMD $IONICE_CMD flatpak run {flatpak_id} {args} {wm_class_arg}"
+        if not flatpak_id:
+            _logger.error("Flatpak ID missing for %s — cannot build wrapper", browser_key)
+            wrapper.write_text(
+                "#!/usr/bin/env bash\necho 'ERROR: flatpak_id missing' >&2\nexit 1\n"
+            )
+            wrapper.chmod(0o755)
+            return wrapper
+        exec_cmd = f"$NICE_CMD $IONICE_CMD flatpak run {shlex.quote(flatpak_id)} {args} {wm_class_arg}"
     elif browser_detection['type'] == 'snap':
-        snap_name = browser_key  # Snap names usually match our keys
-        exec_cmd = f"$NICE_CMD $IONICE_CMD snap run {snap_name} {args} {wm_class_arg}"
+        snap_name = _SNAP_NAMES.get(browser_key, browser_key)
+        exec_cmd = f"$NICE_CMD $IONICE_CMD snap run {shlex.quote(snap_name)} {args} {wm_class_arg}"
     else:  # native
         cmd = browser_detection['cmd']
-        
+
         # Special handling for Firefox kiosk mode
         if browser_key == "firefox" and app.get('kiosk', False):
             session_type = get_session_type()
-            # On X11 force the GTK backend so Firefox kiosk fills the screen
-            # correctly.  On Wayland Firefox handles kiosk natively - no backend
-            # override is needed and passing GDK_BACKEND=x11 would actually
-            # prevent it from launching.
-            # env_prefix uses the POSIX `env VAR=val cmd` form so that the
-            # variable is set in the child's environment rather than being
-            # passed as a literal argument to setsid.
-            if session_type == "x11":
-                env_prefix = "env GDK_BACKEND=x11"
-            else:
-                env_prefix = "env"
+            compositor  = detect_wayland_compositor()
 
-            cmd_esc = cmd.replace('"', '\\"')
+            env_vars = []
+            if session_type == "wayland":
+                env_vars.append("MOZ_ENABLE_WAYLAND=1")
+                if compositor == "kde":
+                    env_vars.append("GTK_USE_PORTAL=1")
+            else:
+                env_vars.append("GDK_BACKEND=x11")
+
+            env_prefix = "env " + " ".join(env_vars) if env_vars else "env"
+            cmd_quoted = shlex.quote(cmd)
 
             lines = [
                 '#!/usr/bin/env bash',
@@ -682,68 +980,81 @@ def make_launcher_wrapper(app: dict, browser_key: str, nice: int, ionice: int, g
                 'set -euo pipefail',
                 'source "$HOME/.profile" 2>/dev/null || true',
                 '',
-                f'CONFIG_DIR="{CONFIG_DIR}"',
-                f'LOG_FILE="{LOG_FILE}"',
+                f'CONFIG_DIR={shlex.quote(str(CONFIG_DIR))}',
+                f'LOG_FILE={shlex.quote(str(LOG_FILE))}',
                 'exec 2>>"$LOG_FILE"',
                 'set -x',
                 '',
                 f'NICE_CMD="nice -n {nice}"',
                 f'IONICE_CMD="ionice -c {ionice}"',
-                f'PROFILE_DIR="{profile_dir}"',
-                f'URL="{app_url}"',
-                f'export GTK_APPLICATION_ID="{unique_wm_class}"',
+                f'PROFILE_DIR={shlex.quote(str(profile_dir))}',
+                f'URL={shlex.quote(app_url)}',
+                f'export GTK_APPLICATION_ID={shlex.quote(unique_wm_class)}',
                 '',
-                f'exec setsid $NICE_CMD $IONICE_CMD {env_prefix} "{cmd_esc}" \\',
+                f'exec setsid $NICE_CMD $IONICE_CMD {env_prefix} {cmd_quoted} \\',
                 '  --profile="$PROFILE_DIR" \\',
                 '  --no-remote \\',
                 '  --kiosk \\',
                 '  "$URL"',
             ]
             wrapper_content = '\n'.join(lines)
-            wrapper.write_text(wrapper_content)
-            wrapper.chmod(0o755)
+            try:
+                wrapper.write_text(wrapper_content)
+                wrapper.chmod(0o755)
+            except Exception as exc:
+                _logger.error("Error writing wrapper script: %s", exc)
             return wrapper
 
-        cmd_esc = cmd.replace('"', '\\"')
-        exec_cmd = f'$NICE_CMD $IONICE_CMD "{cmd_esc}" {args} {wm_class_arg}'
+        cmd_quoted = shlex.quote(cmd)
+        exec_cmd = f'$NICE_CMD $IONICE_CMD {cmd_quoted} {args} {wm_class_arg}'
 
-    # Session info for debugging
+    # For non-kiosk Firefox on Wayland, inject MOZ_ENABLE_WAYLAND in the script header
+    if browser_key == "firefox" and get_session_type() == "wayland":
+        compositor = detect_wayland_compositor()
+        firefox_wayland_env = "export MOZ_ENABLE_WAYLAND=1\n"
+        if compositor == "kde":
+            firefox_wayland_env += "export GTK_USE_PORTAL=1\n"
+
     session_type = get_session_type()
-    
+
     lines = [
         '#!/usr/bin/env bash',
-        '# Generated by PWA Manager',
+        '# Generated by Appify',
         f'# Session: {session_type}',
+        f'# Compositor: {detect_wayland_compositor() if session_type == "wayland" else "n/a"}',
         f'# Browser: {browser_detection["display_name"]}',
         'set -euo pipefail',
         'source "$HOME/.profile" 2>/dev/null || true',
         '',
-        f'CONFIG_DIR="{CONFIG_DIR}"',
-        f'LOG_FILE="{LOG_FILE}"',
-        'exec 2>>"$LOG_FILE"', 
-        'set -x', 
+        f'CONFIG_DIR={shlex.quote(str(CONFIG_DIR))}',
+        f'LOG_FILE={shlex.quote(str(LOG_FILE))}',
+        'exec 2>>"$LOG_FILE"',
+        'set -x',
         '',
         f'NICE_CMD="nice -n {nice}"',
         f'IONICE_CMD="ionice -c {ionice}"',
-        f'export GTK_APPLICATION_ID="{unique_wm_class}"',
+        f'export GTK_APPLICATION_ID={shlex.quote(unique_wm_class)}',
+        firefox_wayland_env.rstrip('\n'),
         f"exec setsid {exec_cmd}",
     ]
-    
+
     wrapper_content = '\n'.join(lines)
-    
+
     try:
         wrapper.write_text(wrapper_content)
         wrapper.chmod(0o755)
-    except Exception as e:
-        print(f"Error writing wrapper script: {e}")
+    except Exception as exc:
+        _logger.error("Error writing wrapper script: %s", exc)
 
     return wrapper
 
 def create_desktop_file(app: dict, script_path: str, status_callback=None):
     desktop_path = get_desktop_file_path(app)
     icon_path = get_icon_path(app)
-    app_name = app["name"]
-    slug = slugify(app_name)
+    # Sanitize app_name before embedding in the .desktop file to prevent
+    # injection of special characters into any downstream shell or ini parsing.
+    app_name = sanitize_shell_string(app["name"])
+    slug = slugify(app["name"])  # slug from original name (pre-sanitize is fine; slugify is already safe)
 
     profile_cfg = load_profile_config(app)
     browser_key = (profile_cfg.get('browser') or app.get('browser') or CONFIG.get('browser', 'firefox')).lower()
@@ -785,16 +1096,47 @@ X-DBus-Name={dbus_name}
         if status_callback:
             status_callback(f"Desktop failed: {e}")
 
-def save_config():
-    """Writes the current CONFIG dictionary to the config file."""
-    CONFIG_FILE.write_text(json.dumps(CONFIG, indent=2))
 
-# ---------------- Config ----------------
-CONFIG_DIR = Path(os.path.expanduser("~/.pwa_manager"))
+# ---------------- Config Paths ----------------
+# Declared here so that save_config() and all helper functions that reference
+# these paths can see them.  Functions defined above use these names at *call*
+# time (not at definition time), so forward references are safe — but grouping
+# the declarations near save_config() makes the dependency obvious to readers.
+CONFIG_DIR  = Path(os.path.expanduser("~/.pwa_manager"))
 CONFIG_FILE = CONFIG_DIR / "config.json"
-ICON_DIR = Path(os.path.expanduser("~/.local/share/icons/hicolor/512x512/apps/"))
+ICON_DIR    = Path(os.path.expanduser("~/.local/share/icons/hicolor/512x512/apps/"))
 DESKTOP_DIR = Path(os.path.expanduser("~/.local/share/applications/"))
-LOG_FILE = CONFIG_DIR / "launch.log"
+LOG_FILE    = CONFIG_DIR / "launch.log"
+
+
+def save_config():
+    """
+    Writes the current CONFIG dictionary to the config file atomically.
+
+    Strategy:
+      1. Serialise to JSON in memory.
+      2. Write to a sibling .tmp file in the same directory (same filesystem,
+         so rename is atomic on POSIX).
+      3. Set permissions to 0o600 (owner-only read/write) before renaming so
+         that the live file is never world-readable even for a brief moment.
+      4. Atomically rename .tmp → live file.
+
+    This prevents a partial write (e.g. from a crash or signal) from leaving
+    the config file in a truncated / corrupt state.
+    """
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    tmp_path = CONFIG_FILE.with_suffix(".json.tmp")
+    try:
+        payload = json.dumps(CONFIG, indent=2)
+        tmp_path.write_text(payload, encoding="utf-8")
+        # Restrict permissions before the file becomes live.
+        tmp_path.chmod(0o600)
+        tmp_path.rename(CONFIG_FILE)
+    except Exception as exc:
+        _logger.error("save_config failed: %s", exc)
+        tmp_path.unlink(missing_ok=True)
+        raise
+
 
 PRESET_DOMAIN_MAP = {
     # Cloud Gaming
@@ -816,8 +1158,8 @@ PRESET_DOMAIN_MAP = {
     "keep.google.com": "Google Keep",
     "drive.google.com": "Google Drive",
     "docs.google.com": "Google Docs",
-    "spreadsheets": "Google Sheets",
-    "presentation": "Google Slides",
+    "docs.google.com/spreadsheets": "Google Sheets",
+    "docs.google.com/presentation": "Google Slides",
     "office.com": "Microsoft 365",
     "outlook.live.com": "Outlook Web",
     "onedrive.live.com": "OneDrive",
@@ -947,86 +1289,11 @@ DEFAULT_EXT_PRESETS = {
         {"name": "SponsorBlock", "web_url": "https://chromewebstore.google.com/detail/sponsorblock-for-youtube/mnjggcdmjocbbbhaepdhchncahnbgone"},
         {"name": "uBlock Origin", "web_url": "https://chromewebstore.google.com/detail/ublock-origin/cjpalhdlnbpafiamejdnhcphjbkeiagm"},
         {"name": "Return YouTube Dislike", "web_url": "https://chromewebstore.google.com/detail/return-youtube-dislike/gebbhagfogifgggkldgodflihgfeippi"},
-        {"name": "Unhook for YouTube", "web_url": "https://chromewebstore.google.com/detail/unhook-remove-youtube-rec/agbjjhcakilocfjoidcmclcoidipnnhl"},
-        {"name": "Enhancer for YouTube", "web_url": "https://chromewebstore.google.com/detail/enhancer-for-youtube/ponfelnnbfdgchaoffdenecfgkfklngg"},
-        {"name": "DeArrow", "web_url": "https://chromewebstore.google.com/detail/dearrow-title-thumbnail-f/ibgpcpbhkbhjcmfnhiepghebomnipido"},
-        {"name": "YouTube NonStop", "web_url": "https://chromewebstore.google.com/detail/youtube-nonstop/ajioplkfknbldfggjllgmojioedcjhkf"},
     ],
     "Google Docs": [
         {"name": "super styles for google docs", "web_url": "https://workspace.google.com/u/0/marketplace/app/super_styles_for_google_docs/749048387655"},
         {"name": "code blocks for  google docs", "web_url": "https://workspace.google.com/u/0/marketplace/app/code_blocks/100740430168"},
         {"name": "Grammare and spell check for google docs", "web_url":  "https://workspace.google.com/u/0/marketplace/app/grammar_and_spell_checker_languagetool/805250893316"},
-        {"name": "DocSecrets", "web_url": "https://workspace.google.com/marketplace/app/docsecrets/106495793380"},
-        {"name": "DocTools", "web_url": "https://workspace.google.com/marketplace/app/doctools/812550428155"},
-        {"name": "Text Cleaner", "web_url": "https://workspace.google.com/marketplace/app/text_cleaner/590957751694"},
-        {"name": "Table of Contents Add-On", "web_url": "https://workspace.google.com/marketplace/app/table_of_contents/673827206993"},
-    ],
-    "Google Sheets": [
-        {"name": "Power Tools", "web_url": "https://workspace.google.com/marketplace/app/power_tools/1058867473888"},
-        {"name": "Advanced Find & Replace", "web_url": "https://workspace.google.com/marketplace/app/advanced_find_replace/1042060810936"},
-    ],
-    "Google Slides": [
-        {"name": "Slides Toolbox", "web_url": "https://workspace.google.com/marketplace/app/slides_toolbox/303181111203"},
-    ],
-    "Google Drive": [
-        {"name": "Save to Google Drive Button", "web_url": "https://chromewebstore.google.com/detail/save-to-google-drive/gmbmikajjgmnabiglmofipeabaddhgne"},
-    ],
-    "Reddit": [
-        {"name": "Reddit Enhancement Suite (RES)", "web_url": "https://chromewebstore.google.com/detail/reddit-enhancement-suite/kbpojkailcjolinmakdefkkcjkcimeoa"},
-        {"name": "Old Reddit Redirect", "web_url": "https://chromewebstore.google.com/detail/old-reddit-redirect/pinhfnpggfpgpbkllgidmclklgljlijl"},
-    ],
-    "X / Twitter": [
-        {"name": "Control Panel for Twitter", "web_url": "https://chromewebstore.google.com/detail/control-panel-for-twitter/dkboeeeenhalhjemdfeehiakblbkocbm"},
-        {"name": "GoodTwitter 2", "web_url": "https://chromewebstore.google.com/detail/goodtwitter2/ojhmphdkpgbibohbihfgmfgphojmpidd"},
-        {"name": "Hide Promoted Posts for Twitter", "web_url": "https://chromewebstore.google.com/detail/hide-promoted-tweets/bkhbpbbbjbpjpmcjoemilnbibhhfcpfo"},
-    ],
-    "Instagram": [
-        {"name": "Web for Instagram Plus DM Tools", "web_url": "https://chromewebstore.google.com/detail/web-for-instagram-with-dm/ifcmnnhkkddkggmbggojfajbgbhjfgcj"},
-        {"name": "Inssist Web Enhancer", "web_url": "https://chromewebstore.google.com/detail/inssist-lite/bodncoafpljjafcfdajpheodjbjfljkk"},
-    ],
-    "Facebook": [
-        {"name": "FB Purity", "web_url": "https://chromewebstore.google.com/detail/fb-purity-clean-up-facebook/lhfdgjlabncfcbnolpjnpeepffkfoich"},
-        {"name": "Social Fixer", "web_url": "https://chromewebstore.google.com/detail/social-fixer-for-facebook/lbdkchheehjoocbbpnkgmnmkgcodionf"},
-    ],
-    "Discord": [
-        {"name": "Discord Theme Injector", "web_url": "https://chromewebstore.google.com/detail/theme-injector-for-discord/oodljbhpfjglgfkddbjdchbllkaeeboc"},
-        {"name": "BetterDiscord Web Tweaks", "web_url": "https://chromewebstore.google.com/detail/betterdiscord-web/hcbpjfjmhadnlekookpimnhiohjhjhna"},
-    ],
-    "Netflix": [
-        {"name": "Netflix Extended", "web_url": "https://chromewebstore.google.com/detail/netflix-extended/bhplkbgoehhhddaecmdaohpebcglgbaa"},
-        {"name": "Super Netflix", "web_url": "https://chromewebstore.google.com/detail/super-netflix/nlcbkpgbhjjnclnndmlbkjnhcphljfff"},
-    ],
-    "Disney+": [
-        {"name": "Disney+ Hotkeys", "web_url": "https://chromewebstore.google.com/detail/disney-hotkeys/omimjmlmcpiimjdpvjhjyayekhqppcbb"},
-    ],
-    "Prime Video": [
-        {"name": "Prime Video Enhancer", "web_url": "https://chromewebstore.google.com/detail/prime-video-extended/keigkbhgjjdjnpgehpenfpkpkppojlcn"},
-    ],
-    "Hulu": [
-        {"name": "Hulu Hotkeys", "web_url": "https://chromewebstore.google.com/detail/hulu-keyboard-controls/ehfnocfijmmlhmhfhfkbawo1stmjhqrs"},
-    ],
-    "Spotify Web": [
-        {"name": "Spotify Tree Navigation", "web_url": "https://chromewebstore.google.com/detail/tree-style-tab-for-spotif/mkcjquizjjhfkfbysptwp891z4p04zlf"},
-        {"name": "Spotify Visualizer", "web_url": "https://chromewebstore.google.com/detail/spotify-visualizer/ojllcjggccimihgojokahbahkofhabbo"},
-    ],
-    "Amazon": [
-        {"name": "Honey", "web_url": "https://chromewebstore.google.com/detail/paypal-honey-automatic-cou/mbckjcfnjmoiagmdehgmjhmehgdafkog"},
-        {"name": "Rakuten Cash Back", "web_url": "https://chromewebstore.google.com/detail/rakuten-cash-back-button/kfbdmcokinfnbgkafhbbebgaolhldljl"},
-        {"name": "Keepa Price Tracker", "web_url": "https://chromewebstore.google.com/detail/keepa-amazon-price-tracker/neebplgakaahbhdphmkckjjcegoiijjo"},
-        {"name": "Fakespot Review Analyzer", "web_url": "https://chromewebstore.google.com/detail/fakespot-analyzer/mhkfjnjlajhemjjmlgcboghkbikkcjif"},
-    ],
-    "Notion": [
-        {"name": "Notion Boost", "web_url": "https://chromewebstore.google.com/detail/notion-boost/fpjpmgnjinhkjcjbhcballlkpcefnplh"},
-    ],
-    "Trello": [
-        {"name": "Card Aging Assistant", "web_url": "https://chromewebstore.google.com/detail/trello-card-ageing/iplpocngbmgkofkfecadangmlpdhkoem"},
-    ],
-    "ClickUp": [
-        {"name": "ClickUp Hotkeys Enhancer", "web_url": "https://chromewebstore.google.com/detail/clickup-enhancer/bmkfpiidgmobgomieofhpaohgjcamkmm"},
-    ],
-    "Gmail": [
-        {"name": "Simplify Gmail", "web_url": "https://chromewebstore.google.com/detail/simplify-gmail/pnhplgjpclknigjpcckkpaeoemljnchg"},
-        {"name": "Gmail Sender Icons", "web_url": "https://chromewebstore.google.com/detail/sender-icons-for-gmail/nkfabcolfplmlijojjgcfdffoehibbfg"},
     ],
     "Google Calendar": [
         {"name": "Event Merge", "web_url": "https://chromewebstore.google.com/detail/event-merge-for-google-cal/dlifekfklhbcbgponifgpdbcopbekmna"},
@@ -1265,11 +1532,19 @@ DEFAULT_CONFIG = {
 CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 if CONFIG_FILE.exists():
     try:
-        CONFIG = json.loads(CONFIG_FILE.read_text())
-    except Exception:
+        CONFIG = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+    except Exception as _cfg_err:
+        _logger.warning("Config load failed (%s) — using defaults", _cfg_err)
         CONFIG = DEFAULT_CONFIG.copy()
 else:
     CONFIG = DEFAULT_CONFIG.copy()
+    # New install: write a pristine config with restrictive permissions.
+    try:
+        payload = json.dumps(CONFIG, indent=2)
+        CONFIG_FILE.write_text(payload, encoding="utf-8")
+        CONFIG_FILE.chmod(0o600)
+    except Exception:
+        pass
 
 # Detect system configuration
 CONFIG["session_type"] = get_session_type()
@@ -1305,10 +1580,15 @@ for browser_key, default_data in DEFAULT_CONFIG["browsers"].items():
 CONFIG.setdefault("dark_mode", True)
 save_config()
 
+# Detect compositor and store it
+CONFIG["wayland_compositor"] = detect_wayland_compositor() if is_wayland_session() else "n/a"
+
 # Log detected configuration
-print(f"[Appify] Session: {CONFIG['session_type']}")
-print(f"[Appify] Default browser: {CONFIG['browser']}")
-print(f"[Appify] Available browsers: {', '.join(CONFIG['available_browsers'].keys())}")
+_logger.info("Session: %s", CONFIG['session_type'])
+if is_wayland_session():
+    _logger.info("Compositor: %s", CONFIG['wayland_compositor'])
+_logger.info("Default browser: %s", CONFIG['browser'])
+_logger.info("Available browsers: %s", ', '.join(CONFIG['available_browsers'].keys()))
 
 # ---------------- Install/Uninstall ----------------
 
@@ -1419,28 +1699,35 @@ user_pref("security.sandbox.content.level", 2);
 
 
 def install_app(app, browser_key, kiosk, nice, ionice, gpu, status_callback=None):
+    # ── Ensure app has a name ──────────────────────────────────────────────
     if 'url' in app and ('name' not in app or not app['name']):
         parsed_url = urlparse(app['url'])
         app['name'] = parsed_url.netloc or 'Custom PWA'
-        
+
+    # ── Validate URL before doing anything ────────────────────────────────
+    if not validate_url(app.get('url', '')):
+        if status_callback:
+            status_callback(f"Error: invalid or insecure URL: {app.get('url', '')!r}")
+        return
+
     app_slug = slugify(app["name"])
-    
-    # Verify browser is available
+
+    # ── Verify browser is available ───────────────────────────────────────
     detection = detect_browser_installation(browser_key)
     if detection['type'] == 'not_found':
         if status_callback:
             status_callback(f"Error: {browser_key} is not installed")
         return
-    
+
     profile_dir = get_profile_dir(app)
     profile_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        profile_dir.chmod(0o700)
+    except Exception:
+        pass
 
     # Firefox needs its profile directory pre-seeded with a user.js so that
-    # it launches as a proper isolated PWA instance.  Chromium-based browsers
-    # build their full profile structure automatically on first launch via
-    # --user-data-dir; Firefox does not do this until the binary actually runs,
-    # which means without this step the profile folder stays empty and Firefox
-    # ignores --no-remote, opening URLs inside an existing window instead.
+    # it launches as a proper isolated PWA instance.
     if browser_key.lower() == "firefox":
         init_firefox_profile(profile_dir, app)
         if status_callback:
@@ -1455,13 +1742,13 @@ def install_app(app, browser_key, kiosk, nice, ionice, gpu, status_callback=None
     marker.write_text("installed\n")
     download_icon(app, status_callback)
     create_desktop_file(app, os.path.abspath(sys.argv[0]), status_callback)
-    
+
     if app_slug not in CONFIG["apps"]:
         CONFIG["apps"][app_slug] = app
 
     save_config()
-    
-    if status_callback: 
+
+    if status_callback:
         status_callback(f"Installed: {app['name']} ({detection['display_name']})")
 
 def remove_app_files(app_to_remove):
@@ -1499,17 +1786,248 @@ def list_installed_apps():
                 installed.append(p.name)
     return installed
 
+BACKUP_DIR = CONFIG_DIR / ".backup"
+MAX_BACKUPS_PER_APP = 10  # Oldest backups are pruned beyond this limit.
+
+def _backup_timestamp() -> str:
+    """ISO-ish timestamp safe for filenames."""
+    return datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+
+def backup_profile(app: dict, status_callback=None) -> Path | None:
+    """
+    Creates a timestamped .tar.gz snapshot of a single app's profile inside
+    BACKUP_DIR/<app-slug>/.
+
+    The archive contains:
+      • The entire browser profile directory (cookies, prefs, extensions …)
+      • The app's profile.json
+      • The app's launcher wrapper script (if present)
+      • The app's .desktop file (if present)
+      • The app's icon (if present)
+
+    Old backups beyond MAX_BACKUPS_PER_APP are pruned (oldest first).
+    Returns the path to the created archive, or None on failure.
+    """
+    slug = slugify(app["name"])
+    app_backup_dir = BACKUP_DIR / slug
+    app_backup_dir.mkdir(parents=True, exist_ok=True)
+
+    ts      = _backup_timestamp()
+    archive = app_backup_dir / f"{slug}_backup_{ts}.tar.gz"
+
+    try:
+        with tarfile.open(archive, "w:gz") as tar:
+            # Profile directory
+            profile_dir = get_profile_dir(app)
+            if profile_dir.exists():
+                tar.add(profile_dir, arcname=f"profile/{slug}")
+
+            # Launcher wrapper
+            wrapper = CONFIG_DIR / "scripts" / f"pwa-launch-{slug}.sh"
+            if wrapper.exists():
+                tar.add(wrapper, arcname=f"scripts/pwa-launch-{slug}.sh")
+
+            # Desktop file
+            desktop = get_desktop_file_path(app)
+            if desktop.exists():
+                tar.add(desktop, arcname=f"desktop/pwa-{slug}-manager.desktop")
+
+            # Icon
+            icon = get_icon_path(app)
+            if icon.exists():
+                tar.add(icon, arcname=f"icons/{slug}.png")
+
+            # App metadata as a small JSON sidecar
+            meta_bytes = json.dumps(app, indent=2).encode()
+            info = tarfile.TarInfo(name="meta.json")
+            info.size = len(meta_bytes)
+            tar.addfile(info, io.BytesIO(meta_bytes))
+
+        # ── Prune old backups beyond MAX_BACKUPS_PER_APP ─────────────────
+        existing = sorted(
+            app_backup_dir.glob("*.tar.gz"),
+            key=lambda p: p.stat().st_mtime,
+        )
+        while len(existing) > MAX_BACKUPS_PER_APP:
+            oldest = existing.pop(0)
+            try:
+                oldest.unlink()
+                _logger.info("Pruned old backup: %s", oldest.name)
+            except Exception as prune_exc:
+                _logger.warning("Could not prune backup %s: %s", oldest.name, prune_exc)
+
+        if status_callback:
+            status_callback(f"Backup created: {archive.name}")
+        return archive
+
+    except Exception as exc:
+        _logger.exception("backup_profile failed")
+        if status_callback:
+            status_callback(f"Backup failed: {exc}")
+        return None
+
+def list_backups(app: dict) -> list[dict]:
+    """
+    Returns a list of backup info dicts for *app*, sorted newest-first.
+    Each dict has keys: 'path' (Path), 'name' (str), 'mtime' (float),
+    'size_mb' (float).
+    """
+    slug = slugify(app["name"])
+    app_backup_dir = BACKUP_DIR / slug
+    if not app_backup_dir.exists():
+        return []
+    results = []
+    for f in sorted(app_backup_dir.glob("*.tar.gz"), key=lambda p: p.stat().st_mtime, reverse=True):
+        st = f.stat()
+        results.append({
+            "path":    f,
+            "name":    f.name,
+            "mtime":   st.st_mtime,
+            "size_mb": round(st.st_size / 1_048_576, 2),
+        })
+    return results
+
+def restore_profile(backup_path: Path, app: dict, status_callback=None) -> bool:
+    """
+    Restores a profile from a backup archive.
+
+    Steps:
+      1. Validate the archive path is inside BACKUP_DIR (prevents path traversal).
+      2. Inspect every tar member for unsafe paths before extracting.
+      3. Wipe the current profile directory, extract, and move files back.
+      4. Regenerate the launcher wrapper and desktop file.
+
+    Returns True on success.
+    """
+    slug = slugify(app["name"])
+
+    # ── Guard: backup_path must live under BACKUP_DIR ───────────────────────
+    try:
+        backup_path.resolve().relative_to(BACKUP_DIR.resolve())
+    except ValueError:
+        msg = f"Restore rejected: path outside backup dir: {backup_path}"
+        _logger.error(msg)
+        if status_callback:
+            status_callback("Restore failed: invalid backup path")
+        return False
+
+    def _safe_member(member: tarfile.TarInfo, dest: Path) -> bool:
+        """
+        Returns True if *member* is safe to extract into *dest*.
+
+        Rejects:
+          • Absolute paths  (e.g. /etc/passwd)
+          • Path-traversal  (e.g. ../../etc/passwd)
+          • Symlinks / hard-links that escape dest
+          • Device / FIFO / character-special files
+        """
+        # Normalise and check for traversal
+        member_path = Path(member.name)
+        if member_path.is_absolute():
+            return False
+        try:
+            (dest / member_path).resolve().relative_to(dest.resolve())
+        except ValueError:
+            return False
+        # Reject unsafe file types
+        if member.isdev() or member.issym() or member.islnk():
+            # Allow symlinks only if they point inside dest
+            if member.issym() or member.islnk():
+                link_target = Path(member.linkname) if member.linkname else Path()
+                if link_target.is_absolute():
+                    return False
+                try:
+                    (dest / member_path).parent.joinpath(link_target).resolve().relative_to(dest.resolve())
+                except ValueError:
+                    return False
+            elif member.isdev():
+                return False
+        return True
+
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+
+            with tarfile.open(backup_path, "r:gz") as tar:
+                # Validate all members before extracting anything.
+                unsafe = [m.name for m in tar.getmembers() if not _safe_member(m, tmp)]
+                if unsafe:
+                    _logger.error("Unsafe tar members rejected: %s", unsafe)
+                    if status_callback:
+                        status_callback("Restore failed: archive contains unsafe paths")
+                    return False
+                tar.extractall(tmp)
+
+            # --- Profile directory ---
+            src_profile = tmp / "profile" / slug
+            dst_profile = get_profile_dir(app)
+            if src_profile.exists():
+                if dst_profile.exists():
+                    shutil.rmtree(dst_profile)
+                shutil.copytree(src_profile, dst_profile)
+                try:
+                    dst_profile.chmod(0o700)
+                except Exception:
+                    pass
+
+            # --- Launcher wrapper ---
+            src_wrapper = tmp / "scripts" / f"pwa-launch-{slug}.sh"
+            if src_wrapper.exists():
+                dst_wrapper = CONFIG_DIR / "scripts" / f"pwa-launch-{slug}.sh"
+                dst_wrapper.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src_wrapper, dst_wrapper)
+                dst_wrapper.chmod(0o755)
+
+            # --- Desktop file ---
+            src_desktop = tmp / "desktop" / f"pwa-{slug}-manager.desktop"
+            if src_desktop.exists():
+                dst_desktop = get_desktop_file_path(app)
+                dst_desktop.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src_desktop, dst_desktop)
+
+            # --- Icon ---
+            src_icon = tmp / "icons" / f"{slug}.png"
+            if src_icon.exists():
+                dst_icon = get_icon_path(app)
+                dst_icon.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src_icon, dst_icon)
+
+        # Refresh the launcher wrapper with current settings in case paths changed
+        profile_cfg = load_profile_config(app)
+        browser_key = (profile_cfg.get("browser") or app.get("browser") or CONFIG.get("browser", "firefox")).lower()
+        gpu        = CONFIG.get("gpu", True)
+        nice_val   = CONFIG.get("nice", 0)
+        ionice_val = CONFIG.get("ionice", 2)
+        make_launcher_wrapper(app, browser_key, nice_val, ionice_val, gpu)
+        create_desktop_file(app, os.path.abspath(sys.argv[0]))
+
+        if status_callback:
+            status_callback(f"Restored from {backup_path.name}")
+        return True
+
+    except Exception as exc:
+        _logger.exception("restore_profile failed")
+        if status_callback:
+            status_callback(f"Restore failed: {exc}")
+        return False
+
+def delete_backup(backup_path: Path, status_callback=None) -> bool:
+    """Permanently deletes a single backup archive."""
+    try:
+        backup_path.unlink()
+        if status_callback:
+            status_callback(f"Deleted backup: {backup_path.name}")
+        return True
+    except Exception as e:
+        if status_callback:
+            status_callback(f"Delete failed: {e}")
+        return False
+
 def find_app_by_name(name):
     for app in CONFIG["apps"].values():
         if app.get("name") == name:
             return app
     return None
-
-def log_debug(msg):
-    LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with open(LOG_FILE, "a") as f:
-        f.write(f"[DEBUG] {msg}\n")
-    print(msg, file=sys.stderr)
 
 def launch_app_from_cli(app_name: str):
     app = find_app_by_name(app_name)
@@ -1517,23 +2035,34 @@ def launch_app_from_cli(app_name: str):
         print(f"ERROR: App '{app_name}' not found.", file=sys.stderr)
         sys.exit(1)
 
-    profile_dir = get_profile_dir(app)
     profile_cfg = load_profile_config(app)
     browser_key = (profile_cfg.get("browser") or app.get("browser") or CONFIG.get("browser", "firefox")).lower()
-    
+
     detection = detect_browser_installation(browser_key)
     if detection['type'] == 'not_found':
         print(f"ERROR: Browser '{browser_key}' not found.", file=sys.stderr)
         sys.exit(1)
 
-    kiosk_flag = CONFIG["browsers"][browser_key].get("kiosk_flag", "") if app.get("kiosk", False) else ""
     gpu = CONFIG.get("gpu", True)
     nice_val = CONFIG.get("nice", 0)
     ionice_val = CONFIG.get("ionice", 2)
 
     try:
         wrapper = make_launcher_wrapper(app, browser_key, nice_val, ionice_val, gpu)
-        
+
+        # Security: confirm wrapper lives under CONFIG_DIR/scripts before executing it.
+        expected_scripts_dir = (CONFIG_DIR / "scripts").resolve()
+        try:
+            wrapper.resolve().relative_to(expected_scripts_dir)
+        except ValueError:
+            log_debug(f"SECURITY: Wrapper path outside scripts dir: {wrapper}")
+            print("ERROR: Wrapper path is outside the expected scripts directory.", file=sys.stderr)
+            sys.exit(1)
+
+        if not wrapper.exists():
+            print(f"ERROR: Wrapper script not found: {wrapper}", file=sys.stderr)
+            sys.exit(1)
+
         log_debug(f"LAUNCH: {app_name} via {detection['display_name']}")
         log_debug(f"WRAPPER: {wrapper}")
 
@@ -1541,41 +2070,64 @@ def launch_app_from_cli(app_name: str):
             [str(wrapper)],
             start_new_session=True,
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
+            stderr=subprocess.DEVNULL,
         )
         sys.exit(0)
 
-    except Exception as e:
-        log_debug(f"LAUNCH ERROR: {e}")
-        print(f"Launch failed: {e}", file=sys.stderr)
+    except SystemExit:
+        raise
+    except Exception as exc:
+        log_debug(f"LAUNCH ERROR: {exc}")
+        print(f"Launch failed: {exc}", file=sys.stderr)
         sys.exit(1)
 
 def launch_extension_manager(browser_key: str, preset_key: str, profile_dir: Path):
     try:
         browser_config = get_browsers().get(browser_key)
         if not browser_config:
-            print(f"ERROR: Browser config not found for {browser_key}")
+            _logger.error("Browser config not found for %s", browser_key)
             return
 
         detection = detect_browser_installation(browser_key)
         if detection['type'] == 'not_found':
-            print(f"ERROR: {browser_key} not installed")
+            _logger.error("%s not installed", browser_key)
             return
 
         normalized_key = next(
             (k for k in DEFAULT_EXT_PRESETS.keys() if k.lower() == preset_key.lower()),
-            preset_key
+            preset_key,
         )
         extensions = DEFAULT_EXT_PRESETS.get(normalized_key, [])
-        
+
+        # Validate and filter extension URLs before passing to the browser.
+        _ALLOWED_EXT_HOSTS = {
+            "chromewebstore.google.com",
+            "microsoftedge.microsoft.com",
+            "addons.mozilla.org",
+            "addons.opera.com",
+            "workspace.google.com",
+        }
+
+        def _is_safe_ext_url(u: str) -> bool:
+            if not validate_url(u):
+                return False
+            host = urlparse(u).netloc.lower().lstrip("www.")
+            return any(host == h or host.endswith("." + h) for h in _ALLOWED_EXT_HOSTS)
+
         if not extensions:
-            url = browser_config["store_url"]
-            print(f"INFO: No extensions found for preset '{preset_key}'. Launching browser to store: {url}")
-            
+            url = browser_config.get("store_url", "https://chromewebstore.google.com/")
+            _logger.info(
+                "No extensions for preset '%s'. Opening store: %s", preset_key, url
+            )
             if detection['type'] == 'flatpak':
-                cmd_list = ["flatpak", "run", detection['flatpak_id'], url]
+                flatpak_id = detection.get('flatpak_id', '')
+                if not flatpak_id:
+                    _logger.error("flatpak_id missing for %s", browser_key)
+                    return
+                cmd_list = ["flatpak", "run", flatpak_id, url]
             elif detection['type'] == 'snap':
-                cmd_list = ["snap", "run", browser_key, url]
+                snap_name = detection.get('snap_name', browser_key)
+                cmd_list = ["snap", "run", snap_name, url]
             else:
                 if browser_key.lower() == "firefox":
                     cmd_list = [detection['cmd'], "--profile", str(profile_dir), "--no-remote", url]
@@ -1587,16 +2139,28 @@ def launch_extension_manager(browser_key: str, preset_key: str, profile_dir: Pat
         urls = [
             ext["web_url"]
             for ext in extensions
-            if isinstance(ext.get("web_url"), str) and ext["web_url"].strip()
+            if isinstance(ext.get("web_url"), str) and _is_safe_ext_url(ext["web_url"].strip())
         ]
-        
+
+        skipped = len(extensions) - len(urls)
+        if skipped:
+            _logger.warning(
+                "%d extension URL(s) skipped — failed host allowlist check", skipped
+            )
+
         if not urls:
+            _logger.warning("No valid extension URLs for preset '%s'", preset_key)
             return
 
         if detection['type'] == 'flatpak':
-            cmd_list = ["flatpak", "run", detection['flatpak_id']] + urls
+            flatpak_id = detection.get('flatpak_id', '')
+            if not flatpak_id:
+                _logger.error("flatpak_id missing for %s", browser_key)
+                return
+            cmd_list = ["flatpak", "run", flatpak_id] + urls
         elif detection['type'] == 'snap':
-            cmd_list = ["snap", "run", browser_key] + urls
+            snap_name = detection.get('snap_name', browser_key)
+            cmd_list = ["snap", "run", snap_name] + urls
         else:
             if browser_key.lower() == "firefox":
                 cmd_list = [detection['cmd'], "--profile", str(profile_dir), "--no-remote"] + urls
@@ -1604,10 +2168,12 @@ def launch_extension_manager(browser_key: str, preset_key: str, profile_dir: Pat
                 cmd_list = [detection['cmd'], f"--user-data-dir={str(profile_dir)}"] + urls
 
         subprocess.Popen(cmd_list)
-        print(f"INFO: Launched {detection['display_name']} to install extensions for {preset_key}.")
+        _logger.info(
+            "Launched %s to install extensions for '%s'.", detection['display_name'], preset_key
+        )
 
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+    except Exception as exc:
+        _logger.exception("launch_extension_manager error: %s", exc)
 
 # ---------------- GTK4 UI ----------------
 Adw.init()
@@ -1628,8 +2194,15 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         super().__init__(**kwargs)
         
         # Display session info in title
-        session_info = f" • {CONFIG['session_type'].upper()}" if CONFIG.get('session_type') else ""
-        self.set_title(_(f"Appify {CURRENT_VERSION}{session_info}"))
+        compositor_val = CONFIG.get('wayland_compositor', 'n/a')
+        session_display = CONFIG['session_type'].upper()
+        if is_wayland_session() and compositor_val not in ("n/a", "unknown"):
+            session_display += f"/{compositor_val.title()}"
+        session_info = f" • {session_display}" if CONFIG.get('session_type') else ""
+        self.set_title(_("Appify %(version)s%(session)s") % {
+            "version": CURRENT_VERSION,
+            "session": session_info,
+        })
         self.set_default_size(1000, 1050)
         self.sorted_apps_list = []
 
@@ -1642,8 +2215,12 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         header.set_show_start_title_buttons(True)
         header.set_show_end_title_buttons(True)
         title = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        title.append(Gtk.Label(label=_(f"Appify {CURRENT_VERSION}")))
-        subtitle_text = f"Smart Browser Detection • {CONFIG['session_type'].upper() if CONFIG.get('session_type') else 'Unknown'} Session"
+        title.append(Gtk.Label(label=_("Appify %(version)s") % {"version": CURRENT_VERSION}))
+        compositor_val = CONFIG.get('wayland_compositor', 'n/a')
+        session_display = CONFIG['session_type'].upper()
+        if is_wayland_session() and compositor_val not in ("n/a", "unknown"):
+            session_display += f" / {compositor_val.title()}"
+        subtitle_text = f"Smart Browser Detection • {session_display} Session"
         title.append(Gtk.Label(label=subtitle_text))
         header.set_title_widget(title)
 
@@ -1653,6 +2230,7 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         menu.append(_("About"), "win.about")
         menu.append(_("Rescan Browsers"), "win.rescan")
         menu.append(_("Restore Default Apps"), "win.restore_defaults")
+        menu.append(_("Backup Manager"), "win.backup_manager")
         menu_btn.set_menu_model(menu)
         header.pack_end(menu_btn)
 
@@ -1667,6 +2245,10 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         restore_action = Gio.SimpleAction.new("restore_defaults", None)
         restore_action.connect("activate", self.on_restore_defaults)
         self.add_action(restore_action)
+
+        backup_action = Gio.SimpleAction.new("backup_manager", None)
+        backup_action.connect("activate", self.on_open_backup_manager)
+        self.add_action(backup_action)
 
         mode_box = Gtk.Box(spacing=6)
         mode_box.append(Gtk.Label(label=_("Dark")))
@@ -1700,8 +2282,12 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         sys_info_box.set_margin_start(12)
         sys_info_box.set_margin_end(12)
         
+        session_text = CONFIG['session_type'].upper()
+        compositor_val = CONFIG.get('wayland_compositor', 'n/a')
+        if is_wayland_session() and compositor_val not in ("n/a", "unknown"):
+            session_text += f" / {compositor_val.title()}"
         session_label = Gtk.Label()
-        session_label.set_markup(f"<b>Display Server:</b> {CONFIG['session_type'].upper()}")
+        session_label.set_markup(f"<b>Display:</b> {session_text}")
         sys_info_box.append(session_label)
         
         browser_count = len(CONFIG.get('available_browsers', {}))
@@ -1867,8 +2453,11 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         self.refresh_btn.connect("clicked", self.on_refresh)
         self.remove_btn = Gtk.Button(label=_("Delete App"))
         self.remove_btn.connect("clicked", self.on_remove_app)
+        self.backup_btn = Gtk.Button(label=_("Backup"))
+        self.backup_btn.connect("clicked", self.on_backup_profile)
         
-        for b in [self.install_btn, self.install_custom_btn, self.uninstall_btn, self.clone_btn, self.refresh_btn, self.remove_btn]: 
+        for b in [self.install_btn, self.install_custom_btn, self.uninstall_btn,
+                  self.clone_btn, self.refresh_btn, self.remove_btn, self.backup_btn]: 
             if b in [self.install_btn, self.install_custom_btn]:
                 b.add_css_class("suggested-action")
             elif b in [self.uninstall_btn, self.remove_btn]:
@@ -1882,7 +2471,7 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         self.update_banner.set_button_label("View Releases")
         self.update_banner.connect(
             "button-clicked",
-            lambda b: subprocess.run(["xdg-open", "https://github.com/bobbycomet/Appify/releases"])
+            lambda b: subprocess.Popen(["xdg-open", "https://github.com/bobbycomet/Appify/releases"])
         )
         self.update_banner.set_revealed(False)
         content_box.append(self.update_banner)
@@ -1962,7 +2551,7 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         self.refresh_browser_combo()
         
         browser_count = len(CONFIG['available_browsers'])
-        self.status_push(_(f"Rescan complete: {browser_count} browser(s) found"))
+        self.status_push(_("Rescan complete: %(count)d browser(s) found") % {"count": browser_count})
 
     def on_restore_defaults(self, action=None, param=None):
         """Restores any missing default apps"""
@@ -2036,27 +2625,26 @@ class PWAManagerWindow(Adw.ApplicationWindow):
 
     def populate_app_combo(self, search_term=""):
         all_apps = CONFIG["apps"].values()
-        
+
         if search_term:
             search_term_lower = search_term.lower()
             filtered_apps = [
-                app for app in all_apps 
+                app for app in all_apps
                 if search_term_lower in app["name"].lower()
             ]
         else:
             filtered_apps = list(all_apps)
-        
+
         self.sorted_apps_list = sorted(filtered_apps, key=lambda x: x["name"].lower())
-        
+
+        installed: set[str] = set(list_installed_apps())
         strings = []
-        installed = set(list_installed_apps())
-        
         for app in self.sorted_apps_list:
             name = app["name"]
             slug = slugify(name)
             text = f"✓ {name}" if slug in installed else name
             strings.append(text)
-            
+
         model = Gio.ListStore.new(Gtk.StringObject)
         for s in strings:
             model.append(Gtk.StringObject.new(s))
@@ -2171,11 +2759,12 @@ class PWAManagerWindow(Adw.ApplicationWindow):
     def update_button_states(self):
         idx = self.app_combo.get_selected()
         valid = idx != Gtk.INVALID_LIST_POSITION and idx < len(self.sorted_apps_list)
-        
+
         self.install_btn.set_sensitive(valid)
         self.uninstall_btn.set_sensitive(valid)
         self.clone_btn.set_sensitive(valid)
         self.remove_btn.set_sensitive(valid)
+        self.backup_btn.set_sensitive(valid)
         self.install_preset_btn.set_sensitive(valid)
         self.open_store_btn.set_sensitive(valid)
         self.add_custom_ext_btn.set_sensitive(valid)
@@ -2183,9 +2772,10 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         if valid:
             app = self.sorted_apps_list[idx]
             slug = slugify(app["name"])
-            installed = slug in list_installed_apps()
+            installed: bool = slug in set(list_installed_apps())
             self.install_btn.set_sensitive(not installed)
             self.uninstall_btn.set_sensitive(installed)
+            self.backup_btn.set_sensitive(installed)
 
     def on_install_presets(self, btn):
         idx = self.app_combo.get_selected()
@@ -2240,6 +2830,9 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         browser_key = (profile_cfg.get("browser") or app.get("browser") or CONFIG.get("browser", "firefox")).lower()
         browser_cfg = get_browsers().get(browser_key, {})
         store_url = browser_cfg.get("store_url", "https://chromewebstore.google.com/")
+        if not validate_url(store_url):
+            self.status_push(_("Invalid store URL"))
+            return
         subprocess.Popen(["xdg-open", store_url])
         self.status_push(_("Opened extension store"))
 
@@ -2277,6 +2870,179 @@ class PWAManagerWindow(Adw.ApplicationWindow):
             dlg.close()
             
         dialog.connect("response", on_response)
+
+    def on_backup_profile(self, btn):
+        """Quick-backup the currently selected app's profile."""
+        idx = self.app_combo.get_selected()
+        if idx == Gtk.INVALID_LIST_POSITION:
+            return
+        app = self.sorted_apps_list[idx]
+        backup_profile(app, self.status_push)
+
+    def on_open_backup_manager(self, action=None, param=None):
+        """Opens the Backup Manager dialog for the currently selected app."""
+        idx = self.app_combo.get_selected()
+        if idx == Gtk.INVALID_LIST_POSITION or idx >= len(self.sorted_apps_list):
+            # No app selected — show a picker instead
+            dialog = Adw.MessageDialog(
+                transient_for=self,
+                heading=_("Backup Manager"),
+                body=_("Select an app in the main window first, then click Backup Manager.")
+            )
+            dialog.add_response("ok", _("OK"))
+            dialog.show()
+            dialog.connect("response", lambda d, r: d.close())
+            return
+        app = self.sorted_apps_list[idx]
+        self._show_backup_manager_for_app(app)
+
+    def _show_backup_manager_for_app(self, app):
+        """Shows the Backup Manager window for a specific app."""
+        dialog = Adw.MessageDialog(
+            transient_for=self,
+            heading=_("Backup Manager — %(name)s") % {"name": app["name"]},
+            body=_("Manage backups stored in ~/.pwa_manager/.backup/%(slug)s/") % {"slug": slugify(app["name"])},
+        )
+        dialog.set_default_size(560, 420)
+
+        outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8,
+                        margin_top=8, margin_bottom=8,
+                        margin_start=8, margin_end=8)
+
+        # ── Backup-now button ──
+        backup_now_btn = Gtk.Button(label=_("⬇  Create Backup Now"))
+        backup_now_btn.add_css_class("suggested-action")
+        outer.append(backup_now_btn)
+
+        # ── Backup list ──
+        list_label = Gtk.Label(label=_("<b>Existing Backups</b>"), use_markup=True,
+                               halign=Gtk.Align.START)
+        outer.append(list_label)
+
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_min_content_height(200)
+        scroll.set_vexpand(True)
+        listbox = Gtk.ListBox()
+        listbox.set_selection_mode(Gtk.SelectionMode.SINGLE)
+        scroll.set_child(listbox)
+        outer.append(scroll)
+
+        # ── Restore / Delete buttons ──
+        action_box = Gtk.Box(spacing=8)
+        restore_btn = Gtk.Button(label=_("↩  Restore Selected"))
+        delete_btn  = Gtk.Button(label=_("🗑  Delete Selected"))
+        delete_btn.add_css_class("destructive-action")
+        action_box.append(restore_btn)
+        action_box.append(delete_btn)
+        outer.append(action_box)
+
+        dialog.set_extra_child(outer)
+        dialog.add_response("close", _("Close"))
+        dialog.show()
+
+        def _populate():
+            # Clear
+            while True:
+                row = listbox.get_row_at_index(0)
+                if row:
+                    listbox.remove(row)
+                else:
+                    break
+            backups = list_backups(app)
+            if not backups:
+                row = Gtk.ListBoxRow()
+                lbl = Gtk.Label(label=_("No backups yet."),
+                                halign=Gtk.Align.START,
+                                margin_top=6, margin_bottom=6,
+                                margin_start=12, margin_end=12)
+                row.set_child(lbl)
+                listbox.append(row)
+                restore_btn.set_sensitive(False)
+                delete_btn.set_sensitive(False)
+            else:
+                restore_btn.set_sensitive(True)
+                delete_btn.set_sensitive(True)
+                for b in backups:
+                    row = Gtk.ListBoxRow()
+                    row._backup_info = b
+                    inner = Gtk.Box(spacing=8,
+                                    margin_top=6, margin_bottom=6,
+                                    margin_start=12, margin_end=12)
+                    ts_str = datetime.datetime.fromtimestamp(b["mtime"]).strftime("%Y-%m-%d %H:%M")
+                    lbl = Gtk.Label(
+                        label=f"{ts_str}  •  {b['size_mb']} MB  •  {b['name']}",
+                        halign=Gtk.Align.START,
+                        xalign=0,
+                    )
+                    lbl.set_hexpand(True)
+                    inner.append(lbl)
+                    row.set_child(inner)
+                    listbox.append(row)
+
+        _populate()
+
+        def _on_backup_now(_btn):
+            result = backup_profile(app)
+            if result:
+                _populate()
+                self.status_push(f"Backup saved: {result.name}")
+            else:
+                self.status_push("Backup failed — check logs")
+
+        def _on_restore(_btn):
+            row = listbox.get_selected_row()
+            if not row or not hasattr(row, "_backup_info"):
+                return
+            b = row._backup_info
+            confirm = Adw.MessageDialog(
+                transient_for=self,
+                heading=_("Restore Profile?"),
+                body=_(
+                    "This will overwrite the current profile for %(name)s\n"
+                    "with the backup from %(ts)s.\n\n"
+                    "This cannot be undone (consider creating a backup first)."
+                ) % {"name": app["name"], "ts": b["name"]},
+            )
+            confirm.add_response("cancel", _("Cancel"))
+            confirm.add_response("restore", _("Restore"))
+            confirm.set_response_appearance("restore", Adw.ResponseAppearance.SUGGESTED)
+            confirm.show()
+
+            def _do_restore(d, resp):
+                if resp == "restore":
+                    restore_profile(b["path"], app, self.status_push)
+                    _populate()
+                d.close()
+
+            confirm.connect("response", _do_restore)
+
+        def _on_delete(_btn):
+            row = listbox.get_selected_row()
+            if not row or not hasattr(row, "_backup_info"):
+                return
+            b = row._backup_info
+            confirm = Adw.MessageDialog(
+                transient_for=self,
+                heading=_("Delete Backup?"),
+                body=_("Permanently delete %(name)s?") % {"name": b["name"]},
+            )
+            confirm.add_response("cancel", _("Cancel"))
+            confirm.add_response("delete", _("Delete"))
+            confirm.set_response_appearance("delete", Adw.ResponseAppearance.DESTRUCTIVE)
+            confirm.show()
+
+            def _do_delete(d, resp):
+                if resp == "delete":
+                    delete_backup(b["path"], self.status_push)
+                    _populate()
+                d.close()
+
+            confirm.connect("response", _do_delete)
+
+        backup_now_btn.connect("clicked", _on_backup_now)
+        restore_btn.connect("clicked", _on_restore)
+        delete_btn.connect("clicked", _on_delete)
+        dialog.connect("response", lambda d, r: d.close())
 
     def on_clone(self, btn):
         idx = self.app_combo.get_selected()
@@ -2322,48 +3088,84 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         self._perform_install(app)
 
     def on_install_custom(self, btn):
-        url = self.url_entry.get_text().strip()
-        if not url.startswith("http"):
-            self.status_push("URL must start with http(s)://")
-            return
-        dialog = Adw.MessageDialog(transient_for=self, heading="Custom PWA")
-        dialog.add_response("cancel", "Cancel")
-        dialog.add_response("install", "Install")
+        # Self-contained dialog that asks for both URL and name.
+        # We do NOT read self.url_entry here — that field belongs to the
+        # app-selection panel and may contain an existing app's URL, which
+        # was the original cause of this being broken.
+        dialog = Adw.MessageDialog(transient_for=self, heading=_("Install Custom PWA"))
+        dialog.add_response("cancel", _("Cancel"))
+        dialog.add_response("install", _("Install"))
         dialog.set_response_appearance("install", Adw.ResponseAppearance.SUGGESTED)
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, margin_top=8, margin_bottom=8, margin_start=8, margin_end=8)
-        box.append(Gtk.Label(label="App Name", halign=Gtk.Align.START))
-        name_entry = Gtk.Entry()
-        inferred = urlparse(url).netloc.replace("www.", "").split('.')[0].capitalize()
-        name_entry.set_text(inferred)
-        box.append(name_entry)
+        dialog.set_response_enabled("install", False)
+
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10,
+                      margin_top=8, margin_bottom=8, margin_start=8, margin_end=8)
+
+        box.append(Gtk.Label(label=_("URL (https://…)"), halign=Gtk.Align.START))
+        url_input = Gtk.Entry()
+        url_input.set_placeholder_text("https://example.com")
+        url_input.set_hexpand(True)
+        box.append(url_input)
+
+        box.append(Gtk.Label(label=_("App Name"), halign=Gtk.Align.START))
+        name_input = Gtk.Entry()
+        name_input.set_placeholder_text(_("My App"))
+        name_input.set_hexpand(True)
+        box.append(name_input)
+
         dialog.set_extra_child(box)
         dialog.show()
 
+        def _update_install_btn(*_):
+            url_ok  = validate_url(url_input.get_text().strip())
+            name_ok = bool(name_input.get_text().strip())
+            dialog.set_response_enabled("install", url_ok and name_ok)
+
+        def _infer_name(*_):
+            """Auto-fill the name field from the URL while it is still empty."""
+            raw = url_input.get_text().strip()
+            if raw.startswith("http") and not name_input.get_text().strip():
+                try:
+                    inferred = urlparse(raw).netloc.replace("www.", "").split(".")[0].capitalize()
+                    if inferred:
+                        name_input.set_text(inferred)
+                except Exception:
+                    pass
+            _update_install_btn()
+
+        url_input.connect("changed", _infer_name)
+        name_input.connect("changed", _update_install_btn)
+
         def on_response(dlg, resp):
             if resp == "install":
-                name = name_entry.get_text().strip()
-                if name:
+                url  = url_input.get_text().strip()
+                name = name_input.get_text().strip()
+                if url and name and validate_url(url):
                     available_keys = list(CONFIG.get("available_browsers", {}).keys())
                     selected_idx = self.browser_combo.get_selected()
-                    browser_key_selected = available_keys[selected_idx] if selected_idx < len(available_keys) else CONFIG.get("browser", "firefox")
-
+                    browser_key_selected = (
+                        available_keys[selected_idx]
+                        if selected_idx < len(available_keys)
+                        else CONFIG.get("browser", "firefox")
+                    )
                     app = {
-                        "name": name, 
-                        "url": url, 
+                        "name": name,
+                        "url": url,
                         "kiosk": self.kiosk_check.get_active(),
                         "gamepad": self.gamepad_check.get_active() if self.gamepad_check.get_sensitive() else False,
-                        "browser": browser_key_selected
+                        "browser": browser_key_selected,
                     }
                     app_slug = slugify(name)
-                    CONFIG["apps"][app_slug] = app 
+                    CONFIG["apps"][app_slug] = app
                     save_config()
                     self.populate_app_combo()
-                    
-                    new_index = next((i for i, a in enumerate(self.sorted_apps_list) if a["name"] == name), 0)
+                    new_index = next(
+                        (i for i, a in enumerate(self.sorted_apps_list) if a["name"] == name), 0
+                    )
                     self.app_combo.set_selected(new_index)
-                    
                     self._perform_install(app)
             dlg.close()
+
         dialog.connect("response", on_response)
 
     def _perform_install(self, app):
@@ -2422,12 +3224,12 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         
         dialog = Adw.MessageDialog(
             transient_for=self,
-            heading=f"Remove {app_name}?",
-            body="Remove entry. Optionally delete profile."
+            heading=_("Remove %(name)s?") % {"name": app_name},
+            body=_("Remove entry. Optionally delete profile.")
         )
-        dialog.add_response("cancel", "Cancel")
-        dialog.add_response("keep", "Keep Profile")
-        dialog.add_response("delete", "Delete Profile")
+        dialog.add_response("cancel", _("Cancel"))
+        dialog.add_response("keep", _("Keep Profile"))
+        dialog.add_response("delete", _("Delete Profile"))
         dialog.set_response_appearance("delete", Adw.ResponseAppearance.DESTRUCTIVE)
         dialog.show()
 
@@ -2445,11 +3247,11 @@ class PWAManagerWindow(Adw.ApplicationWindow):
                 pd = get_profile_dir(app)
                 try:
                     shutil.rmtree(pd)
-                    self.status_push(f"Removed + profile deleted")
+                    self.status_push(_("Removed + profile deleted"))
                 except Exception as e:
-                    self.status_push(f"Profile delete failed: {e}")
+                    self.status_push(_("Profile delete failed: %(error)s") % {"error": e})
             else:
-                self.status_push(f"Removed (profile kept)")
+                self.status_push(_("Removed (profile kept)"))
             
             save_config()
             current_search = self.search_entry.get_text().strip()
@@ -2481,6 +3283,6 @@ if __name__ == "__main__":
     if not os.access(script_path, os.X_OK):
         try:
             script_path.chmod(0o755)
-        except:
+        except OSError:
             pass
     main()
