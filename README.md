@@ -4,9 +4,16 @@
 
 2.1.0 is coming soon. It is the security update and better profile handling for safer data storage.
 
-It now has multilingual support. It checks for your .mo file and on their system, and then uses a process to apply the system language and translates; if that fails, it then reverts to English.
+Appify doesn't just "pin a website" as Chrome or Edge does.
 
-2.0.1 Fixed a bug where installing a custom PWA was trying to install the PWA in your list rather than adding a link. I fixed a bug where WebHID wasn't activating, and Xcloud is still not working with WebHID. For better controller support on Xcloud, please use Firefox. I tried using Better Xcloud, but no luck. Your mileage may vary.
+Those create a shortcut that still runs inside your main browser profile — same cookies, same extensions (loaded all the time), same telemetry, same taskbar grouping mess ("Edge is open 12 times").Appify creates a real, isolated desktop app for each site:
+Completely separate profile folder, its own cookies, logins, history, storage.
+
+-Own extensions → install BTTV/7TV only on Twitch, uBlock only on YouTube, etc. → your main browser stays lean
+-Own window → proper taskbar icon, groups independently, no "7 Edge icons" clutter
+-Uses your real installed browser (Firefox, Brave, Edge, Ungoogled, etc.) with proper Wayland/X11 flags
+-Kiosk mode, WebHID/gamepad support, nice/ionice tuning for cloud gaming
+-no electron wrappers
 
 # Appify 2.0 – Why It's a Major Upgrade Over 1.x
 
