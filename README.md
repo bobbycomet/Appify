@@ -52,7 +52,7 @@ Appify creates something genuinely separate for each site:
 
 <img width="755" height="42" alt="Icons" src="https://github.com/user-attachments/assets/69154b08-d715-43e3-ac74-e8a9379e4c07" />
 
-> ** Quick heads-up before backing up**
+>** Quick heads-up before backing up**
 Appify can back up your logins, cookies, history and site data — but not the extensions you've added.Browsers keep extension settings in special hidden folders separate from the profile, so we can't safely include them. Trying to back up with extensions installed will usually fail or crash.Easy fix:
 Go to the app/site → open its browser settings → remove extensions first
 Create the backup
