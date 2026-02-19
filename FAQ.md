@@ -353,4 +353,8 @@ Appify shows the real cost of isolation and leaves control in the user’s hands
 
 So, 17 apps made in total can reach 6.3 GB from testing, with all the heavy hitters, YouTube, Kick, two anime sites, and Twitch, all active, came out to be 6.8 GB. This is for all 17 apps, not individual; 6.3 GB for one would be insane.
 
+## What is the RAM usege?
+
+Running YouTube took up 1-1.2 GB of RAM (2 extensions), and running Twitch took up 1.3-1.5 GB of RAM (4 Extensions). This is on par with average browser behavior.
+
 ---
