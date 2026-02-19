@@ -6,7 +6,7 @@ If you use the backup feature on a site with extensions. **REMOVE THE EXTENSIONS
 
 Full Changelog: [channel log](https://github.com/bobbycomet/Appify/compare/v2.0.4...v2.0.5)
 
-[!Watch the Video](https://youtu.be/sCyWKTz_7Go)
+[Watch the YouTube Video showcase](https://youtu.be/sCyWKTz_7Go)
 
 Appify doesn't just "pin a website" as Chrome or Edge does.
 
