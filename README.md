@@ -2,7 +2,7 @@
   <img src="https://raw.githubusercontent.com/bobbycomet/Appify/main/appify.png" alt="Appify Logo" width="25%"/>
 </div>
 
-# Appify
+# Appify latest is 2.1.1
 
 **Turn any website into a real desktop app. Installs in under a second.**
 
@@ -82,10 +82,16 @@ Appify launches your real installed browser, so you get every native PWA capabil
 You get the full modern web-platform experience, auto-updates, offline caching, push notifications, and account sync, without the shared-profile downsides of built-in Chrome/Edge PWAs.
 
 ---
+## What's New in 2.1.1
+Minor bug-fix release improving custom extension installation (Feb 19, 2025).
 
-## What's New in 2.1.0
+- Fixed custom extension addition: The "Add custom" button (and extension store links) now open **inside the isolated PWA browser instance** instead of your main/default browser.
+- Added browser-aware URL handling: New functions validate extension store URLs per browser (e.g., Firefox rejects Chrome Web Store links, Chromium rejects addons.mozilla.org) and launch them correctly using the app's profile (handles native/Flatpak/Snap differences and Firefox vs Chromium args).
+- Result: Extensions install reliably to the right profile and persist across launches.
 
-2.1.0 is a focused security, stability, and compositor-awareness release. The UI and core feature set are unchanged from 2.0.x; this release hardens how Appify stores data, launches browsers, and handles the wide variety of Wayland compositors in use today.
+No other changes, all 2.1.0 features (compositor detection, security hardening, presets, etc.) carry over.
+
+Full changelog: [v2.1.0...v2.1.1](https://github.com/bobbycomet/Appify/compare/v2.1.0...v2.1.1)
 
 ### Compositor-Aware Wayland Handling
 
@@ -265,12 +271,12 @@ Works on Debian/Ubuntu-based distributions: Ubuntu 20.04 LTS+, Debian 11+, Linux
 wget https://github.com/bobbycomet/Appify/releases/download/v2.1.1/Appify-2.1.1.deb
 # Recommended: use gdebi to auto-resolve dependencies
 sudo apt install gdebi
-sudo gdebi Appify-2.1.0.deb
+sudo gdebi Appify-2.1.1.deb
 ```
 
 ```bash
 # Alternative: dpkg + fix-broken
-sudo dpkg -i Appify-2.1.0.deb
+sudo dpkg -i Appify-2.1.1.deb
 sudo apt --fix-broken install -y
 ```
 
