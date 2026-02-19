@@ -2,6 +2,8 @@
   <img src="https://raw.githubusercontent.com/bobbycomet/Appify/main/appify.png" alt="Appify Logo" width="25%"/>
 </div>
 
+[Read the FAQs for a simplified explanation](https://github.com/bobbycomet/Appify/blob/main/FAQ.md)
+
 # Appify latest is 2.1.1
 
 **Turn any website into a real desktop app. Installs in under a second.**
