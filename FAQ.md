@@ -289,3 +289,68 @@ YouTube actively fights ad blockers and content-modifying extensions. To diagnos
 * Press **F5** to refresh (this may allow the current video to play temporarily)
 
 If the issue is extension-related, you’ll need to wait for the extension to update. Appify does not control or modify extension behavior.
+
+---
+## How much disk space do PWAs created by Appify use?
+
+It depends entirely on what the site does and which extensions are installed.
+
+During testing, Appify PWAs ranged from:
+
+* ~27 MB (e.g. Gmail with no extensions)
+* Up to ~1.4 GB (e.g. Twitch or Kick with ~3 extensions)
+
+This range is normal and expected for fully isolated browser profiles.
+
+## Why this is considered low
+
+* Appify PWAs are real browser instances with real profiles, not shortcuts or wrappers. Disk usage reflects actual browser behavior:
+* Cached media (video, thumbnails, audio buffers)
+* IndexedDB and localStorage
+* WASM modules
+* Extension data (BTTV, FFZ, 7TV, ad blockers, etc.)
+* A 27 MB PWA is extremely small for a real browser profile and indicates:
+* Minimal cache
+* No heavy media pipelines
+* Few or no extensions
+* A 1.4 GB streaming PWA is normal because:
+* Video platforms cache aggressively for performance
+* Extensions maintain their own databases and assets
+* Browser profiles are intentionally isolated and not deduplicated
+
+## Compared to other approaches
+
+### Electron apps
+
+* Typically ship 200–400 MB upfront per app
+* Include their own Chromium runtime
+* Still grow further with user data
+* Multiple Electron apps duplicate the same runtime repeatedly
+
+### Traditional PWAs / “Install as App”
+
+* Reuse your main browser profile
+* Hide disk usage by mixing data with everything else
+* Offer no isolation or per-app control
+* Disk growth still occurs, just less visible
+
+### Native apps
+
+* Often smaller at install time
+* Still create caches, config, and runtime data over time
+* Do not provide browser-level isolation or per-site sandboxing
+
+## Why Appify does not reduce or compress this
+Appify intentionally avoids:
+* Profile deduplication hacks
+* Shared cache tricks
+* Unsafe extension copying
+* Background cleanup services
+
+Those approaches risk data corruption, crashes, or privacy leaks.
+
+Appify shows the real cost of isolation and leaves control in the user’s hands.
+
+So, 17 apps made in total can reach 6.3 GB from testing, with all the heavy hitters, YouTube, Kick, two anime sites, and Twitch, all active, came out to be 6.8 GB. This is for all 17 apps, not individual; 6.3 GB for one would be insane.
+
+---
