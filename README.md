@@ -54,6 +54,7 @@ Appify creates something genuinely separate for each site:
 
 > **Note on backups:** If you use the backup feature on a site with extensions, remove the extensions first. The backup cannot capture third-party extension data and will crash if you try. This is not a bug.
 
+A small non-breaking bug was introduced in 2.1.0. The open store and add custom extension uses your main browser and not the PWA. There is a simple workaround for this until it is patched. Right-click over anything that uses a link (image, link, video, etc.), click open in (browser name), this opens a new instance of your PWA as a tabbed browser, search for the extension you want, add it, close the PWA and browser instance for it to take effect.
 ---
 
 ## What Modern PWA Features Do You Keep?
