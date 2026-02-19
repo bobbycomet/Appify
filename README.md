@@ -121,6 +121,12 @@ In 2.0.5, profile directories and config files were created with default filesys
 - **`config.json`** is written atomically via a `.tmp` rename swap, and the live file is set to `chmod 0o600` before the rename completes, so it is never world-readable even for a fraction of a second
 - **`profile.json`** follows the same atomic write + `0o600` pattern
 
+<img width="1920" height="1080" alt="appify-shfiles" src="https://github.com/user-attachments/assets/c43dc369-7d16-4bad-95bd-2237b5f5024f" />
+<img width="1920" height="1080" alt="appifyprofiles" src="https://github.com/user-attachments/assets/7ed6d6e0-389d-4d68-9466-a03b7c1e87d9" />
+<img width="1920" height="1080" alt="appifyprofileinards" src="https://github.com/user-attachments/assets/64c001b9-d4b0-411a-ba6b-255a5a28053b" />
+<img width="1920" height="1080" alt="appifyfiles" src="https://github.com/user-attachments/assets/e708dcf9-eb5e-498a-84f8-33a61085e360" />
+
+
 ### Safer Config Writes (Atomic, Crash-Resistant)
 
 2.0.5 wrote `config.json` directly with `Path.write_text()`. A crash mid-write could leave the config truncated or corrupt. 2.1.0 uses a write-to-temp then atomic-rename pattern for every config file:
