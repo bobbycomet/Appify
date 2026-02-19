@@ -52,12 +52,13 @@ Appify creates something genuinely separate for each site:
 
 <img width="755" height="42" alt="Icons" src="https://github.com/user-attachments/assets/69154b08-d715-43e3-ac74-e8a9379e4c07" />
 
->** Quick heads-up before backing up**
-Appify can back up your logins, cookies, history and site data — but not the extensions you've added.Browsers keep extension settings in special hidden folders separate from the profile, so we can't safely include them. Trying to back up with extensions installed will usually fail or crash.Easy fix:
+> **Quick heads-up before backing up**
+Appify can back up your logins, cookies, history, and site data, but not the extensions you've added. Browsers keep extension settings in special hidden folders separate from the profile, so we can't safely include them. Trying to back up with extensions installed will usually fail or crash. 
+Easy fix:
 Go to the app/site → open its browser settings → remove extensions first
 Create the backup
 After restoring later, just reinstall your favorite extensions (they'll usually remember your settings if you're signed in)
-Sorry for the extra step — it's a browser limitation we can't work around, but your core data is still fully protected!
+Sorry for the extra step; it's a browser limitation we can't work around, but your core data is still fully protected!
 
 2.1.1 Fixed a bug of adding custom extensions and opening the store in the main browser; it will now open in the proper PWA instance and save it. 
 
