@@ -6,6 +6,8 @@ If you use the backup feature on a site with extensions. **REMOVE THE EXTENSIONS
 
 Full Changelog: [channel log](https://github.com/bobbycomet/Appify/compare/v2.0.4...v2.0.5)
 
+[!Watch the Video](https://youtu.be/sCyWKTz_7Go)
+
 Appify doesn't just "pin a website" as Chrome or Edge does.
 
 Those create a shortcut that still runs inside your main browser profile — same cookies, same extensions (loaded all the time), same telemetry, same taskbar grouping mess ("Edge is open 12 times"). Appify creates a real, isolated desktop app for each site:
