@@ -2,6 +2,7 @@
   <img src="https://raw.githubusercontent.com/bobbycomet/Appify/main/appify.png" alt="Appify Logo" width="25%"/>
 </div>
 
+If you use the backup feature on a site with extensions. **REMOVE THE EXTENSIONS.** The backup can not and will not be able to back up these third-party tools; you will get a crash and an incomplete backup.
 
 Full Changelog: [channel log](https://github.com/bobbycomet/Appify/compare/v2.0.4...v2.0.5)
 
