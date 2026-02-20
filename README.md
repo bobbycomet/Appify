@@ -319,7 +319,18 @@ sudo pacman -S python-gobject gtk4 libadwaita curl xdg-utils
 ```bash
 sudo zypper install python3-gobject typelib-1_0-Gtk-4_0 typelib-1_0-Adw-1 curl xdg-utils
 ```
+Or you can download the exact Deb files (pawmanager 1.0.0, old name, but it is updated with the code), or the Appify.AppDIR
 
+Deb command
+```
+dpkg-deb --build pwamanager-1.0.0 Appify-2.1.1.deb
+
+```
+AppImage command
+```
+ARCH=x86_64 ./appimagetool-x86_64.AppImage Appify.AppDir Appify-2.1.1-x86_64.AppImage
+
+```
 Then:
 ```bash
 chmod +x Appify.py
