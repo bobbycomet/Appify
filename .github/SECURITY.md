@@ -6,7 +6,7 @@ Only the latest stable release of Appify receives security fixes. Please update 
 
 | Version | Supported |
 |---|---|
-| 2.1.0 (latest) | ✅ |
+| 2.1.1 (latest) | ✅ |
 | 2.0.x | ❌ |
 | 1.x | ❌ |
 
