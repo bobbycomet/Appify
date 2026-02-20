@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Appify
+Comment=Smart PWA Manager - Install web apps as desktop apps
+Exec=appify
+Icon=appify
+Type=Application
+Categories=Utility;Network;WebBrowser;
+Keywords=PWA;webapp;browser;progressive;
+StartupNotify=true
+StartupWMClass=Appify
+MimeType=x-scheme-handler/https;x-scheme-handler/http;
