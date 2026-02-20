@@ -7,6 +7,8 @@ Fixed. I somehow swapped the file for the older one when packaging. That is fixe
 
 [Read the FAQs for a simplified explanation](https://github.com/bobbycomet/Appify/blob/main/FAQ.md)
 
+I built Appify after getting fed up with manually scripting PWA builds. It’s a streamlined automation tool that turns web apps into optimized desktop experiences in seconds. You pick your app and browser, and Appify handles the heavy lifting, including optional extension support and system-level performance tuning (like hardware acceleration and ionice priority). It takes a complex manual process and reduces it to a few clicks.
+
 # Appify latest is 2.1.1
 
 This version is feature-complete and stable. No further updates are planned unless critical bugs are discovered.
