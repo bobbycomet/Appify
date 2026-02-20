@@ -6,6 +6,8 @@
 
 # Appify latest is 2.1.1
 
+This version is feature-complete and stable. No further updates are planned unless critical bugs are discovered.
+
 **Turn any website into a real desktop app. Installs in under a second.**
 
 **Each site gets its own browser, its own extensions, and its own space, automatically.**
