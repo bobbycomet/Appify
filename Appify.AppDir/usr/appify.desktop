@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Appify
+Comment=Your PWA Management Application
+Exec=AppRun
+Icon=Appify
+Type=Application
+Categories=Utility;
