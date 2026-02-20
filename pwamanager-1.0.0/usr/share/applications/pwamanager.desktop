@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=2.0
+Type=Application
+Name=Appify
+Comment=Manage and launch isolated Progressive Web Apps
+Exec=pwamanager
+Icon=appify
+Terminal=false
+Categories=Utility;Network;
+StartupNotify=true
