@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Appify 2.1.0 - Smart Browser Detection Edition
+Appify 2.1.1 - Smart Browser Detection Edition
 - INTELLIGENT BROWSER DETECTION: Auto-detects native vs Flatpak installations
 - WAYLAND/X11 NATIVE SUPPORT: Automatically configures for your display server
 - DEFAULT BROWSER DETECTION: Uses your system's default browser
@@ -13,17 +13,6 @@ Appify 2.1.0 - Smart Browser Detection Edition
 - Full logging
 - Linux-first design with smart detection
 """
-
-# Appify
-# Copyright (C) 2025 Bobby Comet
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, version 3.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 import gi
 gi.require_version("Gtk", "4.0")
@@ -51,7 +40,7 @@ from packaging.version import Version
 import locale
 import gettext
 
-CURRENT_VERSION = "2.1.0"
+CURRENT_VERSION = "2.1.1"
 
 # ---------------- Logging (must be first — used throughout the module) --------
 
@@ -2175,6 +2164,43 @@ def launch_extension_manager(browser_key: str, preset_key: str, profile_dir: Pat
     except Exception as exc:
         _logger.exception("launch_extension_manager error: %s", exc)
 
+
+def _open_url_in_pwa_browser(browser_key: str, profile_dir: Path, url: str):
+    """
+    Opens *url* inside the PWA's own browser instance using its isolated profile,
+    rather than delegating to xdg-open (which would use the system default browser).
+
+    Mirrors the same detection + command-building logic used in launch_extension_manager.
+    """
+    if not validate_url(url):
+        _logger.error("_open_url_in_pwa_browser: invalid URL '%s'", url)
+        return
+
+    detection = detect_browser_installation(browser_key)
+    if detection['type'] == 'not_found':
+        _logger.error("_open_url_in_pwa_browser: browser '%s' not installed", browser_key)
+        return
+
+    if detection['type'] == 'flatpak':
+        flatpak_id = detection.get('flatpak_id', '')
+        if not flatpak_id:
+            _logger.error("_open_url_in_pwa_browser: flatpak_id missing for %s", browser_key)
+            return
+        cmd_list = ["flatpak", "run", flatpak_id, url]
+    elif detection['type'] == 'snap':
+        snap_name = detection.get('snap_name', browser_key)
+        cmd_list = ["snap", "run", snap_name, url]
+    else:
+        if browser_key.lower() == "firefox":
+            cmd_list = [detection['cmd'], "--profile", str(profile_dir), "--no-remote", url]
+        else:
+            cmd_list = [detection['cmd'], f"--user-data-dir={str(profile_dir)}", url]
+
+    subprocess.Popen(cmd_list)
+    _logger.info(
+        "_open_url_in_pwa_browser: launched %s → %s", detection['display_name'], url
+    )
+
 # ---------------- GTK4 UI ----------------
 Adw.init()
 
@@ -2833,8 +2859,9 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         if not validate_url(store_url):
             self.status_push(_("Invalid store URL"))
             return
-        subprocess.Popen(["xdg-open", store_url])
-        self.status_push(_("Opened extension store"))
+        profile_dir = get_profile_dir(app)
+        _open_url_in_pwa_browser(browser_key, profile_dir, store_url)
+        self.status_push(_("Opened extension store in PWA browser"))
 
     def on_add_custom_ext(self, btn):
         idx = self.app_combo.get_selected()
@@ -2866,6 +2893,13 @@ class PWAManagerWindow(Adw.ApplicationWindow):
                     installed_exts.append({"name": name, "web_url": url})
                     save_installed_extensions(app, installed_exts)
                     self.populate_extensions(app)
+                    # Open the extension URL inside the PWA's browser profile so
+                    # the extension is actually installed into the correct instance.
+                    if validate_url(url):
+                        profile_cfg = load_profile_config(app)
+                        browser_key = (profile_cfg.get("browser") or app.get("browser") or CONFIG.get("browser", "firefox")).lower()
+                        profile_dir = get_profile_dir(app)
+                        _open_url_in_pwa_browser(browser_key, profile_dir, url)
                     self.status_push(f"Added custom extension: {name}")
             dlg.close()
             
