@@ -1,0 +1,36 @@
+#!/bin/bash
+# AppRun - Entry point for Appify AppImage
+# This script sets up the environment and launches Appify
+
+# --- AppImage environment ---
+HERE="$(dirname "$(readlink -f "${0}")")"
+export APPDIR="${HERE}"
+
+# --- Python path: prefer bundled, fall back to system ---
+BUNDLED_PYTHON="${HERE}/usr/bin/python3"
+if [ -x "${BUNDLED_PYTHON}" ]; then
+    PYTHON="${BUNDLED_PYTHON}"
+else
+    PYTHON="$(which python3)"
+fi
+
+if [ -z "${PYTHON}" ]; then
+    echo "ERROR: Python 3 not found. Please install Python 3.10 or newer." >&2
+    exit 1
+fi
+
+# --- Python library path ---
+export PYTHONPATH="${HERE}/usr/lib/python3/dist-packages:${HERE}/usr/local/lib/python3/dist-packages:${PYTHONPATH}"
+
+# --- GI/GTK paths for PyGObject ---
+export GI_TYPELIB_PATH="${HERE}/usr/lib/x86_64-linux-gnu/girepository-1.0:${GI_TYPELIB_PATH}"
+export LD_LIBRARY_PATH="${HERE}/usr/lib:${HERE}/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}"
+
+# --- GSettings schemas (needed for GTK4/Adwaita) ---
+export GSETTINGS_SCHEMA_DIR="${HERE}/usr/share/glib-2.0/schemas:${GSETTINGS_SCHEMA_DIR}"
+
+# --- XDG data dirs ---
+export XDG_DATA_DIRS="${HERE}/usr/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+
+# --- Launch Appify ---
+exec "${PYTHON}" "${HERE}/usr/bin/Appify.py" "$@"
