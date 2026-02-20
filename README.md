@@ -2,6 +2,9 @@
   <img src="https://raw.githubusercontent.com/bobbycomet/Appify/main/appify.png" alt="Appify Logo" width="25%"/>
 </div>
 
+Urgent fix happening. I somehow swapped the file for the older one when packaging, and now I need to fix that. Update coming. Sorry for the inconvenience.
+
+
 [Read the FAQs for a simplified explanation](https://github.com/bobbycomet/Appify/blob/main/FAQ.md)
 
 # Appify latest is 2.1.1
