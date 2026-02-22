@@ -88,7 +88,7 @@ Appify does not wrap websites in Electron or ship its own Chromium build. All ap
 
 ---
 
-Issues with Flatpaks due to Flatpak sandboxing
+## Issues with Flatpaks due to Flatpak sandboxing
 
 Flatpak Firefox is not recognizing my controller—Flatpak issue, not Appify's. It can't be worked around in Appify.
 
@@ -100,7 +100,7 @@ I get weird screen tears. If you are using Nvidia and X11, use Nvidia X Server S
 
 ---
 
-WebHID issue
+## WebHID issue
 
 Xbox Xcloud is not seeing my controller. Use native Firefox, no WebHID needed. Chromium browsers and Xcloud do not like each other with WebHID. This is an Xbox issue, not Appify's.
 
