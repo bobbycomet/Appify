@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Appify vs Built-in Browser PWAs</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Syne:wght@400;600;800&display=swap');
+
+  :root {
+    --bg: #0d0f14;
+    --surface: #13161d;
+    --surface2: #1a1e28;
+    --border: #252933;
+    --accent: #00e5ff;
+    --accent2: #7c3aed;
+    --win: #00c896;
+    --tie: #f59e0b;
+    --neutral: #64748b;
+    --text: #e2e8f0;
+    --text-dim: #94a3b8;
+    --text-faint: #475569;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    padding: 48px 24px;
+  }
+
+  .wrapper {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  header {
+    margin-bottom: 40px;
+  }
+
+  .label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  h1 {
+    font-size: clamp(28px, 4vw, 44px);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin-bottom: 16px;
+  }
+
+  h1 span {
+    color: var(--accent);
+  }
+
+  .subtitle {
+    font-size: 15px;
+    color: var(--text-dim);
+    max-width: 600px;
+    line-height: 1.6;
+  }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  /* Table container */
+  .table-wrap {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--surface);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  /* Header row */
+  thead tr {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  th {
+    padding: 16px 20px;
+    text-align: left;
+    font-size: 11px;
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    font-weight: 600;
+  }
+
+  th:first-child { width: 22%; }
+  th:nth-child(2) { width: 25%; }
+  th:nth-child(3) { width: 25%; }
+  th:last-child { width: 28%; }
+
+  /* Body rows */
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+
+  td {
+    padding: 16px 20px;
+    font-size: 14px;
+    line-height: 1.5;
+    vertical-align: top;
+  }
+
+  .aspect {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text);
+  }
+
+  .aspect small {
+    display: block;
+    font-weight: 400;
+    font-size: 11px;
+    color: var(--text-faint);
+    margin-top: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .col-builtin {
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+
+  .col-appify {
+    color: var(--text);
+    font-size: 13px;
+  }
+
+  /* Verdict badge */
+  .verdict {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 4px 10px;
+    border-radius: 20px;
+    margin-bottom: 6px;
+  }
+
+  .verdict.appify {
+    background: rgba(0, 200, 150, 0.12);
+    color: var(--win);
+    border: 1px solid rgba(0, 200, 150, 0.25);
+  }
+
+  .verdict.tie {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--tie);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+  }
+
+  .verdict-reason {
+    display: block;
+    font-size: 12px;
+    color: var(--text-faint);
+    line-height: 1.4;
+  }
+
+  /* Section divider rows */
+  .section-header td {
+    background: rgba(0, 229, 255, 0.04);
+    border-top: 1px solid rgba(0, 229, 255, 0.15);
+    padding: 10px 20px;
+    font-size: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* Stat highlights */
+  .stat {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  .stat-muted {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--neutral);
+  }
+
+  /* Footer */
+  .footer-note {
+    margin-top: 20px;
+    font-size: 12px;
+    color: var(--text-faint);
+    font-family: 'IBM Plex Mono', monospace;
+    line-height: 1.6;
+  }
+
+  .footer-note strong {
+    color: var(--text-dim);
+  }
+
+  /* Summary bar */
+  .summary {
+    margin-top: 32px;
+    padding: 20px 24px;
+    background: var(--surface);
+    border: 1px solid rgba(0, 200, 150, 0.2);
+    border-radius: 12px;
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .summary-stat {
+    text-align: center;
+  }
+
+  .summary-stat .num {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--win);
+    display: block;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .summary-stat .desc {
+    font-size: 11px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .summary-divider {
+    width: 1px;
+    height: 40px;
+    background: var(--border);
+  }
+
+  .summary-text {
+    flex: 1;
+    min-width: 200px;
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  @media (max-width: 700px) {
+    th:nth-child(2), td:nth-child(2) { display: none; }
+    th { font-size: 10px; padding: 12px; }
+    td { padding: 12px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <header>
+    <div class="label">// resource & isolation analysis</div>
+    <h1>Appify vs <span>Built-in Browser PWAs</span></h1>
+    <p class="subtitle">A direct comparison of disk usage, RAM footprint, and isolation between Appify's isolated profiles and Chrome/Edge/Brave's native "Install as App" system. Numbers based on real-world testing.</p>
+  </header>
+
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-dot" style="background: var(--win)"></div>
+      Appify advantage
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background: var(--tie)"></div>
+      Tie — comparable result
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Aspect</th>
+          <th>Built-in Browser PWA</th>
+          <th>Appify</th>
+          <th>Verdict</th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <!-- ISOLATION -->
+        <tr class="section-header">
+          <td colspan="4">01 — Isolation & Privacy</td>
+        </tr>
+
+        <tr>
+          <td>
+            <span class="aspect">Profile Isolation</span>
+            <small>cookies, storage, history</small>
+          </td>
+          <td class="col-builtin">Shared: all PWAs + normal tabs use the same profile. Cross-site data bleeds freely.</td>
+          <td class="col-appify">Full: every app gets its own <span class="stat">~/.pwa_manager/profiles/</span> directory. Nothing shared.</td>
+          <td>
+            <span class="verdict appify">✦ Appify</span>
+            <span class="verdict-reason">True containment. A compromise in one app cannot touch another.</span>
+          </td>
+        </tr>
+
+        <tr>
+          <td>
+            <span class="aspect">Telemetry Bleed</span>
+            <small>cross-app data collection</small>
+          </td>
+          <td class="col-builtin">High: all sites share telemetry endpoints and storage with the main profile.</td>
+          <td class="col-appify">None between apps. Telemetry is per-profile and contained — or eliminated entirely with Brave/Ungoogled Chromium.</td>
+          <td>
+            <span class="verdict appify">✦ Appify</span>
+            <span class="verdict-reason">Shared profiles hide disk/data cost inside your main profile. Appify makes it visible and contained.</span>
+          </td>
+        </tr>
+
+        <!-- DISK -->
+        <tr class="section-header">
+          <td colspan="4">02 — Disk Usage</td>
+        </tr>
+
+        <tr>
+          <td>
+            <span class="aspect">Initial Install Size</span>
+            <small>fresh app, no usage</small>
+          </td>
+          <td class="col-builtin"><span class="stat-muted">~1–10 MB</span><br>manifest, icons, shortcut config</td>
+          <td class="col-appify"><span class="stat">~1–10 MB</span><br>ghost profile starts near-zero; no runtime downloaded</td>
+          <td>
+            <span class="verdict tie">≈ Tie</span>
+            <span class="verdict-reason">Identical low starting point. Neither wastes space upfront.</span>
+          </td>
+        </tr>
+
+        <tr>
+          <td>
+            <span class="aspect">Light App</span>
+            <small>e.g. Gmail, no extensions</small>
+          </td>
+          <td class="col-builtin">Appears small — but data mixes with all other sites in the shared profile.</td>
+          <td class="col-appify"><span class="stat">~27 MB</span> isolated. Extremely lean for a full browser profile.</td>
+          <td>
+            <span class="verdict appify">✦ Appify</span>
+            <span class="verdict-reason">Built-in PWA disk cost is hidden inside your main profile. Appify's is transparent and isolated.</span>
+          </td>
+        </tr>
+
+        <tr>
+          <td>
+            <span class="aspect">Heavy Streaming App</span>
+            <small>e.g. Twitch/Kick + 3–5 extensions</small>
+          </td>
+          <td class="col-builtin"><span class="stat-muted">~500 MB – 2+ GB</span> in shared pool. One site's video cache bloats all other apps.</td>
+          <td class="col-appify"><span class="stat">~1.4 GB+</span> fully contained. Cache, WASM, extension DBs are isolated to this app only.</td>
+          <td>
+            <span class="verdict appify">✦ Appify</span>
+            <span class="verdict-reason">Growth is predictable and bounded per app. No unrelated app pollutes the pool.</span>
+          </td>
+        </tr>
+
+        <tr>
+          <td>
+            <span class="aspect">17 Apps (Mixed)</span>
+            <small>real-world fleet: YouTube, Twitch, Kick, anime, productivity</small>
+          </td>
+          <td class="col-builtin">Potentially lower raw total via cache sharing — but hidden pollution contaminates the entire main profile.</td>
+          <td class="col-appify"><span class="stat">~6.3–6.8 GB total</span> across all 17 apps. No cross-app pollution. Full user control.</td>
+          <td>
+            <span class="verdict appify">✦ Appify</span>
+            <span class="verdict-reason">Comparable or lower effective total — and every byte is accounted for, visible, and deletable individually.</span>
+          </td>
+        </tr>
+
+        <!-- RAM -->
+        <tr class="section-header">
+          <td colspan="4">03 — RAM Usage</td>
+        </tr>
+
+        <tr>
+          <td>
+            <span class="aspect">Light App RAM</span>
+            <small>e.g. Google Docs</small>
+          </td>
+          <td class="col-builtin">Low baseline, but all extensions load regardless of which tab is active.</td>
+          <td class="col-appify"><span class="stat">~300–500 MB</span> depending on add-ons. Extensions load only here, only when open.</td>
+          <td>
+            <span class="verdict tie">≈ Tie</span>
+            <span class="verdict-reason">On par. Appify has no overhead advantage for a single, simple app.</span>
+          </td>
+        </tr>
+
+        <tr>
+          <td>
+            <span class="aspect">Heavy Streaming App RAM</span>
+            <small>e.g. Twitch + 4 extensions</small>
+          </td>
+          <td class="col-builtin"><span class="stat-muted">~800 MB – 1.5 GB</span> but extensions shared globally — cost distributed across profile, not attributed here.</td>
+          <td class="col-appify"><span class="stat">~1.3–1.5 GB</span> — on par with a normal browser tab. Fully released on close.</td>
+          <td>
+            <span class="verdict tie">≈ Tie</span>
+            <span class="verdict-reason">Per-app cost is comparable. The difference emerges when multiple apps are open simultaneously.</span>
+          </td>
+        </tr>
+
+        <tr>
+          <td>
+            <span class="aspect">Multiple Apps Open</span>
+            <small>e.g. Twitch + YouTube + Docs simultaneously</small>
+          </td>
+          <td class="col-builtin">All extensions load globally for every PWA. BTTV runs while you're in Google Docs. RAM bleed is constant.</td>
+          <td class="col-appify">Extensions activate only in the relevant app. BTTV exists only inside Twitch. <strong>Zero bleed.</strong></td>
+          <td>
+            <span class="verdict appify">✦ Appify</span>
+            <span class="verdict-reason">Lower effective RAM for multi-app users. Extensions only cost RAM when their app is actually open.</span>
+          </td>
+        </tr>
+
+        <!-- EXTENSIONS -->
+        <tr class="section-header">
+          <td colspan="4">04 — Extensions</td>
+        </tr>
+
+        <tr>
+          <td>
+            <span class="aspect">Extension Scope</span>
+            <small>where extensions run</small>
+          </td>
+          <td class="col-builtin">Global: one install runs across every tab and PWA, whether relevant or not.</td>
+          <td class="col-appify">Per-app: BTTV only on Twitch, uBlock only on YouTube. Assigned at install time.</td>
+          <td>
+            <span class="verdict appify">✦ Appify</span>
+            <span class="verdict-reason">Leaner, more intentional. No extension runs somewhere it has no business being.</span>
+          </td>
+        </tr>
+
+        <tr>
+          <td>
+            <span class="aspect">Runtime Duplication</span>
+            <small>browser engine overhead</small>
+          </td>
+          <td class="col-builtin">None — reuses the main browser binary.</td>
+          <td class="col-appify">None — uses your existing installed browser. No bundled Chromium, no Electron.</td>
+          <td>
+            <span class="verdict tie">≈ Tie</span>
+            <span class="verdict-reason">Both avoid Electron-style runtime duplication entirely.</span>
+          </td>
+        </tr>
+
+        <!-- VERDICT -->
+        <tr class="section-header">
+          <td colspan="4">05 — Overall</td>
+        </tr>
+
+        <tr>
+          <td>
+            <span class="aspect">Overall Verdict</span>
+          </td>
+          <td class="col-builtin">Efficient via sharing — but unpredictable growth, hidden costs, and extension bleed make real usage harder to control or audit.</td>
+          <td class="col-appify">Meets or beats built-in PWAs in practice. Every resource is visible, isolated, and individually controllable.</td>
+          <td>
+            <span class="verdict appify">✦ Appify</span>
+            <span class="verdict-reason">Better balance for streaming, multi-account, privacy-focused, and power users. No hidden cost, no shared mess.</span>
+          </td>
+        </tr>
+
+      </tbody>
+    </table>
+  </div>
+
+  <div class="summary">
+    <div class="summary-stat">
+      <span class="num">6</span>
+      <span class="desc">Appify wins</span>
+    </div>
+    <div class="summary-divider"></div>
+    <div class="summary-stat">
+      <span class="num" style="color: var(--tie)">4</span>
+      <span class="desc">Ties</span>
+    </div>
+    <div class="summary-divider"></div>
+    <div class="summary-stat">
+      <span class="num">0</span>
+      <span class="desc">Built-in wins</span>
+    </div>
+    <div class="summary-divider"></div>
+    <div class="summary-text">
+      Built-in PWAs win on simplicity for casual users. Appify wins on isolation, predictability, extension efficiency, and privacy — especially as your app count grows.
+    </div>
+  </div>
+
+  <p class="footer-note">
+    <strong>Methodology:</strong> All numbers from real-world testing. Heavy apps tested with active streaming + popular extension stacks (7TV, BTTV, FFZ, SponsorBlock, Pie Adblock). RAM measured during active use, not idle. Disk measured after normal session usage. · Appify v2.1.1 · GPL-3.0
+  </p>
+</div>
+</body>
+</html>
