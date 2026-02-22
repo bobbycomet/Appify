@@ -1,0 +1,12 @@
+Package: Appify
+Version: 2.1.1
+Section: utils
+Priority: optional
+Architecture: all
+Installed-Size: 1000
+Maintainer: Bobby Comet
+Description: PWA Manager (Appify) for Linux
+ This application manages Progressive Web Apps (PWAs) by creating
+ isolated browser profiles and desktop launchers for a seamless
+ experience, with full GTK4 UI.
+Depends: python3, python3-gi, libgtk-4-1, libadwaita-1-0, curl, desktop-file-utils
