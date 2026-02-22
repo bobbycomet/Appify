@@ -86,6 +86,26 @@ Appify does not wrap websites in Electron or ship its own Chromium build. All ap
 
 ---
 
+---
+
+Issues with Flatpaks due to Flatpak sandboxing
+
+Flatpak Firefox is not recognizing my controller—Flatpak issue, not Appify's. It can't be worked around in Appify.
+
+Flatpak does not show the app icon—Flatpak issue, not Appify's. It can't be worked around.
+
+I get weird screen tears. If you are using Nvidia and X11, use Nvidia X Server Settings (with sudo), choose X server Display Configuration, click advanced, checkmark Force Full Composition Pipeline, then Save to X Configuration File, Apply, and Save. This method can be applied if you have this in other apps, not just Flatpak.
+
+---
+
+---
+
+WebHID issue
+
+Xbox Xcloud is not seeing my controller. Use native Firefox, no WebHID needed. Chromium browsers and Xcloud do not like each other with WebHID. This is an Xbox issue, not Appify's.
+
+---
+
 ## Is Appify safe to use?
 
 Yes. Appify is designed with a conservative security posture:
