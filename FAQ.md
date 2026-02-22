@@ -94,7 +94,7 @@ Flatpak Firefox is not recognizing my controller—Flatpak issue, not Appify's. 
 
 Flatpak does not show the app icon—Flatpak issue, not Appify's. It can't be worked around.
 
-I get weird screen tears. If you are using Nvidia and X11, use Nvidia X Server Settings (with sudo), choose X server Display Configuration, click advanced, checkmark Force Full Composition Pipeline, then Save to X Configuration File, Apply, and Save. This method can be applied if you have this in other apps, not just Flatpak.
+I get weird screen tears. If you are using Nvidia and X11, use Nvidia X Server Settings (with sudo), choose X server Display Configuration, click advanced, checkmark Force Full Composition Pipeline, then Save to X Configuration File, Apply, and Save. This method can be applied if you have this in other apps, not just Flatpak. This may slightly increase GPU usage or latency, but this is an X11 issue that can't be worked around.
 
 ---
 
