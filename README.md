@@ -323,7 +323,7 @@ Or you can download the exact Deb files (pawmanager 1.0.0, old name, but it is u
 
 Deb command
 ```
-dpkg-deb --build pwamanager-1.0.0 Appify-2.1.1.deb
+dpkg-deb --build Appify-2.1.1.deb
 
 ```
 AppImage command
