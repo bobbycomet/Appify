@@ -59,6 +59,8 @@ Appify creates something genuinely separate for each site:
 - Kiosk mode, WebHID/gamepad support, and nice/ionice tuning for cloud gaming
 - No Electron wrappers
 
+[Full comparison table](https://bobbycomet.github.io/Appify/)
+
 <img width="755" height="42" alt="Icons" src="https://github.com/user-attachments/assets/69154b08-d715-43e3-ac74-e8a9379e4c07" />
 
 > **Quick heads-up before backing up**
