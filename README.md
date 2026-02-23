@@ -348,7 +348,7 @@ python3 Appify.py
 
 - **Discord:** https://discord.gg/7fEt5W7DPh
 - **Patreon (Beta Builds):** https://www.patreon.com/c/BobbyComet/membership
-- **Support the Griffin Project:** https://ko-fi.com/bobby60908
+- **Support the Griffin Project:** [With ko-fi](https://ko-fi.com/bobby60908) or with [GitHub Sponsors](https://github.com/sponsors/bobbycomet)
 - **YouTube Showcase:** https://youtu.be/sCyWKTz_7Go
 
 Full Changelog: [v2.0.5 to v2.1.0](https://github.com/bobbycomet/Appify/compare/v2.0.5...v2.1.0)
