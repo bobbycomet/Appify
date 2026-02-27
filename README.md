@@ -12,6 +12,11 @@ I built Appify after getting fed up with manually scripting PWA builds. It’s a
 Appify is part of my larger project, Griffin Linux. All proper deb signing will happen when I have all of my tools setup for the repo. [You can check out the project here](https://bobbycomet.github.io/Griffin-Linux-Landing-Page/)
 Some applications are still in development.
 
+Test machines. 
+
+- A Ryzen 7 2700, RTX 2060, DS3H Gigabyte B450, 32 GB DDR4 3600 RAM, M.2 drive 4th gen. Gnome/Mutter. Average isolation profile creation was 0.6 seconds. Custom scripts were not active here (see next test machine).
+- An HP slim desktop PC 290 series, stock motherboard, Celeron 2 cores, integrated graphics, 16 GB DDR4 3000 RAM, stock HDD. Custom kernel tuning script and daemon for process handling (they will be out soon). Launch speeds of the PWAs were still fast on KDE/waland (Kwin) and KDE/X11. The isolated profile was still fast here as well, but it was slower than a more modern system by one to 2 seconds.
+
 # Appify latest is 2.1.1
 
 This version is feature-complete and stable. No further updates are planned unless critical bugs are discovered.
