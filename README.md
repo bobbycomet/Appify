@@ -2,7 +2,7 @@
   <img src="https://raw.githubusercontent.com/bobbycomet/Appify/main/appify.png" alt="Appify Logo" width="25%"/>
 </div>
 
-Fixed. I somehow swapped the file for the older one when packaging. That is fixed now. Sorry for the inconvenience.
+Update version 2.1.2, a fix for KDE Wayland and Pulseaudio to see each app, not just the browser the profile is on. Uninstall the app and reinstall for the update.
 
 
 [Read the FAQs for a simplified explanation and known browser behaviors](https://github.com/bobbycomet/Appify/wiki/FAQs)
