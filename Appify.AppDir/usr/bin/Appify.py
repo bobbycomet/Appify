@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Appify 2.1.1 - Smart Browser Detection Edition
+Appify 2.1.2 - Smart Browser Detection Edition
 - INTELLIGENT BROWSER DETECTION: Auto-detects native vs Flatpak installations
 - WAYLAND/X11 NATIVE SUPPORT: Automatically configures for your display server
 - DEFAULT BROWSER DETECTION: Uses your system's default browser
@@ -11,7 +11,6 @@ Appify 2.1.1 - Smart Browser Detection Edition
 - Kiosk, GPU, nice/ionice optimization
 - Dark mode
 - Full logging
-- Linux-first design with smart detection
 """
 
 import gi
@@ -40,7 +39,7 @@ from packaging.version import Version
 import locale
 import gettext
 
-CURRENT_VERSION = "2.1.1"
+CURRENT_VERSION = "2.1.2"
 
 # ---------------- Logging (must be first — used throughout the module) --------
 
@@ -777,6 +776,8 @@ def download_icon(app: dict, status_callback=None):
     """
     Attempts to download an icon for the PWA.
     Validates the downloaded file contains PNG/ICO magic bytes before keeping it.
+    After a successful download the icon theme cache is refreshed so that
+    KDE Wayland (and other desktops) pick up the new icon immediately.
     """
     hostname = get_hostname_from_url(app['url'])
     if not hostname:
@@ -821,6 +822,20 @@ def download_icon(app: dict, status_callback=None):
                 label = "Icon" if src == sources[0] else "Fallback icon"
                 if status_callback:
                     status_callback(f"{label}: {hostname}")
+                # Refresh the GTK icon theme cache so KDE Wayland and other
+                # desktops see the new icon without requiring a logout/login.
+                # ICON_DIR is  …/hicolor/512x512/apps/  so parents[3] is the
+                # root of the icon theme (…/.local/share/icons/).
+                try:
+                    icon_theme_root = ICON_DIR.parents[3]
+                    subprocess.run(
+                        ["gtk-update-icon-cache", "-f", "-t", str(icon_theme_root)],
+                        check=False,
+                        capture_output=True,
+                        timeout=5,
+                    )
+                except Exception as cache_exc:
+                    _logger.debug("gtk-update-icon-cache failed (non-fatal): %s", cache_exc)
                 return
             else:
                 # Downloaded something that isn't an image — remove it.
@@ -833,6 +848,13 @@ def make_launcher_wrapper(app: dict, browser_key: str, nice: int, ionice: int, g
     """
     Create a shell wrapper for launching PWAs with proper nice/ionice priority settings.
     Enhanced with full WebHID support and intelligent Wayland/X11 detection.
+
+    Changes in 2.1.2:
+      - PULSE_PROP_* environment variables are exported so PulseAudio/PipeWire
+        labels each PWA stream with the app name instead of the browser name.
+        This makes the sound mixer (e.g. KDE audio widget, pavucontrol) show
+        "YouTube" or "Discord" rather than "firefox" or "chrome".
+        Works on both X11 and Wayland; PipeWire honours PULSE_PROP_* natively.
 
     Security notes:
       - All user-supplied values (URL, profile path, app name) are passed to
@@ -930,6 +952,24 @@ def make_launcher_wrapper(app: dict, browser_key: str, nice: int, ionice: int, g
         "ungoogled-chromium": "ungoogled-chromium",
     }
 
+    # ── Audio identity ───────────────────────────────────────────────────────
+    # Export PULSE_PROP_* so PulseAudio / PipeWire labels this audio stream
+    # with the PWA's name rather than the browser process name.  This makes
+    # the KDE audio widget, GNOME sound settings, and pavucontrol all show
+    # e.g. "YouTube" or "Discord" instead of "firefox" or "chromium".
+    #
+    # PipeWire honours the same PULSE_PROP_* variables via its PulseAudio
+    # compatibility layer, so no separate handling is needed.
+    #
+    # Note: shell variable names cannot contain dots, so we embed these as
+    # literal `export NAME=VALUE` lines rather than using a variable.
+    app_display_name = sanitize_shell_string(app.get('name', 'PWA'))
+    audio_env_lines = [
+        f'export PULSE_PROP_application.name={shlex.quote(app_display_name)}',
+        f'export PULSE_PROP_application.icon_name={shlex.quote(slug)}',
+        f'export PULSE_PROP_media.role=browser',
+    ]
+
     firefox_wayland_env = ""
     if browser_detection['type'] == 'flatpak':
         flatpak_id = browser_detection.get('flatpak_id', '')
@@ -979,6 +1019,8 @@ def make_launcher_wrapper(app: dict, browser_key: str, nice: int, ionice: int, g
                 f'PROFILE_DIR={shlex.quote(str(profile_dir))}',
                 f'URL={shlex.quote(app_url)}',
                 f'export GTK_APPLICATION_ID={shlex.quote(unique_wm_class)}',
+                # Audio identity — mixer shows app name, not browser name
+                *audio_env_lines,
                 '',
                 f'exec setsid $NICE_CMD $IONICE_CMD {env_prefix} {cmd_quoted} \\',
                 '  --profile="$PROFILE_DIR" \\',
@@ -1024,6 +1066,8 @@ def make_launcher_wrapper(app: dict, browser_key: str, nice: int, ionice: int, g
         f'IONICE_CMD="ionice -c {ionice}"',
         f'export GTK_APPLICATION_ID={shlex.quote(unique_wm_class)}',
         firefox_wayland_env.rstrip('\n'),
+        # Audio identity — mixer shows app name, not browser name
+        *audio_env_lines,
         f"exec setsid {exec_cmd}",
     ]
 
@@ -1038,6 +1082,21 @@ def make_launcher_wrapper(app: dict, browser_key: str, nice: int, ionice: int, g
     return wrapper
 
 def create_desktop_file(app: dict, script_path: str, status_callback=None):
+    """
+    Writes the .desktop file for a PWA.
+
+    Changes in 2.1.2:
+      - Icon= now uses the full absolute path to the PNG file instead of a
+        bare icon name.  KDE Wayland's compositor resolves Icon= by checking
+        the XDG icon theme cache; dynamically-installed icons are not always
+        present in the cache before the next logout/login.  An absolute path
+        bypasses the cache entirely and works on all compositors (KDE, GNOME,
+        sway, hyprland …) on both X11 and Wayland.
+      - gtk-update-icon-cache is called after every write so that desktops
+        that do use the cache (e.g. GNOME Shell) also pick up the icon.
+      - Falls back to the system "web-browser" icon when the downloaded icon
+        does not yet exist; the file is regenerated on the next install/refresh.
+    """
     desktop_path = get_desktop_file_path(app)
     icon_path = get_icon_path(app)
     # Sanitize app_name before embedding in the .desktop file to prevent
@@ -1059,13 +1118,20 @@ def create_desktop_file(app: dict, script_path: str, status_callback=None):
     unique_wm_class = f"PWA-{slug}"
     dbus_name = f"com.pwa.{slug}"
 
+    # Use the full absolute path for Icon= so KDE Wayland (and other
+    # compositors) find the icon without needing a warm icon-theme cache.
+    # A bare name like "pwa-youtube" only works after gtk-update-icon-cache
+    # has run AND the desktop has re-read the cache — which may not happen
+    # until the next session start.  An absolute path always works immediately.
+    icon_value = str(icon_path.resolve()) if icon_path.exists() else "web-browser"
+
     desktop_content = f"""[Desktop Entry]
 Version=1.0
 Type=Application
 Name={app_name}
 Exec={str(wrapper)}
 TryExec={try_exec}
-Icon={icon_path}
+Icon={icon_value}
 Terminal=false
 Categories=Network;WebBrowser;
 StartupNotify=true
@@ -1079,6 +1145,19 @@ X-DBus-Name={dbus_name}
         desktop_path.write_text(desktop_content)
         desktop_path.chmod(0o755)
         subprocess.run(["update-desktop-database", str(DESKTOP_DIR)], check=False)
+        # Refresh the GTK icon theme cache so desktops that use the cache
+        # (GNOME Shell, Cinnamon, XFCE …) also see the new icon immediately.
+        # ICON_DIR is  …/hicolor/512x512/apps/  → parents[3] is the icons root.
+        try:
+            icon_theme_root = ICON_DIR.parents[3]
+            subprocess.run(
+                ["gtk-update-icon-cache", "-f", "-t", str(icon_theme_root)],
+                check=False,
+                capture_output=True,
+                timeout=5,
+            )
+        except Exception as cache_exc:
+            _logger.debug("gtk-update-icon-cache failed (non-fatal): %s", cache_exc)
         if status_callback:
             status_callback(f"Desktop: {app_name}")
     except Exception as e:
