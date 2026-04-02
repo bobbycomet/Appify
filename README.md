@@ -2,7 +2,7 @@
   <img src="https://raw.githubusercontent.com/bobbycomet/Appify/main/appify.png" alt="Appify Logo" width="25%"/>
 </div>
 
-Update version 2.1.2, a fix for KDE Wayland and Pulseaudio to see each app, not just the browser the profile is on. Uninstall the app and reinstall for the update.
+Update version 2.1.3, a fix for 2.1.2 apps not launching, KDE Wayland and Pulseaudio to see each app, not just the browser the profile is on. Uninstall the app and reinstall for the update. 2.1.4 when finished will have those features worked out as Pulseaudio has a specific way it works with chromium browsers.
 
 
 [Read the FAQs for a simplified explanation and known browser behaviors](https://github.com/bobbycomet/Appify/wiki/FAQs)
