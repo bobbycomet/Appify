@@ -4,7 +4,7 @@
 
 Made for Windows switchers to Ubuntu to have an easier time. No Terminal to create every file, just a few clicks and done.
 
-Update version 2.1.3, a fix for 2.1.2 apps not launching, adding audio controls has been abandoned per app, as every attempt has ended in a black screen. At first, I thought it was the display management, but it was the audio logic, weird, I know. But Linux is full of things that are complex. The issue was a resource leak and/or race conditions related to audio with multiple apps open, and when they closed. So, 2.1.4 will be mostly bug fixes. If I can reliably get the sound porting to work, it will be updated, as for now, it is not planned until it can be reliably done.
+Update version 2.1.4 is mostly bug fixes. If I can reliably get the sound porting to work, it will be updated, as for now, it is not planned until it can be reliably done. The audio feature was causing a black screen issue in testing due to race conditions and a resource leak. Which is why it was dropped.
 
 
 [Read the FAQs for a simplified explanation and known browser behaviors](https://github.com/bobbycomet/Appify/wiki/FAQs)
