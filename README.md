@@ -4,7 +4,7 @@
 
 Made for Windows switchers to Ubuntu to have an easier time. No Terminal to create every file, just a few clicks and done.
 
-Update version 2.1.3, a fix for 2.1.2 apps not launching, KDE Wayland and Pulseaudio to see each app, not just the browser the profile is on. Uninstall the app and reinstall for the update. 2.1.4 when finished will have those features worked out as Pulseaudio has a specific way it works with chromium browsers.
+Update version 2.1.3, a fix for 2.1.2 apps not launching, adding audio controls has been abandoned per app, as every attempt has ended in a black screen. At first, I thought it was the display management, but it was the audio logic, weird, I know. But Linux is full of things that are complex. The issue was a resource leak and/or race conditions related to audio with multiple apps open, and when they closed. So, 2.1.4 will be mostly bug fixes. If I can reliably get the sound porting to work, it will be updated, as for now, it is not planned until it can be reliably done.
 
 
 [Read the FAQs for a simplified explanation and known browser behaviors](https://github.com/bobbycomet/Appify/wiki/FAQs)
