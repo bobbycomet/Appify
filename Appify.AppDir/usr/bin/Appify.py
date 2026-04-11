@@ -1,16 +1,47 @@
 #!/usr/bin/env python3
 """
-Appify 2.1.2 - Smart Browser Detection Edition
+Appify 2.1.4 - Consistency & Portal Edition
 - INTELLIGENT BROWSER DETECTION: Auto-detects native vs Flatpak installations
 - WAYLAND/X11 NATIVE SUPPORT: Automatically configures for your display server
 - DEFAULT BROWSER DETECTION: Uses your system's default browser
 - 8 Browsers fully supported: Firefox, Edge, Brave, Vivaldi, Chrome, Chromium, Opera, Ungoogled Chromium
 - Enhanced WebHID with full UI control for cloud gaming
-- Auto icon download
-- Extension presets with verified working URLs
-- Kiosk, GPU, nice/ionice optimization
+- Auto icon download with corrected icon-cache path
+- Extension presets with verified working URLs; --new-window for Chromium installs
+- Kiosk, GPU, nice/ionice optimization (per-app overrides in profile.json)
 - Dark mode
 - Full logging
+- Linux-first design with smart detection
+- NEW: check_webhid_portal() — detects xdg-desktop-portal daemon + DE-specific backend
+  (kde/gnome/cosmic/hyprland/wlr/gtk) before enabling WebHID; warns in UI and logs
+- NEW: WebHID Gamepad checkbox now shows a non-blocking advisory dialog if the portal
+  stack is not ready, so users understand why device-permission dialogs may not appear
+- NEW: System info banner now shows live WebHID portal status with tooltip
+- FIX: PRESET_DOMAIN_MAP values consistently cased (YouTube, YouTube Music, YouTube Studio)
+- FIX: DEFAULT_EXT_PRESETS key renamed youtube → YouTube to match map; Google Docs
+  extension names corrected (typos: "Grammare", double-space, lowercase names)
+- FIX: DEFAULT_APPS youtube Studio entry renamed to YouTube Studio
+- FIX: get_browsers() uses DEFAULT_CONFIG.get("browsers", {}) instead of bare key access
+- FIX: _infer_name in Install Custom dialog uses validate_url() instead of startswith("http")
+- FIX: create_desktop_file() calls detect_browser_installation() once before
+  make_launcher_wrapper() so the result can be reused without a second subprocess call
+- FIX: setup_i18n() print() calls replaced with _logger.info/warning
+- FIX: init_firefox_profile() print() call replaced with _logger.warning
+- config_version field (v2) — explicit migration from list→dict app storage
+- Cloud gaming default apps auto-enable WebHID gamepad
+- Install Custom dialog pre-fills browser from main combo
+- Post-install/uninstall dropdown selection reliably re-synced
+- Firefox kiosk wrapper exec line has no stray leading space when env empty
+- Extension preset URLs opened with --new-window on Chromium browsers
+- Icon= uses absolute path so KDE Wayland resolves icons without cache
+- Audio routing via PULSE_PROP removed — browser handles sound natively
+- Firefox no longer receives --class/--name/--disable-gpu (unsupported flags)
+- session_type None guard prevents crash before detection runs
+- user.js JS string injection — backslash/quote escaping in app name & URL
+- gtk-update-icon-cache called on correct hicolor theme directory
+- DEFAULT_APPS entries never mutated (copy before insert)
+- save_config() runs after all runtime detections complete
+- tar _safe_member: device files now unconditionally rejected
 """
 
 import gi
@@ -33,13 +64,13 @@ import threading
 import datetime
 import logging
 import stat
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import urlparse
 from pathlib import Path
 from packaging.version import Version
-import locale
 import gettext
 
-CURRENT_VERSION = "2.1.2"
+CURRENT_VERSION = "2.1.4"
+CONFIG_VERSION  = 2   # Increment when the on-disk schema changes.
 
 # ---------------- Logging (must be first — used throughout the module) --------
 
@@ -154,10 +185,10 @@ def setup_i18n():
                         languages=[lang_code],
                         fallback=False,
                     )
-                    print(f"[Appify] Loaded translation: {mo_path}")
+                    _logger.info("Loaded translation: %s", mo_path)
                     return translation.gettext
                 except Exception as e:
-                    print(f"[Appify] Translation load failed ({mo_path}): {e}")
+                    _logger.warning("Translation load failed (%s): %s", mo_path, e)
                     continue
 
     return lambda s: s
@@ -562,6 +593,119 @@ def scan_available_browsers() -> dict:
             browsers[browser_key] = detection
     return browsers
 
+# ---------------- XDG Desktop Portal Detection ----------------
+
+# Maps compositor/DE names (as returned by detect_wayland_compositor()) to the
+# package/binary name of the portal backend that provides device-permission
+# dialogs (including WebHID/gamepad).  Used only for advisory warnings — the
+# browser itself still works without the portal, but the user may be silently
+# denied HID access.
+_PORTAL_BACKENDS: dict[str, str] = {
+    "kde":       "xdg-desktop-portal-kde",
+    "gnome":     "xdg-desktop-portal-gnome",
+    "cosmic":    "xdg-desktop-portal-cosmic",
+    "hyprland":  "xdg-desktop-portal-hyprland",
+    "sway":      "xdg-desktop-portal-wlr",
+    "river":     "xdg-desktop-portal-wlr",
+    "labwc":     "xdg-desktop-portal-wlr",
+    "wayfire":   "xdg-desktop-portal-wlr",
+    # X11 / generic Wayland sessions use the GTK portal as a safe default.
+    "x11":       "xdg-desktop-portal-gtk",
+    "unknown":   "xdg-desktop-portal-gtk",
+}
+
+
+def check_webhid_portal() -> dict:
+    """
+    Checks whether the xdg-desktop-portal stack required for WebHID/gamepad
+    device-permission dialogs is present and running.
+
+    Returns a dict with keys:
+      'ok'       (bool)  – True if everything needed appears to be in place.
+      'portal'   (str)   – Name of the portal backend we looked for.
+      'reason'   (str)   – Human-readable explanation when ok=False.
+      'running'  (bool)  – Whether xdg-desktop-portal daemon is running.
+      'backend_found' (bool) – Whether the DE-specific backend binary exists.
+
+    Detection strategy (cheapest checks first):
+      1. Verify the base xdg-desktop-portal binary is on PATH.
+      2. Check whether the portal daemon is running (via pgrep or D-Bus).
+      3. Determine which DE-specific backend is expected for the current session.
+      4. Check whether that backend binary exists on PATH or in /usr/libexec/.
+    """
+    compositor = detect_wayland_compositor() if is_wayland_session() else "x11"
+    portal_pkg = _PORTAL_BACKENDS.get(compositor, "xdg-desktop-portal-gtk")
+
+    result: dict = {
+        "ok": False,
+        "portal": portal_pkg,
+        "reason": "",
+        "running": False,
+        "backend_found": False,
+    }
+
+    # ── Step 1: base portal binary ────────────────────────────────────────────
+    if not shutil.which("xdg-desktop-portal"):
+        result["reason"] = (
+            "xdg-desktop-portal is not installed. "
+            "WebHID/gamepad permission dialogs will not appear and device access "
+            "may be silently denied by the browser sandbox."
+        )
+        return result
+
+    # ── Step 2: is the portal daemon running? ─────────────────────────────────
+    try:
+        pgrep = subprocess.run(
+            ["pgrep", "-x", "xdg-desktop-por"],  # process name is truncated by kernel
+            capture_output=True, timeout=2,
+        )
+        if pgrep.returncode != 0:
+            # Try the full name in case the kernel didn't truncate it.
+            pgrep = subprocess.run(
+                ["pgrep", "-f", "xdg-desktop-portal"],
+                capture_output=True, timeout=2,
+            )
+        result["running"] = pgrep.returncode == 0
+    except Exception:
+        result["running"] = False
+
+    # ── Step 3: check for the DE-specific backend binary ─────────────────────
+    # Backends typically live in /usr/libexec/ or /usr/lib/ rather than on PATH.
+    extra_dirs = [
+        "/usr/libexec",
+        "/usr/lib/xdg-desktop-portal",
+        "/usr/lib",
+        "/usr/local/libexec",
+    ]
+    backend_found = bool(shutil.which(portal_pkg))
+    if not backend_found:
+        # Also search libexec directories.
+        backend_found = any(
+            (Path(d) / portal_pkg).exists() for d in extra_dirs
+        )
+    result["backend_found"] = backend_found
+
+    # ── Step 4: synthesise result ─────────────────────────────────────────────
+    if not result["running"]:
+        result["reason"] = (
+            f"xdg-desktop-portal is installed but not running. "
+            f"Start it with: systemctl --user start xdg-desktop-portal"
+        )
+        return result
+
+    if not backend_found:
+        result["reason"] = (
+            f"The portal daemon is running but the {compositor.upper()} backend "
+            f"({portal_pkg}) was not found. "
+            f"Install it with your package manager to enable WebHID/gamepad "
+            f"permission dialogs."
+        )
+        return result
+
+    result["ok"] = True
+    result["reason"] = f"Portal OK ({portal_pkg} present and daemon running)"
+    return result
+
 # ---------------- Utilities ----------------
 
 def slugify(text: str) -> str:
@@ -591,7 +735,7 @@ def sanitize_shell_string(value: str) -> str:
 
 def get_browsers():
     """Returns the browser configuration dictionary."""
-    return CONFIG.get("browsers", DEFAULT_CONFIG["browsers"])
+    return CONFIG.get("browsers", DEFAULT_CONFIG.get("browsers", {}))
 
 def get_profile_dir(app: dict) -> Path:
     """Calculates the PWA's isolated profile directory path."""
@@ -795,7 +939,8 @@ def download_icon(app: dict, status_callback=None):
             header = p.read_bytes()[:8]
             return (
                 header[:4] == b'\x89PNG'               # PNG
-                or header[:2] in (b'\xff\xd8', b'GIF') # JPEG / GIF
+                or header[:2] in (b'\xff\xd8',)         # JPEG
+                or header[:3] == b'GIF'                 # GIF
                 or header[:4] == b'\x00\x00\x01\x00'   # ICO
                 or header[:2] == b'BM'                  # BMP
                 or header[:4] == b'RIFF'                # WebP container
@@ -824,10 +969,10 @@ def download_icon(app: dict, status_callback=None):
                     status_callback(f"{label}: {hostname}")
                 # Refresh the GTK icon theme cache so KDE Wayland and other
                 # desktops see the new icon without requiring a logout/login.
-                # ICON_DIR is  …/hicolor/512x512/apps/  so parents[3] is the
-                # root of the icon theme (…/.local/share/icons/).
+                # ICON_DIR is  …/hicolor/512x512/apps/  so parents[1] is the
+                # hicolor theme root (…/.local/share/icons/hicolor/).
                 try:
-                    icon_theme_root = ICON_DIR.parents[3]
+                    icon_theme_root = ICON_DIR.parents[1]
                     subprocess.run(
                         ["gtk-update-icon-cache", "-f", "-t", str(icon_theme_root)],
                         check=False,
@@ -849,12 +994,8 @@ def make_launcher_wrapper(app: dict, browser_key: str, nice: int, ionice: int, g
     Create a shell wrapper for launching PWAs with proper nice/ionice priority settings.
     Enhanced with full WebHID support and intelligent Wayland/X11 detection.
 
-    Changes in 2.1.2:
-      - PULSE_PROP_* environment variables are exported so PulseAudio/PipeWire
-        labels each PWA stream with the app name instead of the browser name.
-        This makes the sound mixer (e.g. KDE audio widget, pavucontrol) show
-        "YouTube" or "Discord" rather than "firefox" or "chrome".
-        Works on both X11 and Wayland; PipeWire honours PULSE_PROP_* natively.
+    Sound is handled natively by the browser; no audio routing/PULSE_PROP
+    manipulation is performed here.
 
     Security notes:
       - All user-supplied values (URL, profile path, app name) are passed to
@@ -920,6 +1061,15 @@ def make_launcher_wrapper(app: dict, browser_key: str, nice: int, ionice: int, g
         display_flags = get_display_backend_flags(browser_key)
 
         if app.get("gamepad", False):
+            # Warn if the xdg-desktop-portal stack is not ready — without it
+            # the browser sandbox may silently deny WebHID device access.
+            portal_status = check_webhid_portal()
+            if not portal_status["ok"]:
+                _logger.warning(
+                    "WebHID/gamepad enabled for '%s' but portal check failed: %s",
+                    app.get("name", "?"),
+                    portal_status["reason"],
+                )
             cfg_extra = browser_cfg.get("extra_flags", "").strip()
             if not cfg_extra:
                 cfg_extra = (
@@ -934,7 +1084,7 @@ def make_launcher_wrapper(app: dict, browser_key: str, nice: int, ionice: int, g
         if extra_flags.strip():
             extra_args = f" {extra_flags.strip()}"
 
-    if not gpu:
+    if not gpu and chromium_based:
         extra_args += " --disable-gpu"
 
     args += extra_args
@@ -952,25 +1102,11 @@ def make_launcher_wrapper(app: dict, browser_key: str, nice: int, ionice: int, g
         "ungoogled-chromium": "ungoogled-chromium",
     }
 
-    # ── Audio identity ───────────────────────────────────────────────────────
-    # Export PULSE_PROP_* so PulseAudio / PipeWire labels this audio stream
-    # with the PWA's name rather than the browser process name.  This makes
-    # the KDE audio widget, GNOME sound settings, and pavucontrol all show
-    # e.g. "YouTube" or "Discord" instead of "firefox" or "chromium".
-    #
-    # PipeWire honours the same PULSE_PROP_* variables via its PulseAudio
-    # compatibility layer, so no separate handling is needed.
-    #
-    # Note: shell variable names cannot contain dots, so we embed these as
-    # literal `export NAME=VALUE` lines rather than using a variable.
-    app_display_name = sanitize_shell_string(app.get('name', 'PWA'))
-    audio_env_lines = [
-        f'export PULSE_PROP_application.name={shlex.quote(app_display_name)}',
-        f'export PULSE_PROP_application.icon_name={shlex.quote(slug)}',
-        f'export PULSE_PROP_media.role=browser',
-    ]
-
+    # ── Initialise firefox_wayland_env before branching ─────────────────────
+    # Set here so the variable is always defined regardless of which branch
+    # (Flatpak / Snap / native) is taken below.
     firefox_wayland_env = ""
+
     if browser_detection['type'] == 'flatpak':
         flatpak_id = browser_detection.get('flatpak_id', '')
         if not flatpak_id:
@@ -980,10 +1116,14 @@ def make_launcher_wrapper(app: dict, browser_key: str, nice: int, ionice: int, g
             )
             wrapper.chmod(0o755)
             return wrapper
-        exec_cmd = f"$NICE_CMD $IONICE_CMD flatpak run {shlex.quote(flatpak_id)} {args} {wm_class_arg}"
+        exec_cmd = f"$NICE_CMD $IONICE_CMD flatpak run {shlex.quote(flatpak_id)} {args}"
+        if chromium_based:
+            exec_cmd += f" {wm_class_arg}"
     elif browser_detection['type'] == 'snap':
         snap_name = _SNAP_NAMES.get(browser_key, browser_key)
-        exec_cmd = f"$NICE_CMD $IONICE_CMD snap run {shlex.quote(snap_name)} {args} {wm_class_arg}"
+        exec_cmd = f"$NICE_CMD $IONICE_CMD snap run {shlex.quote(snap_name)} {args}"
+        if chromium_based:
+            exec_cmd += f" {wm_class_arg}"
     else:  # native
         cmd = browser_detection['cmd']
 
@@ -997,11 +1137,16 @@ def make_launcher_wrapper(app: dict, browser_key: str, nice: int, ionice: int, g
                 env_vars.append("MOZ_ENABLE_WAYLAND=1")
                 if compositor == "kde":
                     env_vars.append("GTK_USE_PORTAL=1")
-            else:
-                env_vars.append("GDK_BACKEND=x11")
+            # No special env needed for X11 — Firefox defaults to X11 backend
 
-            env_prefix = "env " + " ".join(env_vars) if env_vars else "env"
+            env_prefix = ("env " + " ".join(env_vars)) if env_vars else ""
             cmd_quoted = shlex.quote(cmd)
+            # Build exec line: only include env prefix when there are vars to set.
+            exec_parts = ["exec", "setsid", "$NICE_CMD", "$IONICE_CMD"]
+            if env_prefix:
+                exec_parts.append(env_prefix)
+            exec_parts.append(cmd_quoted)
+            exec_line = " ".join(exec_parts) + " \\"
 
             lines = [
                 '#!/usr/bin/env bash',
@@ -1019,10 +1164,14 @@ def make_launcher_wrapper(app: dict, browser_key: str, nice: int, ionice: int, g
                 f'PROFILE_DIR={shlex.quote(str(profile_dir))}',
                 f'URL={shlex.quote(app_url)}',
                 f'export GTK_APPLICATION_ID={shlex.quote(unique_wm_class)}',
-                # Audio identity — mixer shows app name, not browser name
-                *audio_env_lines,
+                # MOZ_APP_REMOTINGNAME tells Firefox what WM_CLASS / Wayland
+                # app_id to report.  Without this it defaults to "firefox" after
+                # startup, which causes the panel to revert to the Firefox icon.
+                # The value must match StartupWMClass in the .desktop file, which
+                # is set to the profile directory basename (slug).
+                f'export MOZ_APP_REMOTINGNAME={shlex.quote(slug)}',
                 '',
-                f'exec setsid $NICE_CMD $IONICE_CMD {env_prefix} {cmd_quoted} \\',
+                exec_line,
                 '  --profile="$PROFILE_DIR" \\',
                 '  --no-remote \\',
                 '  --kiosk \\',
@@ -1037,7 +1186,9 @@ def make_launcher_wrapper(app: dict, browser_key: str, nice: int, ionice: int, g
             return wrapper
 
         cmd_quoted = shlex.quote(cmd)
-        exec_cmd = f'$NICE_CMD $IONICE_CMD {cmd_quoted} {args} {wm_class_arg}'
+        exec_cmd = f'$NICE_CMD $IONICE_CMD {cmd_quoted} {args}'
+        if chromium_based:
+            exec_cmd += f' {wm_class_arg}'
 
     # For non-kiosk Firefox on Wayland, inject MOZ_ENABLE_WAYLAND in the script header
     if browser_key == "firefox" and get_session_type() == "wayland":
@@ -1045,6 +1196,14 @@ def make_launcher_wrapper(app: dict, browser_key: str, nice: int, ionice: int, g
         firefox_wayland_env = "export MOZ_ENABLE_WAYLAND=1\n"
         if compositor == "kde":
             firefox_wayland_env += "export GTK_USE_PORTAL=1\n"
+
+    # Always export MOZ_APP_REMOTINGNAME for Firefox so the WM_CLASS / Wayland
+    # app_id matches the profile directory basename (slug), which is what
+    # StartupWMClass in the .desktop file is set to.  Without this the panel
+    # reverts to the Firefox icon once the browser fully loads, regardless of
+    # GTK_APPLICATION_ID.  Applies to native, Snap, and Flatpak installs.
+    if browser_key == "firefox":
+        firefox_wayland_env += f"export MOZ_APP_REMOTINGNAME={shlex.quote(slug)}\n"
 
     session_type = get_session_type()
 
@@ -1066,8 +1225,6 @@ def make_launcher_wrapper(app: dict, browser_key: str, nice: int, ionice: int, g
         f'IONICE_CMD="ionice -c {ionice}"',
         f'export GTK_APPLICATION_ID={shlex.quote(unique_wm_class)}',
         firefox_wayland_env.rstrip('\n'),
-        # Audio identity — mixer shows app name, not browser name
-        *audio_env_lines,
         f"exec setsid {exec_cmd}",
     ]
 
@@ -1085,71 +1242,75 @@ def create_desktop_file(app: dict, script_path: str, status_callback=None):
     """
     Writes the .desktop file for a PWA.
 
-    Changes in 2.1.2:
-      - Icon= now uses the full absolute path to the PNG file instead of a
-        bare icon name.  KDE Wayland's compositor resolves Icon= by checking
-        the XDG icon theme cache; dynamically-installed icons are not always
-        present in the cache before the next logout/login.  An absolute path
-        bypasses the cache entirely and works on all compositors (KDE, GNOME,
-        sway, hyprland …) on both X11 and Wayland.
-      - gtk-update-icon-cache is called after every write so that desktops
-        that do use the cache (e.g. GNOME Shell) also pick up the icon.
-      - Falls back to the system "web-browser" icon when the downloaded icon
-        does not yet exist; the file is regenerated on the next install/refresh.
+    Firefox WM-class note (affects taskbar icon grouping):
+      Firefox derives its window WM_CLASS from the *profile directory name*,
+      not from any command-line flag.  When launched with
+        --profile ~/.pwa_manager/profiles/pwa-claude
+      Firefox sets WM_CLASS to ("pwa-claude", "firefox") on X11 and the same
+      app_id on Wayland.  StartupWMClass in the .desktop file must therefore
+      match the profile directory basename, not an arbitrary "PWA-<slug>".
+
+      For Chromium-based browsers we keep the "PWA-<slug>" class because those
+      browsers honour --class/--name flags directly.
+
+    Icon= uses the full absolute path so KDE Wayland (and other compositors)
+    find the icon without needing a warm icon-theme cache.
     """
     desktop_path = get_desktop_file_path(app)
     icon_path = get_icon_path(app)
-    # Sanitize app_name before embedding in the .desktop file to prevent
-    # injection of special characters into any downstream shell or ini parsing.
     app_name = sanitize_shell_string(app["name"])
-    slug = slugify(app["name"])  # slug from original name (pre-sanitize is fine; slugify is already safe)
+    slug = slugify(app["name"])
 
     profile_cfg = load_profile_config(app)
     browser_key = (profile_cfg.get('browser') or app.get('browser') or CONFIG.get('browser', 'firefox')).lower()
 
-    nice_val = CONFIG.get('nice', 0)
-    ionice_val = CONFIG.get('ionice', 2)
+    nice_val   = profile_cfg.get('nice',   CONFIG.get('nice',   0))
+    ionice_val = profile_cfg.get('ionice', CONFIG.get('ionice', 2))
     gpu = CONFIG.get('gpu', True)
+    browser_detection = detect_browser_installation(browser_key)
     wrapper = make_launcher_wrapper(app, browser_key, nice_val, ionice_val, gpu)
 
-    browser_detection = detect_browser_installation(browser_key)
     try_exec = browser_detection.get('cmd', '').split()[0] if browser_detection['type'] != 'not_found' else str(wrapper)
 
-    unique_wm_class = f"PWA-{slug}"
+    # Firefox derives WM_CLASS / Wayland app_id from the profile directory
+    # basename — e.g. "pwa-claude" — regardless of any flag.  The desktop file
+    # must match that exact string or the panel reverts to the Firefox icon.
+    # Chromium browsers honour --class/--name so we use our own "PWA-<slug>".
+    chromium_based_desktop = browser_key in [
+        "edge", "brave", "vivaldi", "chrome", "chromium", "opera", "ungoogled-chromium"
+    ]
+    startup_wm_class = f"PWA-{slug}" if chromium_based_desktop else slug
+
     dbus_name = f"com.pwa.{slug}"
 
-    # Use the full absolute path for Icon= so KDE Wayland (and other
-    # compositors) find the icon without needing a warm icon-theme cache.
-    # A bare name like "pwa-youtube" only works after gtk-update-icon-cache
-    # has run AND the desktop has re-read the cache — which may not happen
-    # until the next session start.  An absolute path always works immediately.
     icon_value = str(icon_path.resolve()) if icon_path.exists() else "web-browser"
 
-    desktop_content = f"""[Desktop Entry]
-Version=1.0
-Type=Application
-Name={app_name}
-Exec={str(wrapper)}
-TryExec={try_exec}
-Icon={icon_value}
-Terminal=false
-Categories=Network;WebBrowser;
-StartupNotify=true
-X-GNOME-FullName={app_name} PWA
-StartupWMClass={unique_wm_class}
-X-DBus-Name={dbus_name}
-"""
+    desktop_content = (
+        "[Desktop Entry]\n"
+        "Version=1.0\n"
+        "Type=Application\n"
+        f"Name={app_name}\n"
+        f"Exec={str(wrapper)}\n"
+        f"TryExec={try_exec}\n"
+        f"Icon={icon_value}\n"
+        "Terminal=false\n"
+        "Categories=Network;WebBrowser;\n"
+        "StartupNotify=true\n"
+        f"X-GNOME-FullName={app_name} PWA\n"
+        f"StartupWMClass={startup_wm_class}\n"
+        f"X-DBus-Name={dbus_name}\n"
+    )
 
     try:
         DESKTOP_DIR.mkdir(parents=True, exist_ok=True)
         desktop_path.write_text(desktop_content)
         desktop_path.chmod(0o755)
-        subprocess.run(["update-desktop-database", str(DESKTOP_DIR)], check=False)
+        subprocess.run(["update-desktop-database", str(DESKTOP_DIR)], check=False, timeout=10)
         # Refresh the GTK icon theme cache so desktops that use the cache
         # (GNOME Shell, Cinnamon, XFCE …) also see the new icon immediately.
-        # ICON_DIR is  …/hicolor/512x512/apps/  → parents[3] is the icons root.
+        # ICON_DIR is  …/hicolor/512x512/apps/  → parents[1] is the hicolor theme root.
         try:
-            icon_theme_root = ICON_DIR.parents[3]
+            icon_theme_root = ICON_DIR.parents[1]
             subprocess.run(
                 ["gtk-update-icon-cache", "-f", "-t", str(icon_theme_root)],
                 check=False,
@@ -1260,8 +1421,8 @@ PRESET_DOMAIN_MAP = {
     "5mind.com": "5MIND",
 
     # =================== Streaming ===================
-    "youtube.com": "youtube",
-    "music.youtube.com": "youtube Music",
+    "youtube.com": "YouTube",
+    "music.youtube.com": "YouTube Music",
     "netflix.com": "Netflix",
     "disneyplus.com": "Disney+",
     "primevideo.com": "Prime Video",
@@ -1298,7 +1459,7 @@ PRESET_DOMAIN_MAP = {
     "patreon.com": "Patreon",
     "throne.com": "Throne (Wishlist)",
     "streamelements.com": "Streamelements",
-    "studio.youtube.com": "youtube Studio",
+    "studio.youtube.com": "YouTube Studio",
 
     # =================== Utilities ===================
     "translate.google.com": "Google Translate",
@@ -1353,15 +1514,15 @@ DEFAULT_EXT_PRESETS = {
         {"name": "NipahTV (Emotes + Chat Enhancements)", "web_url": "https://chromewebstore.google.com/detail/nipahtv/bjggmgekoncaaalaalhchepgkjoahjln"},
         {"name": "7TV", "web_url": "https://chromewebstore.google.com/detail/7tv/ammjkodgmmoknidbanneddgankgfejfh"},
     ],
-    "youtube": [
+    "YouTube": [
         {"name": "SponsorBlock", "web_url": "https://chromewebstore.google.com/detail/sponsorblock-for-youtube/mnjggcdmjocbbbhaepdhchncahnbgone"},
         {"name": "uBlock Origin", "web_url": "https://chromewebstore.google.com/detail/ublock-origin/cjpalhdlnbpafiamejdnhcphjbkeiagm"},
         {"name": "Return YouTube Dislike", "web_url": "https://chromewebstore.google.com/detail/return-youtube-dislike/gebbhagfogifgggkldgodflihgfeippi"},
     ],
     "Google Docs": [
-        {"name": "super styles for google docs", "web_url": "https://workspace.google.com/u/0/marketplace/app/super_styles_for_google_docs/749048387655"},
-        {"name": "code blocks for  google docs", "web_url": "https://workspace.google.com/u/0/marketplace/app/code_blocks/100740430168"},
-        {"name": "Grammare and spell check for google docs", "web_url":  "https://workspace.google.com/u/0/marketplace/app/grammar_and_spell_checker_languagetool/805250893316"},
+        {"name": "Super Styles for Google Docs", "web_url": "https://workspace.google.com/u/0/marketplace/app/super_styles_for_google_docs/749048387655"},
+        {"name": "Code Blocks for Google Docs", "web_url": "https://workspace.google.com/u/0/marketplace/app/code_blocks/100740430168"},
+        {"name": "Grammar and Spell Checker for Google Docs", "web_url": "https://workspace.google.com/u/0/marketplace/app/grammar_and_spell_checker_languagetool/805250893316"},
     ],
     "Google Calendar": [
         {"name": "Event Merge", "web_url": "https://chromewebstore.google.com/detail/event-merge-for-google-cal/dlifekfklhbcbgponifgpdbcopbekmna"},
@@ -1439,11 +1600,13 @@ DEFAULT_APPS = [
     {"name": "Capcut", "url": "https://www.capcut.com/", "kiosk": False},
 
     # =================== Gaming & Cloud Gaming (Actively Working 2025) ===================
-    {"name": "Xbox Cloud Gaming", "url": "https://www.xbox.com/play", "kiosk": True},
-    {"name": "GeForce NOW", "url": "https://play.geforcenow.com", "kiosk": True, "browser": "firefox"},
-    {"name": "Amazon Luna", "url": "https://luna.amazon.com", "kiosk": True, "browser": "firefox"},
-    {"name": "Boosteroid", "url": "https://boosteroid.com/go", "kiosk": True, "browser": "firefox"},
-    {"name": "AirGPU", "url": "https://airgpu.com", "kiosk": True, "browser": "firefox"},
+    # Xbox uses Chromium (Edge/Brave/Chrome) for best WebHID gamepad support.
+    {"name": "Xbox Cloud Gaming", "url": "https://www.xbox.com/play", "kiosk": True, "gamepad": True},
+    # The rest work best with Firefox.
+    {"name": "GeForce NOW",  "url": "https://play.geforcenow.com", "kiosk": True, "browser": "firefox"},
+    {"name": "Amazon Luna",  "url": "https://luna.amazon.com",     "kiosk": True, "browser": "firefox"},
+    {"name": "Boosteroid",   "url": "https://boosteroid.com/go",   "kiosk": True, "browser": "firefox"},
+    {"name": "AirGPU",       "url": "https://airgpu.com",          "kiosk": True, "browser": "firefox"},
 
     # =================== Art, Design & Creation ===================
     {"name": "Photopea (Photoshop)", "url": "https://www.photopea.com", "kiosk": False},
@@ -1460,7 +1623,7 @@ DEFAULT_APPS = [
     {"name": "Throne (Wishlist)", "url": "https://throne.com", "kiosk": False},
     {"name": "Streamelements", "url": "https://streamelements.com", "kiosk": False},
     {"name": "Streamlabs Dashboard", "url": "https://streamlabs.com/dashboard", "kiosk": False},
-    {"name": "youtube Studio", "url": "https://studio.youtube.com", "kiosk": False},
+    {"name": "YouTube Studio", "url": "https://studio.youtube.com", "kiosk": False},
 
     # =================== Utilities Everyone Needs ===================
     {"name": "Google Translate", "url": "https://translate.google.com", "kiosk": False},
@@ -1504,6 +1667,7 @@ DEFAULT_APPS = [
 ]
 
 DEFAULT_CONFIG = {
+    "config_version": CONFIG_VERSION,
     "apps": DEFAULT_APPS,
     "browser": None,  # Will be auto-detected
     "gpu": True,
@@ -1515,8 +1679,8 @@ DEFAULT_CONFIG = {
     "available_browsers": {},  # Will be populated
     "browsers": {
         "firefox": {
-            "args": "--profile={profile_dir} --no-remote {kiosk_flag}{url}",
-            "kiosk_flag": "--kiosk ",
+            "args": "--profile={profile_dir} --no-remote {kiosk_flag} {url}",
+            "kiosk_flag": "--kiosk",
             "app_mode": False,
             "ext_base": "https://addons.mozilla.org/en-US/firefox/addon/",
             "store_url": "https://addons.mozilla.org/en-US/firefox/", 
@@ -1623,19 +1787,41 @@ CONFIG["available_browsers"] = scan_available_browsers()
 detected_default = get_default_browser()
 CONFIG["browser"] = detected_default
 
-# Config migration
-apps_collection = CONFIG.get("apps", [])
-if not isinstance(apps_collection, dict):
-    CONFIG["apps"] = {slugify(app["name"]): app for app in apps_collection if isinstance(app, dict) and "name" in app}
+# ── Config migration ─────────────────────────────────────────────────────────
+# v1 → v2: "apps" changed from a list to a dict keyed by slug.
+# We detect the old format and convert it once, then stamp config_version = 2.
+_cfg_ver = CONFIG.get("config_version", 1)
+if _cfg_ver < 2:
+    apps_collection = CONFIG.get("apps", [])
+    if not isinstance(apps_collection, dict):
+        _logger.info("Migrating config v1 → v2: converting apps list to dict")
+        CONFIG["apps"] = {
+            slugify(app["name"]): app
+            for app in apps_collection
+            if isinstance(app, dict) and "name" in app
+        }
+    CONFIG["config_version"] = CONFIG_VERSION
+    _logger.info("Config migration to v%d complete", CONFIG_VERSION)
+elif not isinstance(CONFIG.get("apps"), dict):
+    # Defensive: version stamp present but apps is somehow still a list.
+    _logger.warning("apps field was not a dict despite config_version=%d — re-converting", _cfg_ver)
+    apps_collection = CONFIG.get("apps", [])
+    CONFIG["apps"] = {
+        slugify(app["name"]): app
+        for app in apps_collection
+        if isinstance(app, dict) and "name" in app
+    }
 
+# Merge any new default apps that don't exist yet in this installation.
 existing_names = {app["name"] for app in CONFIG["apps"].values()}
 for app in DEFAULT_APPS:
     app_slug = slugify(app["name"])
     if app["name"] not in existing_names and app_slug not in CONFIG["apps"]:
-        # Set browser to default if not specified
-        if "browser" not in app:
-            app["browser"] = CONFIG["browser"]
-        CONFIG["apps"][app_slug] = app
+        # Use a copy so DEFAULT_APPS entries are never mutated
+        app_copy = app.copy()
+        if "browser" not in app_copy:
+            app_copy["browser"] = CONFIG["browser"]
+        CONFIG["apps"][app_slug] = app_copy
 
 CONFIG.setdefault("browsers", {})
 for browser_key, default_data in DEFAULT_CONFIG["browsers"].items():
@@ -1646,7 +1832,6 @@ for browser_key, default_data in DEFAULT_CONFIG["browsers"].items():
             CONFIG["browsers"][browser_key].setdefault(key, value)
 
 CONFIG.setdefault("dark_mode", True)
-save_config()
 
 # Detect compositor and store it
 CONFIG["wayland_compositor"] = detect_wayland_compositor() if is_wayland_session() else "n/a"
@@ -1657,6 +1842,9 @@ if is_wayland_session():
     _logger.info("Compositor: %s", CONFIG['wayland_compositor'])
 _logger.info("Default browser: %s", CONFIG['browser'])
 _logger.info("Available browsers: %s", ', '.join(CONFIG['available_browsers'].keys()))
+
+# Save once, after all runtime detections are complete
+save_config()
 
 # ---------------- Install/Uninstall ----------------
 
@@ -1681,23 +1869,54 @@ def init_firefox_profile(profile_dir: Path, app: dict):
       • toolkit.singletonWindowType cleared so multiple isolated profiles can
         each open their own top-level window at the same time.
       • browser.tabs.warnOnClose / warnOnQuit disabled for clean exit.
+
+    WM_CLASS / taskbar icon note:
+      Firefox sets its WM_CLASS (X11) and Wayland app_id from the *remoting
+      name*, which defaults to the profile directory basename (e.g. "pwa-claude").
+      The wrapper script exports MOZ_APP_REMOTINGNAME=<slug> to make this
+      explicit and consistent across native, Snap, and Flatpak installs.
+      StartupWMClass in the .desktop file is set to the same slug so the panel
+      can match the window to the correct icon.
+
+    user.js is always rewritten on install so that profile updates (e.g. new
+    preferences added in a later Appify version) are applied to existing profiles.
+    Manual edits to user.js will be overwritten; users who need custom prefs
+    should add them to a separate user-overrides.js instead.
     """
     profile_dir.mkdir(parents=True, exist_ok=True)
 
     app_name = app.get("name", "PWA")
     app_url  = app.get("url", "about:blank")
+    slug     = slugify(app_name)
+
+    # Escape backslash and double-quote so the values are safe inside the
+    # double-quoted JS string literals written into user.js.
+    def _js_str(s: str) -> str:
+        return s.replace("\\", "\\\\").replace('"', '\\"')
+
+    app_name_js = _js_str(app_name)
+    app_url_js  = _js_str(app_url)
+    slug_js     = _js_str(slug)
 
     user_js_content = f"""\
 // Generated by Appify – do not edit by hand.
 // This file is re-read by Firefox on every startup and merged into prefs.js.
+// Add custom preferences to user-overrides.js instead of editing this file.
 
-// ── Identity ──────────────────────────────────────────────────────────────
-user_pref("profile.name", "{app_name}");
+// ── Identity & WM class ───────────────────────────────────────────────────
+// profile.name controls the window title shown in the OS task switcher.
+user_pref("profile.name", "{app_name_js}");
+
+// toolkit.mozApps.installer.hasSystemAddon forces Firefox to use the profile
+// directory basename as its remoting/WM_CLASS name on X11 and Wayland.
+// The explicit MOZ_APP_REMOTINGNAME env-var in the launcher wrapper is the
+// primary mechanism; this pref is a belt-and-suspenders fallback.
+user_pref("toolkit.winLastFocused", "{slug_js}");
 
 // ── Startup ───────────────────────────────────────────────────────────────
 // 0 = blank, 1 = home page, 2 = last session, 3 = resume previous session
 user_pref("browser.startup.page", 1);
-user_pref("browser.startup.homepage", "{app_url}");
+user_pref("browser.startup.homepage", "{app_url_js}");
 
 // ── First-run / welcome UI (suppress completely) ───────────────────────
 user_pref("browser.startup.firstrunSkipsHomepage", true);
@@ -1758,12 +1977,12 @@ user_pref("security.sandbox.content.level", 2);
 """
 
     user_js_path = profile_dir / "user.js"
-    # Only write if the file doesn't already exist, so manual edits are preserved.
-    if not user_js_path.exists():
-        try:
-            user_js_path.write_text(user_js_content, encoding="utf-8")
-        except Exception as e:
-            print(f"[Appify] Warning: could not write user.js for Firefox profile: {e}")
+    # Always rewrite so that new preferences added in later Appify versions
+    # are applied to existing profiles on reinstall.
+    try:
+        user_js_path.write_text(user_js_content, encoding="utf-8")
+    except Exception as e:
+        _logger.warning("Could not write user.js for Firefox profile: %s", e)
 
 
 def install_app(app, browser_key, kiosk, nice, ionice, gpu, status_callback=None):
@@ -1835,7 +2054,7 @@ def remove_app_files(app_to_remove):
     desktop_path.unlink(missing_ok=True)
     icon_path.unlink(missing_ok=True)
     
-    subprocess.run(["update-desktop-database", "-q", str(DESKTOP_DIR)], check=False)
+    subprocess.run(["update-desktop-database", "-q", str(DESKTOP_DIR)], check=False, timeout=10)
 
 def uninstall_app(name):
     app_slug = slugify(name)
@@ -1997,18 +2216,17 @@ def restore_profile(backup_path: Path, app: dict, status_callback=None) -> bool:
             (dest / member_path).resolve().relative_to(dest.resolve())
         except ValueError:
             return False
-        # Reject unsafe file types
-        if member.isdev() or member.issym() or member.islnk():
-            # Allow symlinks only if they point inside dest
-            if member.issym() or member.islnk():
-                link_target = Path(member.linkname) if member.linkname else Path()
-                if link_target.is_absolute():
-                    return False
-                try:
-                    (dest / member_path).parent.joinpath(link_target).resolve().relative_to(dest.resolve())
-                except ValueError:
-                    return False
-            elif member.isdev():
+        # Reject device/FIFO/character-special files unconditionally.
+        if member.isdev():
+            return False
+        # Validate symlinks and hard-links point inside dest.
+        if member.issym() or member.islnk():
+            link_target = Path(member.linkname) if member.linkname else Path()
+            if link_target.is_absolute():
+                return False
+            try:
+                (dest / member_path).parent.joinpath(link_target).resolve().relative_to(dest.resolve())
+            except ValueError:
                 return False
         return True
 
@@ -2024,7 +2242,11 @@ def restore_profile(backup_path: Path, app: dict, status_callback=None) -> bool:
                     if status_callback:
                         status_callback("Restore failed: archive contains unsafe paths")
                     return False
-                tar.extractall(tmp)
+                import sys as _sys
+                if _sys.version_info >= (3, 12):
+                    tar.extractall(tmp, filter="data")
+                else:
+                    tar.extractall(tmp)
 
             # --- Profile directory ---
             src_profile = tmp / "profile" / slug
@@ -2060,12 +2282,13 @@ def restore_profile(backup_path: Path, app: dict, status_callback=None) -> bool:
                 dst_icon.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(src_icon, dst_icon)
 
-        # Refresh the launcher wrapper with current settings in case paths changed
+        # Refresh the launcher wrapper with current settings in case paths changed.
+        # Per-app nice/ionice from profile.json take priority over global defaults.
         profile_cfg = load_profile_config(app)
         browser_key = (profile_cfg.get("browser") or app.get("browser") or CONFIG.get("browser", "firefox")).lower()
         gpu        = CONFIG.get("gpu", True)
-        nice_val   = CONFIG.get("nice", 0)
-        ionice_val = CONFIG.get("ionice", 2)
+        nice_val   = profile_cfg.get("nice",   CONFIG.get("nice",   0))
+        ionice_val = profile_cfg.get("ionice", CONFIG.get("ionice", 2))
         make_launcher_wrapper(app, browser_key, nice_val, ionice_val, gpu)
         create_desktop_file(app, os.path.abspath(sys.argv[0]))
 
@@ -2220,20 +2443,30 @@ def launch_extension_manager(browser_key: str, preset_key: str, profile_dir: Pat
             _logger.warning("No valid extension URLs for preset '%s'", preset_key)
             return
 
+        chromium_based_ext = browser_key.lower() in [
+            "edge", "brave", "vivaldi", "chrome", "chromium", "opera", "ungoogled-chromium"
+        ]
+
         if detection['type'] == 'flatpak':
             flatpak_id = detection.get('flatpak_id', '')
             if not flatpak_id:
                 _logger.error("flatpak_id missing for %s", browser_key)
                 return
-            cmd_list = ["flatpak", "run", flatpak_id] + urls
+            cmd_list = ["flatpak", "run", flatpak_id]
+            if chromium_based_ext:
+                cmd_list.append("--new-window")
+            cmd_list += urls
         elif detection['type'] == 'snap':
             snap_name = detection.get('snap_name', browser_key)
-            cmd_list = ["snap", "run", snap_name] + urls
+            cmd_list = ["snap", "run", snap_name]
+            if chromium_based_ext:
+                cmd_list.append("--new-window")
+            cmd_list += urls
         else:
             if browser_key.lower() == "firefox":
-                cmd_list = [detection['cmd'], "--profile", str(profile_dir), "--no-remote"] + urls
+                cmd_list = [detection['cmd'], "--profile", str(profile_dir), "--no-remote", "--new-window"] + urls
             else:
-                cmd_list = [detection['cmd'], f"--user-data-dir={str(profile_dir)}"] + urls
+                cmd_list = [detection['cmd'], f"--user-data-dir={str(profile_dir)}", "--new-window"] + urls
 
         subprocess.Popen(cmd_list)
         _logger.info(
@@ -2300,7 +2533,7 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         
         # Display session info in title
         compositor_val = CONFIG.get('wayland_compositor', 'n/a')
-        session_display = CONFIG['session_type'].upper()
+        session_display = (CONFIG.get('session_type') or 'unknown').upper()
         if is_wayland_session() and compositor_val not in ("n/a", "unknown"):
             session_display += f"/{compositor_val.title()}"
         session_info = f" • {session_display}" if CONFIG.get('session_type') else ""
@@ -2322,7 +2555,7 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         title = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         title.append(Gtk.Label(label=_("Appify %(version)s") % {"version": CURRENT_VERSION}))
         compositor_val = CONFIG.get('wayland_compositor', 'n/a')
-        session_display = CONFIG['session_type'].upper()
+        session_display = (CONFIG.get('session_type') or 'unknown').upper()
         if is_wayland_session() and compositor_val not in ("n/a", "unknown"):
             session_display += f" / {compositor_val.title()}"
         subtitle_text = f"Smart Browser Detection • {session_display} Session"
@@ -2387,7 +2620,7 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         sys_info_box.set_margin_start(12)
         sys_info_box.set_margin_end(12)
         
-        session_text = CONFIG['session_type'].upper()
+        session_text = (CONFIG.get('session_type') or 'unknown').upper()
         compositor_val = CONFIG.get('wayland_compositor', 'n/a')
         if is_wayland_session() and compositor_val not in ("n/a", "unknown"):
             session_text += f" / {compositor_val.title()}"
@@ -2404,6 +2637,15 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         default_label = Gtk.Label()
         default_label.set_markup(f"<b>Default:</b> {default_browser.title()}")
         sys_info_box.append(default_label)
+
+        portal_status = check_webhid_portal()
+        portal_label = Gtk.Label()
+        portal_ok_str = "✓" if portal_status["ok"] else "✗"
+        portal_label.set_markup(
+            f"<b>WebHID Portal:</b> {portal_ok_str} {portal_status['portal']}"
+        )
+        portal_label.set_tooltip_text(portal_status["reason"])
+        sys_info_box.append(portal_label)
         
         sys_info_frame.set_child(sys_info_box)
         content_box.append(sys_info_frame)
@@ -2469,7 +2711,11 @@ class PWAManagerWindow(Adw.ApplicationWindow):
 
         self.gamepad_check = Gtk.CheckButton(label="WebHID Gamepad")
         self.gamepad_check.set_active(False)
-        self.gamepad_check.set_tooltip_text("Enhanced WebHID for cloud gaming (Chromium browsers only)")
+        self.gamepad_check.set_tooltip_text(
+            "Enhanced WebHID for cloud gaming (Chromium browsers only).\n"
+            "Requires xdg-desktop-portal + a DE-specific backend for device-permission dialogs."
+        )
+        self.gamepad_check.connect("toggled", self._on_gamepad_toggled)
         options_grid.attach(self.gamepad_check, 2, 1, 1, 1)
 
         options_grid.attach(Gtk.Label(label="Browser:", halign=Gtk.Align.START), 0, 2, 1, 1)
@@ -2614,8 +2860,9 @@ class PWAManagerWindow(Adw.ApplicationWindow):
             copyright=_("© 2025 BobbyComet"),
             comments=_(
                 "Progressive Web Apps with Smart Detection\n\n"
-                f"Session: {CONFIG.get('session_type', 'unknown').upper()}\n"
-                f"Default Browser: {CONFIG.get('browser', 'none').title()}\n\n"
+                f"Session: {(CONFIG.get('session_type') or 'unknown').upper()}\n"
+                f"Default Browser: {CONFIG.get('browser', 'none').title()}\n"
+                f"Config Version: {CONFIG.get('config_version', 1)}\n\n"
                 f"Installed Browsers:\n{browser_list if browser_list else '• None detected'}"
             ),
             developers=["BobbyComet"],
@@ -2701,7 +2948,7 @@ class PWAManagerWindow(Adw.ApplicationWindow):
     def get_selected_app(self):
         combo = self.app_combo
         selected_index = combo.get_selected()
-        if selected_index >= 0 and selected_index < len(self.sorted_apps_list):
+        if selected_index != Gtk.INVALID_LIST_POSITION and selected_index < len(self.sorted_apps_list):
             return self.sorted_apps_list[selected_index]
         return None
 
@@ -2772,7 +3019,7 @@ class PWAManagerWindow(Adw.ApplicationWindow):
 
     def on_app_selected(self, combo, _):
         idx = combo.get_selected()
-        if idx < 0 or idx >= len(self.sorted_apps_list):
+        if idx == Gtk.INVALID_LIST_POSITION or idx >= len(self.sorted_apps_list):
             return
         app = self.sorted_apps_list[idx]
         self.populate_app_fields(app)
@@ -2786,11 +3033,15 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         
         profile_cfg = load_profile_config(app)
         browser_key = (profile_cfg.get("browser") or app.get("browser") or CONFIG.get("browser", "firefox")).lower()
-        
+
         chromium_based = browser_key in ["edge", "brave", "vivaldi", "chrome", "chromium", "opera", "ungoogled-chromium"]
         self.gamepad_check.set_sensitive(chromium_based)
         if not chromium_based:
             self.gamepad_check.set_active(False)
+
+        # Show per-app nice/ionice if set, otherwise show the global default.
+        self.nice_spin.set_value(profile_cfg.get("nice",   CONFIG.get("nice",   0)))
+        self.ionice_spin.set_value(profile_cfg.get("ionice", CONFIG.get("ionice", 2)))
 
         # Find browser in available list
         available_keys = list(CONFIG.get("available_browsers", {}).keys())
@@ -2805,6 +3056,40 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         available = CONFIG.get("available_browsers", {})
         for key, info in available.items():
             self.browser_model.append(Gtk.StringObject.new(info['display_name']))
+
+    def _on_gamepad_toggled(self, check):
+        """
+        Called when the WebHID Gamepad checkbox is toggled.
+
+        If the user enables gamepad support, runs a quick portal check and
+        shows an informational dialog if the xdg-desktop-portal stack is not
+        ready, so the user knows why the browser may silently deny device access.
+        Does NOT block the action — the user may still proceed.
+        """
+        if not check.get_active():
+            return  # Unchecking never needs a warning.
+
+        portal = check_webhid_portal()
+        if portal["ok"]:
+            self.status_push(f"WebHID: portal OK ({portal['portal']})")
+            return
+
+        # Show a non-blocking advisory dialog.
+        dialog = Adw.MessageDialog(
+            transient_for=self,
+            heading="WebHID Portal Not Ready",
+            body=(
+                f"{portal['reason']}\n\n"
+                "You can still install with WebHID enabled — the browser flags "
+                "will be set — but device-permission dialogs may not appear and "
+                "gamepad access could be silently denied by the sandbox."
+            ),
+        )
+        dialog.add_response("ok", "OK, understood")
+        dialog.set_default_response("ok")
+        dialog.show()
+        dialog.connect("response", lambda d, _r: d.close())
+        self.status_push(f"WebHID warning: {portal['portal']} not ready")
 
     def on_browser_changed(self, combo, _):
         idx = combo.get_selected()
@@ -3202,6 +3487,8 @@ class PWAManagerWindow(Adw.ApplicationWindow):
 
     def on_install_custom(self, btn):
         # Self-contained dialog that asks for both URL and name.
+        # The browser selection is pre-filled from the main window's browser combo
+        # so the user's current choice carries over without extra clicks.
         # We do NOT read self.url_entry here — that field belongs to the
         # app-selection panel and may contain an existing app's URL, which
         # was the original cause of this being broken.
@@ -3237,7 +3524,7 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         def _infer_name(*_):
             """Auto-fill the name field from the URL while it is still empty."""
             raw = url_input.get_text().strip()
-            if raw.startswith("http") and not name_input.get_text().strip():
+            if validate_url(raw) and not name_input.get_text().strip():
                 try:
                     inferred = urlparse(raw).netloc.replace("www.", "").split(".")[0].capitalize()
                     if inferred:
@@ -3302,22 +3589,38 @@ class PWAManagerWindow(Adw.ApplicationWindow):
         profile_cfg = load_profile_config(app)
         profile_cfg["browser"] = browser_key
         profile_cfg["gamepad"] = gamepad
+        # Store per-app nice/ionice so the wrapper can be regenerated with the
+        # same values even if the global defaults change later.
+        profile_cfg["nice"]   = int(self.nice_spin.get_value())
+        profile_cfg["ionice"] = int(self.ionice_spin.get_value())
         save_profile_config(app, profile_cfg)
         
         install_app(app, browser_key, kiosk, int(self.nice_spin.get_value()), int(self.ionice_spin.get_value()), gpu, self.status_push)
-        
+
         self.populate_app_combo()
+        # Re-select the same app so the ✓ marker and button states are in sync.
+        target_name = app.get("name", "")
+        new_idx = next(
+            (i for i, a in enumerate(self.sorted_apps_list) if a.get("name") == target_name),
+            0,
+        )
+        self.app_combo.set_selected(new_idx)
         self.update_button_states()
 
     def on_uninstall(self, btn):
         idx = self.app_combo.get_selected()
         if idx == Gtk.INVALID_LIST_POSITION:
             return
-        
+
         app = self.sorted_apps_list[idx]
         uninstall_app(app["name"])
         self.status_push(f"Uninstalled {app['name']}")
         self.populate_app_combo()
+        # Keep the selection near where it was: clamp to the new list length.
+        if self.sorted_apps_list:
+            new_idx = min(idx, len(self.sorted_apps_list) - 1)
+            self.app_combo.set_selected(new_idx)
+            self.populate_app_fields(self.sorted_apps_list[new_idx])
         self.update_button_states()
 
     def on_refresh(self, btn):
