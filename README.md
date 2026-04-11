@@ -21,7 +21,7 @@ Test machines.
 
 # Appify latest is 2.1.4
 
-Version 2.1.1 represents the stable, feature-complete vision for Appify. Maintenance is active for bug fixes and browser compatibility updates.
+Version 2.1.1+ represents the stable, feature-complete vision for Appify. Maintenance is active for bug fixes and browser compatibility updates.
 
 **Turn any website into a real desktop app. Installs in under a second.**
 
@@ -285,7 +285,7 @@ Everything that made Appify useful in 2.0.5 is still here, unchanged:
 Works on any modern Linux distribution with FUSE support, including Ubuntu 20.04+, Linux Mint 20+, Pop!_OS 20.04+, Zorin OS 16+, elementary OS 6+, Debian 11+, Fedora 35+, openSUSE Leap 15.3+ / Tumbleweed, Arch / Manjaro / EndeavourOS, and any other `x86_64` distro with glibc 2.31+.
 
 ```bash
-wget https://github.com/bobbycomet/Appify/releases/download/v2.1.1/Appify-2.1.1-x86_64.AppImage
+wget https://github.com/bobbycomet/Appify/releases/download/v2.1.4/Appify-x86_64.AppImage
 chmod +x Appify-x86_64.AppImage
 ./Appify-x86_64.AppImage
 ```
@@ -295,7 +295,7 @@ chmod +x Appify-x86_64.AppImage
 Works on Debian/Ubuntu-based distributions: Ubuntu 20.04 LTS+, Debian 11+, Linux Mint 20+, Pop!_OS 20.04+, Zorin OS 16+, elementary OS 6+, Kali Linux (rolling), and Raspberry Pi OS (Bullseye+, arm64).
 
 ```bash
-wget https://github.com/bobbycomet/Appify/releases/download/v2.1.1/Appify-2.1.1.deb
+wget https://github.com/bobbycomet/Appify/releases/download/v2.1.4/Appify-2.1.4.deb
 # Recommended: use gdebi to auto-resolve dependencies
 sudo apt install gdebi
 sudo gdebi Appify-2.1.1.deb
