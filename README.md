@@ -19,6 +19,8 @@
 
 ---
 
+USE 2.1.4 DO NOT USE 2.1.3. Version 2.1.3 was removed from Opendesktop and other affiliated sites (kept in GitHub for further review as to what went wrong). It caused a black screen due to race conditions and a few other bugs in the audio feature. It was removed in 2.1.4, and some other bug fixes were added.
+
 ## Why Does This Exist?
 
 Linux is the best desktop operating system for a lot of people. But one thing it has always lacked compared to Windows and macOS is a simple way to install web apps as real desktop apps with their own icons, taskbar entries, and isolated profiles.
