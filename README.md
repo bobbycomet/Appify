@@ -2,360 +2,169 @@
   <img src="https://raw.githubusercontent.com/bobbycomet/Appify/main/appify.png" alt="Appify Logo" width="25%"/>
 </div>
 
-Made for Windows switchers to Ubuntu to have an easier time. No Terminal to create every file, just a few clicks and done.
+<div align="center">
 
-Update version 2.1.4 is mostly bug fixes. If I can reliably get the sound porting to work, it will be updated, as for now, it is not planned until it can be reliably done. The audio feature was causing a black screen issue in testing due to race conditions and a resource leak. Which is why it was dropped.
+# Appify
 
+**Turn any website into a real desktop app. In under a second.**
 
-[Read the FAQs for a simplified explanation and known browser behaviors](https://github.com/bobbycomet/Appify/wiki/FAQs)
+[![Latest Release](https://img.shields.io/badge/release-v2.1.4-blue)](https://github.com/bobbycomet/Appify/releases/tag/v2.1.4)
+[![Part of Griffin Linux](https://img.shields.io/badge/project-Griffin%20Linux-purple)](https://bobbycomet.github.io/Griffin-Linux-Landing-Page/)
 
-I built Appify after getting fed up with manually scripting PWA builds. It’s a streamlined automation tool that turns web apps into optimized desktop experiences in seconds. You pick your app and browser, and Appify handles the heavy lifting, including optional extension support and system-level performance tuning (like hardware acceleration and ionice priority). It takes a complex manual process and reduces it to a few clicks.
+[Video Showcase](https://youtu.be/sCyWKTz_7Go?si=bcjcPYgJ3QqXZH2N) | [Full Comparison Table](https://bobbycomet.github.io/Appify/) | [Discord](https://discord.gg/7fEt5W7DPh)
 
-Appify is part of my larger project, Griffin Linux. All proper deb signing will happen when I have all of my tools set up for the repo. [You can check out the project here](https://bobbycomet.github.io/Griffin-Linux-Landing-Page/)
-Some applications are still in development.
+</div>
 
-Test machines. 
+<img width="1920" height="1080" alt="Screenshot_20260414_022537" src="https://github.com/user-attachments/assets/3ad375f1-d641-40df-b83f-d1fd275cd8db" />
 
-- A Ryzen 7 2700, RTX 2060, DS3H Gigabyte B450, 32 GB DDR4 3600 RAM, M.2 drive 4th gen. Gnome/Mutter. Average isolation profile creation was 0.6 seconds. Custom scripts were not active here (see next test machine).
-- An HP slim desktop PC 290 series, stock motherboard, Celeron 2 cores, integrated graphics, 16 GB DDR4 3000 RAM, stock HDD. Custom kernel tuning script and daemon for process handling (they will be out soon). Launch speeds of the PWAs were still fast on KDE/waland (Kwin) and KDE/X11. The isolated profile was still fast here as well, but it was slower than a more modern system by one to 2 seconds.
+---
 
-# Appify latest is 2.1.4
+## Why Does This Exist?
 
-Version 2.1.1+ represents the stable, feature-complete vision for Appify. Maintenance is active for bug fixes and browser compatibility updates.
+Linux is the best desktop operating system for a lot of people. But one thing it has always lacked compared to Windows and macOS is a simple way to install web apps as real desktop apps with their own icons, taskbar entries, and isolated profiles.
 
-**Turn any website into a real desktop app. Installs in under a second.**
+The usual workarounds are messy. Chromium-based browsers have a "Create shortcut" option that technically works, but it ties your app to your main browser profile with no isolation. Firefox has nothing built in at all. Tools like GNOME Web and nativefier exist but require extra setup, have limited browser support, or rely on fragile hacks like userChrome.css that break silently every few Firefox updates.
 
-**Each site gets its own browser, its own extensions, and its own space, automatically. That includes Firefox without PWA extensions.**
+Appify was built because none of those solutions were actually good. It gives you isolated, real desktop apps from any URL, using whichever browser you already have installed, with no manual config files, no terminal commands, and no breakage after browser updates.
 
-Uses your already-installed browser. Nothing bundled, nothing duplicated.
+Appify is part of the larger [Griffin Linux project](https://bobbycomet.github.io/Griffin-Linux-Landing-Page/).
 
-Great for streaming tools, cloud gaming, work apps, and keeping personal and work sites separate (cloning feature makes this possible)
+---
 
-No Electron wrappers. No shared browser mess. No setup wizards. Just pick a site, click Install, and it's there, working like a native app, completely separate from everything else.
+## A Note for Windows Users
+
+If you are coming from Windows, one thing to know: Linux has two main ways to distribute apps. A `.deb` file is like an installer, the equivalent of a `.exe` setup wizard. An `.AppImage` is a self-contained portable file you can just run directly without installing anything, similar to a portable `.exe`. If you are on Ubuntu, Linux Mint, Pop!_OS, or any Debian-based distro, the `.deb` is the recommended choice. If your distro is not listed below or you just want something portable, the AppImage will work on almost any modern Linux system.
 
 ---
 
 ## How It Works
 
-Appify is fully GUI-controlled. Here's the entire process:
+Appify is fully GUI-controlled. Open the app, and the entire process looks like this:
 
-1. Open Appify and search for your app, or pick one from the built-in list of 90+ sites
-2. Appify creates a ghost profile instantly, using zero disk space until you need it
-3. Choose your browser from whatever you have installed; Appify detects them automatically
-4. Optionally, pick an extension preset (Appify opens that browser instance so you can configure it just like you normally would), you can also add your own via the add custom button
+1. Search for a site by name, or pick from the built-in list of 90+ popular sites
+2. Appify creates an isolated browser profile instantly, using zero disk space until the app is actually launched
+3. Choose which browser to use. Appify automatically detects every browser you have installed, including native, Flatpak, and Snap versions
+4. Optionally pick an extension preset for the site (SponsorBlock for YouTube, BetterTTV for Twitch, etc.). Appify opens that specific browser instance so you can configure extensions just like normal. You can also add your own via the Add Custom button
 5. Click Install
 
-That's it. In under a second, you have a real, working desktop app.
-Typical install time: 0.6 seconds (see showcase video)
+That is it. Typical install time is 0.6 seconds. No loading bars. No account creation. No permissions screens.
 
-No loading bars. No account creation. No permissions screens. It just works.
-
-[Video showcase](https://youtu.be/sCyWKTz_7Go?si=bcjcPYgJ3QqXZH2N)
-
-<img width="1920" height="1080" alt="Appify2 1" src="https://github.com/user-attachments/assets/aee8cceb-7926-4c92-a0ee-c618a017205a" />
+[Watch the video showcase](https://youtu.be/sCyWKTz_7Go?si=bcjcPYgJ3QqXZH2N) | [See the full comparison table](https://bobbycomet.github.io/Appify/)
 
 ---
 
-## Why Not Just Pin a Website?
+## Firefox PWAs Without userChrome.css
 
-When Chrome or Edge "installs" a website as an app, they're not really making an app. They create a shortcut that still runs inside your main browser profile, sharing the same cookies, the same extensions, the same telemetry, and the same taskbar clutter ("Edge is open 12 times").
+If you have tried to turn Firefox into a PWA launcher before, you have probably run into userChrome.css. It is the traditional approach for hiding the browser chrome and making Firefox look more like a standalone app. The problem is that it is fragile. Firefox updates frequently change the internal structure of the UI, and userChrome.css edits that worked perfectly last month can silently break, leaving you with a weird-looking, broken window and no obvious way to fix it.
 
-Appify creates something genuinely separate for each site:
+Appify does not use userChrome.css at all. Instead, it uses Firefox's `--kiosk` (see cloud gaming section below) flag combined with isolated profile directories and a pre-configured `user.js` file that Appify writes automatically. Each app gets its own Firefox profile with startup telemetry disabled, the homepage locked to your app's URL, and all first-run UI suppressed. The profile is fully isolated from your regular Firefox, so your main browser, bookmarks, and history are never touched.
 
-- Its own profile folder, cookies, logins, history, and storage
-- Its own extensions, so you can install BTTV/7TV only on Twitch, uBlock only on YouTube, and keep your main browser lean
-- Its own window with its own icon, grouped independently on your taskbar (see image below)
-- Runs your real installed browser (Firefox, Brave, Edge, Ungoogled, and more) with proper Wayland/X11 support
-- Kiosk mode, WebHID/gamepad support, and nice/ionice tuning for cloud gaming
-- No Electron wrappers
-
-[Full comparison table](https://bobbycomet.github.io/Appify/)
-
-<img width="755" height="42" alt="Icons" src="https://github.com/user-attachments/assets/69154b08-d715-43e3-ac74-e8a9379e4c07" />
-
-> **Quick heads-up before backing up**
-Appify can back up your logins, cookies, history, and site data, but not the extensions you've added. Browsers keep extension settings in special hidden folders separate from the profile, so we can't safely include them. Trying to back up with extensions installed will usually fail or crash. 
-Easy fix:
-Go to the app/site → open its browser settings → remove extensions first
-Create the backup
-After restoring later, just reinstall your favorite extensions (they'll usually remember your settings if you're signed in)
-Sorry for the extra step; it's a browser limitation we can't work around, but your core data is still fully protected!
-
-2.1.1 Fixed a bug of adding custom extensions and opening the store in the main browser; it will now open in the proper PWA instance and save it. 
+This approach is stable across Firefox updates because it uses documented, supported Firefox features rather than internal CSS hooks.
 
 ---
 
-## What Modern PWA Features Do You Keep?
+## Cloud Gaming and Kiosk Mode
 
-Appify launches your real installed browser, so you get every native PWA capability that the browser supports, including auto-updates from the site manifest, offline support via service workers, push notifications, and account sync.
+Kiosk mode is included in Appify specifically because of cloud gaming. When you install a cloud gaming app like Xbox Cloud Gaming, GeForce NOW, or Amazon Luna through Appify with kiosk mode enabled, it launches in a true full-screen dedicated window with no browser chrome, no tab bar, and no address bar. It behaves exactly like a native game launcher.
 
-| Browser | Auto-Updates | Offline / Service Worker | Push Notifications (via settings in browser instance) | Account Sync | Notes |
-|---|---|---|---|---|---|
-| **Firefox** | Yes | Yes | Yes | Firefox Sync (passwords, history, tabs, add-ons) | Best gamepad support; native Wayland; per-app extensions shine here |
-| **Microsoft Edge** | Yes | Yes | Yes | Microsoft account (passwords, history, extensions, collections) | Tight Windows integration (coming soon); good default for many users |
-| **Brave** | Yes | Yes | Yes | Brave Sync (bookmarks, passwords, settings) | Built-in ad/tracker blocking; strong isolation synergy |
-| **Vivaldi** | Yes | Yes | Yes | Vivaldi Sync (bookmarks, passwords, notes, tabs) | Highly customizable UI; tab stacking/notes carry over |
-| **Google Chrome** | Yes | Yes | Yes | Google account (full: passwords, history, extensions, tabs, payments) | Widest extension ecosystem; seamless Google integration |
-| **Chromium** | Yes | Yes | Yes | Depends on distro/build | Open-source base; no Google telemetry by default |
-| **Opera** | Yes | Yes | Yes | Opera account (bookmarks, passwords, tabs, messengers) | Built-in VPN/messenger sidebar carries over |
-| **Ungoogled Chromium** | Yes | Yes | Yes | Manual or via Google account | Maximum privacy; ideal for isolation purists |
+**Firefox is the recommended browser for most cloud gaming services.** The reason is gamepad support. Firefox has native gamepad support built in that works without any special flags or workarounds. Chromium-based browsers (Chrome, Edge, Brave, etc.) require WebHID flags (which Appify handles) to be explicitly enabled, and on Linux, those flags also require the xdg-desktop-portal daemon and a matching desktop environment backend to be running before device permission dialogs can appear. If that portal stack is not set up correctly, your controller may be silently ignored with no error message.
 
-You get the full modern web-platform experience, auto-updates, offline caching, push notifications, and account sync, without the shared-profile downsides of built-in Chrome/Edge PWAs.
+Xbox Cloud Gaming is the one exception. Because Xcloud still has limitations in Chromium-based browsers, even with the correct flags, and WebHID gamepad support in Chromium requires extra setup on Linux, **Xbox Cloud Gaming in Appify defaults to a Chromium-based browser with WebHID flags pre-configured.** Appify handles all of this automatically, including checking whether your portal stack is ready and warning you in the UI if it is not.
+
+For Xbox's Xcloud, GeForce NOW, Amazon Luna, Boosteroid, and AirGPU, Appify defaults those entries to Firefox for the most reliable out-of-the-box controller experience.
 
 ---
-## What's New in 2.1.1
-Minor bug-fix release improving custom extension installation (Feb 19, 2025).
 
-- Fixed custom extension addition: The "Add custom" button (and extension store links) now open **inside the isolated PWA browser instance** instead of your main/default browser.
-- Added browser-aware URL handling: New functions validate extension store URLs per browser (e.g., Firefox rejects Chrome Web Store links, Chromium rejects addons.mozilla.org) and launch them correctly using the app's profile (handles native/Flatpak/Snap differences and Firefox vs Chromium args).
-- Result: Extensions install reliably to the right profile and persist across launches.
+## Downloading and Installing
 
-No other changes, all 2.1.0 features (compositor detection, security hardening, presets, etc.) carry over.
+**Latest version: 2.1.4**
 
-Full changelog: [v2.1.0...v2.1.1](https://github.com/bobbycomet/Appify/compare/v2.1.0...v2.1.1)
+**Debian/Ubuntu/Linux Mint/Pop!_OS and other Debian-based distros:**
 
-### Compositor-Aware Wayland Handling
-
-2.0.5 applied generic Wayland flags to all Wayland sessions without knowing what compositor was running. 2.1.0 detects your compositor and applies the right flags automatically:
-
-| Compositor | Detection Method | Special Handling |
-|---|---|---|
-| **GNOME / Mutter** | `XDG_CURRENT_DESKTOP`, process scan | Standard ozone flags + CSD |
-| **KDE Plasma / KWin** | `XDG_CURRENT_DESKTOP`, `kwin_wayland` process | Adds `GTK_USE_PORTAL=1` for Firefox kiosk; server-side decorations |
-| **Sway** | `SWAYSOCK` env var, process scan | `WaylandWindowDecorations` + `--enable-wayland-ime` |
-| **Hyprland** | `HYPRLAND_INSTANCE_SIGNATURE` env var | `WaylandWindowDecorations` + `--enable-wayland-ime` |
-| **COSMIC** | `XDG_CURRENT_DESKTOP`, `cosmic-comp` process | Standard ozone flags + CSD |
-| **Wayfire** | `DESKTOP_SESSION`, process scan | `WaylandWindowDecorations` + `--enable-wayland-ime` |
-| **River** | `DESKTOP_SESSION`, process scan | `WaylandWindowDecorations` + `--enable-wayland-ime` |
-| **labwc** | `DESKTOP_SESSION`, process scan | `WaylandWindowDecorations` + `--enable-wayland-ime` |
-| **Unknown** | fallback | `--ozone-platform-hint=auto` |
-
-Detection uses the cheapest path first (known environment variables, then `XDG_CURRENT_DESKTOP`/`DESKTOP_SESSION`, then a live process scan) with a fast 2-second timeout so startup is never delayed.
-
-Firefox on Wayland also receives compositor-specific treatment. On KDE, `GTK_USE_PORTAL=1` is added alongside `MOZ_ENABLE_WAYLAND=1` so portal-based file pickers and system dialogs work correctly.
-
-### Secure Profile Data Storage
-
-In 2.0.5, profile directories and config files were created with default filesystem permissions. In 2.1.0:
-
-- **Profile directories** are created with `chmod 0o700` (owner-only access, no other users on the system can read your PWA cookies, logins, or history)
-- **`config.json`** is written atomically via a `.tmp` rename swap, and the live file is set to `chmod 0o600` before the rename completes, so it is never world-readable even for a fraction of a second
-- **`profile.json`** follows the same atomic write + `0o600` pattern
-
-<img width="1920" height="1080" alt="appify-shfiles" src="https://github.com/user-attachments/assets/c43dc369-7d16-4bad-95bd-2237b5f5024f" />
-<img width="1920" height="1080" alt="appifyprofiles" src="https://github.com/user-attachments/assets/7ed6d6e0-389d-4d68-9466-a03b7c1e87d9" />
-<img width="1920" height="1080" alt="appifyprofileinards" src="https://github.com/user-attachments/assets/64c001b9-d4b0-411a-ba6b-255a5a28053b" />
-<img width="1920" height="1080" alt="appifyfiles" src="https://github.com/user-attachments/assets/e708dcf9-eb5e-498a-84f8-33a61085e360" />
-
-
-### Safer Config Writes (Atomic, Crash-Resistant)
-
-2.0.5 wrote `config.json` directly with `Path.write_text()`. A crash mid-write could leave the config truncated or corrupt. 2.1.0 uses a write-to-temp then atomic-rename pattern for every config file:
+Download the `.deb` and install it:
 
 ```
-write JSON to config.json.tmp (0o600)
-os.rename(tmp to config.json)   ← atomic on POSIX
+wget https://github.com/bobbycomet/Appify/releases/download/v2.1.4/Appify-2.1.4.deb
+sudo dpkg -i Appify-2.1.4.deb
+sudo apt-get install -f   # fixes any missing dependencies
 ```
 
-A crash or power loss during a save now leaves the previous config intact. The `.tmp` file is cleaned up automatically on failure.
+Or open the `.deb` file with your software manager if it supports package installation directly.
 
-### Shell Injection Hardening
+**All other distros (Arch, Fedora, openSUSE, NixOS, etc.) and portable use:**
 
-The launcher scripts Appify generates embed user-supplied values (URLs, app names, profile paths). In 2.1.0, all such values pass through `sanitize_shell_string()`, a strict allowlist filter that strips shell metacharacters, and are also placed inside quoted shell variables in the generated script. This is a defence-in-depth measure: even if the allowlist misses an edge case, the quoting prevents injection.
+Download the AppImage:
 
-`download_file()` (used for icon fetching) now restricts curl to `https,http` protocols only, caps downloads at 2 MB, and validates downloaded icons with a magic-byte check (PNG/ICO/JPEG/GIF/WebP/BMP) before keeping them.
-
-### Firefox Profile Pre-Initialisation
-
-In 2.0.5, Firefox profiles were created as empty directories. On first launch, Firefox would show its welcome screen, account setup prompts, and telemetry consent dialogs before opening the PWA URL. 2.1.0 seeds each new Firefox profile with a `user.js` file that disables all of that on creation, sets the startup homepage to the PWA's URL, and clears `toolkit.singletonWindowType` so multiple isolated Firefox profiles can each hold their own window simultaneously. The `user.js` is only written if it does not already exist, so any manual edits you make to an existing profile are preserved.
-
-### Internationalisation (i18n) Support
-
-2.1.0 adds a full gettext-based translation system. On startup, Appify detects your system language via `LC_ALL`, `LANGUAGE`, and `LANG` and searches all standard locale directories across major Linux distros. If no translation exists for your language, Appify falls back to English with no errors.
-
-To contribute a translation:
-
-```bash
-# 1. Extract strings
-xgettext -L Python -o appify.pot Appify.py
-
-# 2. Create a .po file for your language
-msginit -l de_DE -o locale/de_DE/LC_MESSAGES/appify.po
-
-# 3. Translate and compile
-msgfmt locale/de_DE/LC_MESSAGES/appify.po -o locale/de_DE/LC_MESSAGES/appify.mo
-
-# 4. Install
-cp locale/de_DE/LC_MESSAGES/appify.mo /usr/share/locale/de_DE/LC_MESSAGES/
+```
+https://github.com/bobbycomet/Appify/releases/download/v2.1.4/Appify-x86_64.AppImage
 ```
 
-### Expanded Preset App Library
+Make it executable and run it:
 
-2.0.5 shipped a focused set of presets. 2.1.0 nearly triples the built-in app list with new categories:
-
-| New Category | Apps Added |
-|---|---|
-| **Productivity** | Google Drive, Google Keep, Google Calendar, OneDrive, Outlook Web, Microsoft 365, ClickUp, Trello, Todoist, TickTick, Miro, Canva, Lucidchart, Excalidraw, diagrams.net |
-| **Communication** | Slack, Microsoft Teams, Zoom Web, Google Meet |
-| **Social** | X / Twitter, Instagram, Facebook, LinkedIn, Pinterest, Bluesky, 5MIND |
-| **Streaming** | YouTube Music, Disney+, Prime Video, Hulu, Max (HBO), Peacock, Paramount+, Apple TV+, Plex Web, Stremio Web, Crunchyroll, AniWatch, Hianime, Rumble, Capcut |
-| **Art & Creation** | Photopea, Figma, Clip Studio Paint Web, Sketchfab, Pixlr Editor, Remove.bg |
-| **Utilities** | Google Translate, DeepL, Speedtest.net, Fast.com, Pomofocus Timer, myNoise, Rainy Mood, Radio Garden, ILovePDF, TinyPNG, Khan Academy, Duolingo, Yummly |
-| **Shopping** | Amazon, eBay, AliExpress, Walmart, Target, Best Buy, Etsy, Trivago, Uber Web |
-| **News** | Wikipedia, BBC News, Reuters, The Verge, TechCrunch, Hacker News, Wolfram Alpha, CNN, NYT, Washington Post, Forbes |
-| **VTuber & Streaming Tools** | Streamelements, Ko-fi, Patreon, Throne (Wishlist), YouTube Studio |
-
-### Extension Preset Expansion
-
-2.0.5 had presets for Twitch, Kick, YouTube, Google Docs, and Google Slides. 2.1.0 adds:
-
-- **Google Calendar:** Event Merge
-- **Google Docs** presets updated with Grammar & Spell Check (LanguageTool), Super Styles, and Code Blocks
-
-### URL Validation Hardening
-
-`validate_url()` now explicitly rejects `data:`, `file:`, `javascript:`, and any other non-http/https scheme. URLs are also capped at 2,048 characters.
-
-### Improved Logging
-
-The module-level logger now attaches a `FileHandler` lazily, waiting until `~/.pwa_manager/launch.log`'s parent directory exists before writing. This prevents spurious warnings on a fresh install. All log messages now use structured `%(asctime)s [%(levelname)s] %(message)s` formatting with ISO timestamps.
-
----
-
-## Quick Comparison: 2.0.5 vs 2.1.0
-
-| Feature | 2.0.5 | 2.1.0 |
-|---|---|---|
-| Wayland compositor detection | Generic flags for all compositors | Per-compositor (GNOME, KDE, Sway, Hyprland, COSMIC, Wayfire, River, labwc) |
-| Firefox kiosk on KDE Wayland | Broken (missing portal flags) | `GTK_USE_PORTAL=1` added automatically |
-| Profile directory permissions | Default (world-readable) | `chmod 0700` (owner-only) |
-| Config file permissions | Default | `chmod 0600`, atomic write |
-| Config write safety | Direct `write_text()` | Atomic tmp rename (crash-safe) |
-| Shell injection hardening | Basic sanitisation | Allowlist filter + quoted shell variables |
-| Icon download security | No validation | Magic-byte check, protocol allowlist, 2 MB cap |
-| Firefox first-run experience | Welcome screens, telemetry dialogs | Suppressed via `user.js` seed |
-| Firefox multi-instance | Unreliable | `toolkit.singletonWindowType` cleared |
-| Internationalisation (i18n) | No | Full gettext system, all major distro locale paths |
-| Preset app count | ~30 apps | 90+ apps across 11 categories |
-| Google Calendar extensions | No | Event Merge preset added |
-| URL scheme validation | Basic | Blocks `data:`, `file:`, `javascript:` and others |
-| Logging | File handler always attached | Lazy attach after config dir exists |
-| Windows support | No | Coming soon |
-| Profile isolation | Yes | Yes |
-| 8-browser detection | Yes | Yes |
-| GTK4 / Adwaita UI | Yes | Yes |
-| Extension presets | Yes | Yes (expanded) |
-| Cloud gaming presets | Yes | Yes |
-| App cloning | Yes | Yes |
-| Auto icon download | Yes | Yes (hardened) |
-| Update banner | Yes | Yes |
-| WebHID / gamepad support | Yes | Yes |
-
----
-
-## What Stayed the Same
-
-Everything that made Appify useful in 2.0.5 is still here, unchanged:
-
-- **8 browsers fully detected:** Firefox, Edge, Brave, Vivaldi, Chrome, Chromium, Opera, Ungoogled Chromium, native, Flatpak, and Snap
-- **Intelligent browser detection** at startup (no hardcoded paths)
-- **System default browser auto-detection** via `xdg-settings`, `mimeapps.list`, and `gio`
-- **Isolated profiles:** every PWA gets its own `~/.pwa_manager/profiles/<slug>/` with separate cookies, logins, and storage
-- **Profile data preserved on uninstall:** reinstalling a PWA restores all your data
-- **The GTK4 / Adwaita UI:** same layout, dark mode, app combo, kiosk toggle, GPU toggle, nice/ionice spinners
-- **Extension presets:** Twitch, Kick, YouTube, Google Docs, and more
-- **Custom PWA installation:** paste any URL, give it a name
-- **App cloning:** duplicate any PWA with its own isolated profile
-- **Cloud gaming presets:** Xbox Cloud Gaming, GeForce NOW, Amazon Luna, Boosteroid, AirGPU with kiosk mode and Firefox-first recommendations
-- **Full WebHID / gamepad flag stack:** `--enable-features=WebHID --enable-gamepad-button-axis-events --disable-features=WebHidBlocklist`
-- **Auto icon download:** icon.horse, Google favicons, and direct favicon.ico fallback chain, now with magic-byte validation
-- **Correct `.desktop` files:** `StartupWMClass`, `X-DBus-Name`, `TryExec`, and proper category flags
-- **Update banner:** checks GitHub Releases on launch and notifies you of newer versions (skips pre-releases)
-- **Full logging:** all launches write to `~/.pwa_manager/launch.log`
-- **No Flatpak version of Appify itself:** sandboxing still breaks browser detection, extension installation, profile isolation, Wayland/X11 switching, and controller support
-
----
-
-## Installation
-
-**Windows port is coming soon.** Appify's isolation model, browser detection, and PWA launching are being adapted for Windows. Stay tuned on Discord and Patreon for updates.
-
-### AppImage
-
-Works on any modern Linux distribution with FUSE support, including Ubuntu 20.04+, Linux Mint 20+, Pop!_OS 20.04+, Zorin OS 16+, elementary OS 6+, Debian 11+, Fedora 35+, openSUSE Leap 15.3+ / Tumbleweed, Arch / Manjaro / EndeavourOS, and any other `x86_64` distro with glibc 2.31+.
-
-```bash
-wget https://github.com/bobbycomet/Appify/releases/download/v2.1.4/Appify-x86_64.AppImage
+```
 chmod +x Appify-x86_64.AppImage
 ./Appify-x86_64.AppImage
 ```
 
-### Deb Package
-
-Works on Debian/Ubuntu-based distributions: Ubuntu 20.04 LTS+, Debian 11+, Linux Mint 20+, Pop!_OS 20.04+, Zorin OS 16+, elementary OS 6+, Kali Linux (rolling), and Raspberry Pi OS (Bullseye+, arm64).
-
-```bash
-wget https://github.com/bobbycomet/Appify/releases/download/v2.1.4/Appify-2.1.4.deb
-# Recommended: use gdebi to auto-resolve dependencies
-sudo apt install gdebi
-sudo gdebi Appify-2.1.1.deb
-```
-
-```bash
-# Alternative: dpkg + fix-broken
-sudo dpkg -i Appify-2.1.1.deb
-sudo apt --fix-broken install -y
-```
-
-### Running from Source
-
-Install the required dependencies for your distro first:
-
-**Debian / Ubuntu / Mint / Pop!_OS / Zorin:**
-```bash
-sudo apt update
-sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-4.0 gir1.2-adw-1 curl xdg-utils
-```
-
-**Fedora / RHEL / CentOS:**
-```bash
-sudo dnf install python3-gobject gtk4 libadwaita curl xdg-utils
-```
-
-**Arch / Manjaro / EndeavourOS:**
-```bash
-sudo pacman -S python-gobject gtk4 libadwaita curl xdg-utils
-```
-
-**openSUSE Leap / Tumbleweed:**
-```bash
-sudo zypper install python3-gobject typelib-1_0-Gtk-4_0 typelib-1_0-Adw-1 curl xdg-utils
-```
-Or you can download the exact Deb files (pawmanager 1.0.0, old name, but it is updated with the code), or the Appify.AppDIR
-
-Deb command
-```
-dpkg-deb --build Appify-2.1.1.deb
-
-```
-AppImage command
-```
-ARCH=x86_64 ./appimagetool-x86_64.AppImage Appify.AppDir Appify-2.1.1-x86_64.AppImage
-
-```
-Then:
-```bash
-chmod +x Appify.py
-python3 Appify.py
-```
+You can move the AppImage anywhere you like and it will run from there. No installation required.
 
 ---
 
-## Community & Support
+## Supported Distros
 
-- **Discord:** https://discord.gg/7fEt5W7DPh
-- **Patreon (Beta Builds):** https://www.patreon.com/c/BobbyComet/membership
-- **Support the Griffin Project:** [With ko-fi](https://ko-fi.com/bobby60908) or with [GitHub Sponsors](https://github.com/sponsors/bobbycomet)
-- **YouTube Showcase:** https://youtu.be/sCyWKTz_7Go
+Appify is tested and known to work on the following:
 
-Full Changelog: [v2.0.5 to v2.1.0](https://github.com/bobbycomet/Appify/compare/v2.0.5...v2.1.0)
+**Debian-based:** Ubuntu, Linux Mint, Pop!_OS, Zorin OS, elementary OS, Debian itself
+
+**RPM-based:** Fedora, openSUSE, Nobara (use the AppImage)
+
+**Arch-based:** Arch Linux, Manjaro, EndeavourOS (use the AppImage)
+
+**Independent:** NixOS, Void Linux, and most other modern systemd-based distros (use the AppImage)
+
+Appify requires Python 3.10 or later, GTK 4, and libadwaita. These are included when you use the `.deb` installer. For the AppImage, everything is bundled. For manual installs on other distros, the equivalent packages are `python3-gi`, `gir1.2-gtk-4.0`, and `gir1.2-adw-1`.
+
+Wayland and X11 are both fully supported. Appify automatically detects your session type and configures browser launch flags accordingly, including compositor-specific flags for KDE Plasma, GNOME, Hyprland, Sway, COSMIC, and other Wayland environments.
+
+---
+
+## How Backups Work
+
+Every installed app can be backed up from within Appify. A backup is a single `.tar.gz` archive that contains the entire browser profile directory (cookies, logins, preferences), the launcher script, the desktop file, the app icon, and a metadata sidecar. Backups are stored in `~/.config/appify/.backup/<app-name>/` and are timestamped so you can keep multiple restore points.
+
+Appify keeps up to 10 backups per app automatically. When a new backup is created, and the limit is exceeded, the oldest backup is pruned. Restoring a backup wipes the current profile and replaces it, then regenerates the launcher and desktop file with your current system paths, so restores work cleanly even if you have moved things around.
+
+**Important:** Before creating a backup, any extensions you have added to that app's browser profile must be removed first. This is a browser limitation, not an Appify one. Browser extensions store their files inside the profile directory in a way that can produce inconsistent archive states if they are present during the backup. Remove the extensions from the profile, take a backup, then reinstall the extensions afterward if needed. You can also move a backup to another computer, put it in the backup folder, and Appify will see it.
+
+---
+
+## Technical Details
+
+Appify stores its configuration and all app profiles in `~/.config/appify/`. The structure looks like this:
+
+```
+~/.config/appify/
+  config.json              # global settings and app registry
+  profiles/<app-slug>/     # isolated browser profile per app
+    user.js                # Firefox: auto-generated profile preferences
+    profile.json           # per-app metadata (browser, gamepad flag, etc.)
+    installed.marker       # presence flag used by list_installed_apps()
+  scripts/                 # generated launcher shell wrappers
+  .backup/<app-slug>/      # timestamped .tar.gz backup archives
+```
+
+Each installed app gets a shell wrapper in `scripts/` that handles nice/ionice process priority, GPU acceleration flags, WebHID flags for gamepad support, and Wayland or X11 display backend flags. A `.desktop` file is written to `~/.local/share/applications/` so the app appears in your application launcher with its own icon.
+
+Browser detection checks for native installs, Flatpak, and Snap in that order. For Firefox specifically, Appify writes a `user.js` to the profile directory that suppresses all first-run UI, telemetry, sync prompts, and new-tab page content, and sets the homepage to your app's URL. This file is rewritten on every install so that new preferences added in future Appify versions are applied to existing profiles automatically. If you want to add your own Firefox preferences to a profile, put them in a `user-overrides.js` file in the same directory rather than editing `user.js` directly.
+
+Appify checks for updates against the GitHub Releases API on startup in a background thread and notifies you in the UI if a newer stable release is available.
+
+---
+
+## Community and Support
+
+- **Discord:** [Join Here](https://discord.gg/7fEt5W7DPh)
+- **Patreon (Beta Builds):** [Patreon](https://www.patreon.com/c/BobbyComet/membership)
+- **Support the Griffin Project:** [Ko-fi](https://ko-fi.com/bobby60908)
+
+Appify is part of the [Griffin Linux project](https://bobbycomet.github.io/Griffin-Linux-Landing-Page/).
