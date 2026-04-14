@@ -19,7 +19,8 @@
 
 ---
 
-USE 2.1.4 DO NOT USE 2.1.3. Version 2.1.3 was removed from Opendesktop and other affiliated sites (kept in GitHub for further review as to what went wrong). It caused a black screen due to race conditions and a few other bugs in the audio feature. It was removed in 2.1.4, and some other bug fixes were added.
+>**Note:** Version 2.1.3 was withdrawn due to a race condition causing a black screen in some setups.
+This was fixed in 2.1.4 along with additional stability improvements.
 
 ## Why Does This Exist?
 
