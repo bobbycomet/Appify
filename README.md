@@ -87,26 +87,26 @@ For Xbox's Xcloud, GeForce NOW, Amazon Luna, Boosteroid, and AirGPU, Appify defa
 
 ## Downloading and Installing
 
-**Latest version: 2.1.4**
+**Latest version: 2.2.0**
 
 **Debian/Ubuntu/Linux Mint/Pop!_OS and other Debian-based distros:**
 
 Download the `.deb` and install it:
 
 ```
-wget https://github.com/bobbycomet/Appify/releases/download/v2.1.4/Appify-2.1.4.deb
-sudo dpkg -i Appify-2.1.4.deb
+wget https://github.com/bobbycomet/Appify/releases/download/v2.2.0/Appify-2.2.0.deb
+sudo dpkg -i Appify-2.2.0.deb
 sudo apt-get install -f   # fixes any missing dependencies
 ```
 
-Or open the `.deb` file with your software manager if it supports package installation directly.
+Or open the `.deb` file with your software manager if it supports package installation directly. Gdebi is also a solid choice
 
 **All other distros (Arch, Fedora, openSUSE, NixOS, etc.) and portable use:**
 
 Download the AppImage:
 
 ```
-https://github.com/bobbycomet/Appify/releases/download/v2.1.4/Appify-x86_64.AppImage
+https://github.com/bobbycomet/Appify/releases/download/v2.2.0/Appify-2.2.0-x86_64.AppImage
 ```
 
 Make it executable and run it:
