@@ -6,7 +6,9 @@
 
 # Appify
 
-**Turn any website into a real desktop app. In under a second.**
+**Search the defaults or paste a link, pick your browser, and click install. That’s it.**
+
+**Every app runs in its own isolated profile with its own icon and launcher. Everything is handled automatically, but fully customizable if you want it.**
 
 Version 2.2.0 is now out with an added feature. Firefox userChrome.css support. **THIS IS AN ADVANCED AND FRAGILE FEATURE! This is not Appify's fault.** userChrome.css can break as quickly as it is made. This is because of how Firefox changes and updates. If you use them, I do not have a store or any defaults. This is an **OPT-IN** feature only; you can ignore it.
 
