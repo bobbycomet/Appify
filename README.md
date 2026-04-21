@@ -8,6 +8,10 @@
 
 **Turn any website into a real desktop app. In under a second.**
 
+Version 2.2.0 is now out with an added feature. Firefox userChrome.css support. **THIS IS AN ADVANCED AND FRAGILE FEATURE! This is not Appify's fault.** userChrome.css can break as quickly as it is made. This is because of how Firefox changes and updates. If you use them, I do not have a store or any defaults. This is an **OPT-IN** feature only; you can ignore it.
+
+Better Nvidia support for X11 on Firefox and Chromium-based browsers.
+
 [![Latest Release](https://img.shields.io/badge/release-v2.1.4-blue)](https://github.com/bobbycomet/Appify/releases/tag/v2.1.4)
 [![Part of Griffin Linux](https://img.shields.io/badge/project-Griffin%20Linux-purple)](https://bobbycomet.github.io/Griffin-Linux-Landing-Page/)
 
@@ -16,6 +20,9 @@
 </div>
 
 <img width="1920" height="1080" alt="Screenshot_20260414_022537" src="https://github.com/user-attachments/assets/3ad375f1-d641-40df-b83f-d1fd275cd8db" />
+
+userChrome.css advanced feature
+<img width="1920" height="1080" alt="Screenshot_20260421_050304" src="https://github.com/user-attachments/assets/892af248-9dbe-421f-bd25-eb93e2658ec0" />
 
 ---
 
@@ -60,7 +67,7 @@ That is it. Typical install time is 0.6 seconds. No loading bars. No account cre
 
 If you have tried to turn Firefox into a PWA launcher before, you have probably run into userChrome.css. It is the traditional approach for hiding the browser chrome and making Firefox look more like a standalone app. The problem is that it is fragile. Firefox updates frequently change the internal structure of the UI, and userChrome.css edits that worked perfectly last month can silently break, leaving you with a weird-looking, broken window and no obvious way to fix it.
 
-Appify does not use userChrome.css at all. Instead, it uses Firefox's `--kiosk` (see cloud gaming section below) flag combined with isolated profile directories and a pre-configured `user.js` file that Appify writes automatically. Each app gets its own Firefox profile with startup telemetry disabled, the homepage locked to your app's URL, and all first-run UI suppressed. The profile is fully isolated from your regular Firefox, so your main browser, bookmarks, and history are never touched.
+Appify does not use userChrome.css by default. This is a purely opt-in feature. It defaults to the basic UI, unless cloud gaming, it uses Firefox's `--kiosk` (see cloud gaming section below) flag combined with isolated profile directories and a pre-configured `user.js` file that Appify writes automatically. Each app gets its own Firefox profile with startup telemetry disabled, the homepage locked to your app's URL, and all first-run UI suppressed. The profile is fully isolated from your regular Firefox, so your main browser, bookmarks, and history are never touched.
 
 This approach is stable across Firefox updates because it uses documented, supported Firefox features rather than internal CSS hooks.
 
