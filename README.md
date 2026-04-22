@@ -10,6 +10,8 @@
 
 **Every app runs in its own isolated profile with its own icon and launcher. Everything is handled automatically, but fully customizable if you want it.**
 
+Version 2.2.1 had some cleanup of presets and apps in the list
+
 Version 2.2.0 is now out with an added feature. Firefox userChrome.css support. **THIS IS AN ADVANCED AND FRAGILE FEATURE! This is not Appify's fault.** userChrome.css can break as quickly as it is made. This is because of how Firefox changes and updates. If you use them, I do not have a store or any defaults. This is an **OPT-IN** feature only; you can ignore it.
 
 Better Nvidia support for X11 on Firefox and Chromium-based browsers.
@@ -96,7 +98,7 @@ For Xbox's Xcloud, GeForce NOW, Amazon Luna, Boosteroid, and AirGPU, Appify defa
 Download the `.deb` and install it:
 
 ```
-wget https://github.com/bobbycomet/Appify/releases/download/v2.2.0/Appify-2.2.0.deb
+wget https://github.com/bobbycomet/Appify/releases/download/v2.2.1/Appify-2.2.1.deb
 sudo dpkg -i Appify-2.2.0.deb
 sudo apt-get install -f   # fixes any missing dependencies
 ```
@@ -108,14 +110,14 @@ Or open the `.deb` file with your software manager if it supports package instal
 Download the AppImage:
 
 ```
-https://github.com/bobbycomet/Appify/releases/download/v2.2.0/Appify-2.2.0-x86_64.AppImage
+https://github.com/bobbycomet/Appify/releases/download/v2.2.1/Appify-2.2.1-x86_64.AppImage
 ```
 
 Make it executable and run it:
 
 ```
-chmod +x Appify-x86_64.AppImage
-./Appify-x86_64.AppImage
+chmod +x Appify-2.2.1-x86_64.AppImage
+./Appify-2.2.1-x86_64.AppImage
 ```
 
 You can move the AppImage anywhere you like and it will run from there. No installation required.
