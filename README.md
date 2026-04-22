@@ -99,7 +99,7 @@ Download the `.deb` and install it:
 
 ```
 wget https://github.com/bobbycomet/Appify/releases/download/v2.2.1/Appify-2.2.1.deb
-sudo dpkg -i Appify-2.2.0.deb
+sudo dpkg -i Appify-2.2.1.deb
 sudo apt-get install -f   # fixes any missing dependencies
 ```
 
