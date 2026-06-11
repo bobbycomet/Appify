@@ -6,17 +6,11 @@
 
 # Appify
 
-**Search the defaults or paste a link, pick your browser, and click install. That’s it.**
+**Search the defaults or paste a link, pick your browser, and click install. That's it.**
 
 **Every app runs in its own isolated profile with its own icon and launcher. Everything is handled automatically, but fully customizable if you want it.**
 
-Version 2.2.1 had some cleanup of presets and apps in the list
-
-Version 2.2.0 is now out with an added feature. Firefox userChrome.css support. **THIS IS AN ADVANCED AND FRAGILE FEATURE! This is not Appify's fault.** userChrome.css can break as quickly as it is made. This is because of how Firefox changes and updates. If you use them, I do not have a store or any defaults. This is an **OPT-IN** feature only; you can ignore it.
-
-Better Nvidia support for X11 on Firefox and Chromium-based browsers.
-
-[![Latest Release](https://img.shields.io/badge/release-v2.1.4-blue)](https://github.com/bobbycomet/Appify/releases/tag/v2.1.4)
+[![Latest Release](https://img.shields.io/badge/release-v2.2.2-blue)](https://github.com/bobbycomet/Appify/releases/tag/v2.2.2)
 [![Part of Griffin Linux](https://img.shields.io/badge/project-Griffin%20Linux-purple)](https://bobbycomet.github.io/Griffin-Linux-Landing-Page/)
 
 [Video Showcase](https://youtu.be/sCyWKTz_7Go?si=bcjcPYgJ3QqXZH2N) | [Full Comparison Table](https://bobbycomet.github.io/Appify/) | [Discord](https://discord.gg/7fEt5W7DPh)
@@ -25,13 +19,37 @@ Better Nvidia support for X11 on Firefox and Chromium-based browsers.
 
 <img width="1920" height="1080" alt="Screenshot_20260414_022537" src="https://github.com/user-attachments/assets/3ad375f1-d641-40df-b83f-d1fd275cd8db" />
 
-userChrome.css advanced feature
-<img width="1920" height="1080" alt="Screenshot_20260421_050304" src="https://github.com/user-attachments/assets/892af248-9dbe-421f-bd25-eb93e2658ec0" />
-
 ---
 
->**Note:** Version 2.1.3 was withdrawn due to a race condition causing a black screen in some setups.
-This was fixed in 2.1.4 along with additional stability improvements.
+## What's New in 2.2.2
+
+Three new features have been added. Everything that existed before still works exactly the same way; nothing was removed or changed in behavior.
+
+| Feature | Before 2.2.2 | After 2.2.2 |
+|---|---|---|
+| **Finding apps** | Search by name only | Search by name **or** browse by category in a collapsible panel |
+| **Profile storage info** | No indication of how much disk space a profile uses | Profile size shown directly below the app dropdown, updated when you switch apps |
+| **After switching X11 ↔ Wayland** | Had to reinstall each app individually to fix launcher flags | New "Regenerate All Wrappers" menu action rewrites every installed app's launcher at once |
+| App categories | Comments only, not surfaced in the UI | All 90+ built-in apps tagged across 11 categories; custom-added apps preserved as-is |
+| Wrapper scripts | Embedded session type at install time, stale after session change | Same behavior at install; now trivially refreshable for all apps in one action |
+
+### Browse by Category
+
+A collapsible "Browse by Category" panel sits below the app search. Open it, pick a category from the dropdown, and you see every app in that group with a ✓ next to the ones already installed. Clicking Select on any app puts it into the main dropdown instantly — all the normal Install, Uninstall, Clone, and Backup buttons then act on it. The search box and the category browser work independently and do not interfere with each other.
+
+The 11 categories are: AI & Search, Productivity, Communication, Social, Streaming, Cloud Gaming, Art & Design, Streaming Tools, Utilities, Shopping, and News & Knowledge.
+
+### Profile Size Indicator
+
+Just below the app selection dropdown, Appify now shows the current on-disk size of that app's profile directory. For example, "Profile size: 84.2 MB". The measurement runs in the background, so switching between apps never slows down the UI, even for large profiles. Apps that have not been installed yet show a dash.
+
+### Regenerate All Wrappers
+
+Each installed app has a small shell script that Appify generated at install time. That script includes the right display flags for whichever session type (X11 or Wayland) and browser installation method (native, Flatpak, or Snap) was active when you installed it. If you switch from X11 to Wayland, upgrade a browser from native to Flatpak, or make any other system-level change, those scripts can go stale.
+
+Previously, the fix was to reinstall each app one by one. Now there is a single menu action — **Regenerate All Wrappers** — under the hamburger menu. It rewrites every installed app's launcher script and desktop file using your current system state, shows you the count when it finishes, and touches nothing else. No profile data, no cookies, no extensions, and no preferences are affected.
+
+---
 
 ## Why Does This Exist?
 
@@ -47,7 +65,7 @@ Appify is part of the larger [Griffin Linux project](https://bobbycomet.github.i
 
 ## A Note for Windows Users
 
-If you are coming from Windows, one thing to know: Linux has two main ways to distribute apps. A `.deb` file is like an installer, the equivalent of a `.exe` setup wizard. An `.AppImage` is a self-contained portable file you can just run directly without installing anything, similar to a portable `.exe`. If you are on Ubuntu, Linux Mint, Pop!_OS, or any Debian-based distro, the `.deb` is the recommended choice. If your distro is not listed below or you just want something portable, the AppImage will work on almost any modern Linux system.
+If you are coming from Windows, one thing to know: Linux has two main ways to distribute apps. A `.deb` (each distro type has its own version of something similar) file is like an installer, the equivalent of a `.exe` setup wizard. An `.AppImage` is a self-contained portable file you can just run directly without installing anything, similar to a portable `.exe`. If you are on Ubuntu, Linux Mint, Pop!_OS, or any Debian-based distro, the `.deb` is the recommended choice. If your distro is not listed below or you just want something portable, the AppImage will work on almost any modern Linux system.
 
 ---
 
@@ -55,7 +73,7 @@ If you are coming from Windows, one thing to know: Linux has two main ways to di
 
 Appify is fully GUI-controlled. Open the app, and the entire process looks like this:
 
-1. Search for a site by name, or pick from the built-in list of 90+ popular sites
+1. Search for a site by name, browse by category, or pick from the built-in list of 90+ popular sites
 2. Appify creates an isolated browser profile instantly, using zero disk space until the app is actually launched
 3. Choose which browser to use. Appify automatically detects every browser you have installed, including native, Flatpak, and Snap versions
 4. Optionally pick an extension preset for the site (SponsorBlock for YouTube, BetterTTV for Twitch, etc.). Appify opens that specific browser instance so you can configure extensions just like normal. You can also add your own via the Add Custom button
@@ -71,9 +89,11 @@ That is it. Typical install time is 0.6 seconds. No loading bars. No account cre
 
 If you have tried to turn Firefox into a PWA launcher before, you have probably run into userChrome.css. It is the traditional approach for hiding the browser chrome and making Firefox look more like a standalone app. The problem is that it is fragile. Firefox updates frequently change the internal structure of the UI, and userChrome.css edits that worked perfectly last month can silently break, leaving you with a weird-looking, broken window and no obvious way to fix it.
 
-Appify does not use userChrome.css by default. This is a purely opt-in feature. It defaults to the basic UI, unless cloud gaming, it uses Firefox's `--kiosk` (see cloud gaming section below) flag combined with isolated profile directories and a pre-configured `user.js` file that Appify writes automatically. Each app gets its own Firefox profile with startup telemetry disabled, the homepage locked to your app's URL, and all first-run UI suppressed. The profile is fully isolated from your regular Firefox, so your main browser, bookmarks, and history are never touched.
+Appify does not use userChrome.css by default. It is a purely opt-in feature available under Firefox Advanced Options when Firefox is selected. By default, Appify uses Firefox's `--kiosk` flag (for cloud gaming) or a standard window combined with isolated profile directories and a pre-configured `user.js` file that Appify writes automatically. Each app gets its own Firefox profile with startup telemetry disabled, the homepage locked to your app's URL, and all first-run UI suppressed. The profile is fully isolated from your regular Firefox, so your main browser, bookmarks, and history are never touched.
 
 This approach is stable across Firefox updates because it uses documented, supported Firefox features rather than internal CSS hooks.
+
+> **Note on userChrome.css:** This is an advanced and fragile feature — not because of anything Appify does, but because of how Firefox itself works. userChrome.css can break with any Firefox update that changes the internal UI structure. If you use it, Appify has no control over whether it remains functional after a Firefox update. It is opt-in only and safe to ignore entirely.
 
 ---
 
@@ -81,46 +101,40 @@ This approach is stable across Firefox updates because it uses documented, suppo
 
 Kiosk mode is included in Appify specifically because of cloud gaming. When you install a cloud gaming app like Xbox Cloud Gaming, GeForce NOW, or Amazon Luna through Appify with kiosk mode enabled, it launches in a true full-screen dedicated window with no browser chrome, no tab bar, and no address bar. It behaves exactly like a native game launcher.
 
-**Firefox is the recommended browser for most cloud gaming services.** The reason is gamepad support. Firefox has native gamepad support built in that works without any special flags or workarounds. Chromium-based browsers (Chrome, Edge, Brave, etc.) require WebHID flags (which Appify handles) to be explicitly enabled, and on Linux, those flags also require the xdg-desktop-portal daemon and a matching desktop environment backend to be running before device permission dialogs can appear. If that portal stack is not set up correctly, your controller may be silently ignored with no error message.
+**Firefox is the recommended browser for most cloud gaming services.** The reason is gamepad support. Firefox has native gamepad support built in that works without any special flags or workarounds. Chromium-based browsers (Chrome, Edge, Brave, etc.) require WebHID flags, which Appify handles, to be explicitly enabled, and on Linux, those flags also require the xdg-desktop-portal daemon and a matching desktop environment backend to be running before device permission dialogs can appear. If that portal stack is not set up correctly, your controller may be silently ignored with no error message.
 
-Xbox Cloud Gaming is the one exception. Because Xcloud still has limitations in Chromium-based browsers, even with the correct flags, and WebHID gamepad support in Chromium requires extra setup on Linux, **Xbox Cloud Gaming in Appify defaults to a Chromium-based browser with WebHID flags pre-configured.** Appify handles all of this automatically, including checking whether your portal stack is ready and warning you in the UI if it is not.
+Xbox Cloud Gaming is the one exception. Appify defaults Xbox Cloud Gaming to a Chromium-based browser with WebHID flags pre-configured. Appify handles all of this automatically, including checking whether your portal stack is ready and warning you in the UI if it is not.
 
-For Xbox's Xcloud, GeForce NOW, Amazon Luna, Boosteroid, and AirGPU, Appify defaults those entries to Firefox for the most reliable out-of-the-box controller experience.
+For GeForce NOW, Amazon Luna, Boosteroid, and AirGPU, Appify defaults those entries to Firefox for the most reliable out-of-the-box controller experience.
 
 ---
 
 ## Downloading and Installing
 
-**Latest version: 2.2.0**
+**Latest version: 2.2.2**
 
 **Debian/Ubuntu/Linux Mint/Pop!_OS and other Debian-based distros:**
 
-Download the `.deb` and install it:
-
 ```
-wget https://github.com/bobbycomet/Appify/releases/download/v2.2.1/Appify-2.2.1.deb
-sudo dpkg -i Appify-2.2.1.deb
-sudo apt-get install -f   # fixes any missing dependencies
+wget https://github.com/bobbycomet/Appify/releases/download/v2.2.2/Appify-2.2.2.deb
+sudo dpkg -i Appify-2.2.2.deb
+sudo apt-get install -f
 ```
 
-Or open the `.deb` file with your software manager if it supports package installation directly. Gdebi is also a solid choice
+Or open the `.deb` file with your software manager directly. Gdebi is also a solid choice.
 
 **All other distros (Arch, Fedora, openSUSE, NixOS, etc.) and portable use:**
 
-Download the AppImage:
-
 ```
-https://github.com/bobbycomet/Appify/releases/download/v2.2.1/Appify-2.2.1-x86_64.AppImage
+https://github.com/bobbycomet/Appify/releases/download/v2.2.2/Appify2.2.2.AppImage
 ```
 
-Make it executable and run it:
-
 ```
-chmod +x Appify-2.2.1-x86_64.AppImage
-./Appify-2.2.1-x86_64.AppImage
+chmod +x Appify2.2.2.AppImage
+./Appify2.2.2.AppImage
 ```
 
-You can move the AppImage anywhere you like and it will run from there. No installation required.
+You can move the AppImage anywhere you like, and it will run from there. No installation required.
 
 ---
 
@@ -148,7 +162,7 @@ Every installed app can be backed up from within Appify. A backup is a single `.
 
 Appify keeps up to 10 backups per app automatically. When a new backup is created, and the limit is exceeded, the oldest backup is pruned. Restoring a backup wipes the current profile and replaces it, then regenerates the launcher and desktop file with your current system paths, so restores work cleanly even if you have moved things around.
 
-**Important:** Before creating a backup, any extensions you have added to that app's browser profile must be removed first. This is a browser limitation, not an Appify one. Browser extensions store their files inside the profile directory in a way that can produce inconsistent archive states if they are present during the backup. Remove the extensions from the profile, take a backup, then reinstall the extensions afterward if needed. You can also move a backup to another computer, put it in the backup folder, and Appify will see it.
+> **Note:** Before creating a backup, any extensions you have added to that app's browser profile must be removed first. This is a browser limitation, not an Appify one. Browser extensions store their files inside the profile directory in a way that can produce inconsistent archive states if they are present during the backup. Remove the extensions, take the backup, then reinstall them afterward if needed. You can also move a backup to another computer, place it in the backup folder, and Appify will find it.
 
 ---
 
@@ -161,7 +175,7 @@ Appify stores its configuration and all app profiles in `~/.config/appify/`. The
   config.json              # global settings and app registry
   profiles/<app-slug>/     # isolated browser profile per app
     user.js                # Firefox: auto-generated profile preferences
-    profile.json           # per-app metadata (browser, gamepad flag, etc.)
+    profile.json           # per-app metadata (browser, gamepad flag, nice/ionice, etc.)
     installed.marker       # presence flag used by list_installed_apps()
   scripts/                 # generated launcher shell wrappers
   .backup/<app-slug>/      # timestamped .tar.gz backup archives
@@ -169,7 +183,9 @@ Appify stores its configuration and all app profiles in `~/.config/appify/`. The
 
 Each installed app gets a shell wrapper in `scripts/` that handles nice/ionice process priority, GPU acceleration flags, WebHID flags for gamepad support, and Wayland or X11 display backend flags. A `.desktop` file is written to `~/.local/share/applications/` so the app appears in your application launcher with its own icon.
 
-Browser detection checks for native installs, Flatpak, and Snap in that order. For Firefox specifically, Appify writes a `user.js` to the profile directory that suppresses all first-run UI, telemetry, sync prompts, and new-tab page content, and sets the homepage to your app's URL. This file is rewritten on every install so that new preferences added in future Appify versions are applied to existing profiles automatically. If you want to add your own Firefox preferences to a profile, put them in a `user-overrides.js` file in the same directory rather than editing `user.js` directly.
+Browser detection checks for native installs, Flatpak, and Snap in that order. The profile size displayed in the UI is measured by walking the profile directory, no external tools required. Wrapper regeneration reads `profile.json` for per-app settings, so the regenerated script is identical to what would be produced by a fresh install with those same settings.
+
+For Firefox specifically, Appify writes a `user.js` to the profile directory that suppresses all first-run UI, telemetry, sync prompts, and new-tab page content, and sets the homepage to your app's URL. This file is rewritten on every install so that new preferences added in future Appify versions are applied to existing profiles automatically. If you want to add your own Firefox preferences to a profile, put them in a `user-overrides.js` file in the same directory rather than editing `user.js` directly.
 
 Appify checks for updates against the GitHub Releases API on startup in a background thread and notifies you in the UI if a newer stable release is available.
 
