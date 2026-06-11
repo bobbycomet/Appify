@@ -15,9 +15,15 @@
 
 [Video Showcase](https://youtu.be/sCyWKTz_7Go?si=bcjcPYgJ3QqXZH2N) | [Full Comparison Table](https://bobbycomet.github.io/Appify/) | [Discord](https://discord.gg/7fEt5W7DPh)
 
+### The Old VS New Look
+
 </div>
 
 <img width="1920" height="1080" alt="Screenshot_20260414_022537" src="https://github.com/user-attachments/assets/3ad375f1-d641-40df-b83f-d1fd275cd8db" />
+
+<img width="1920" height="1080" alt="Screenshot_20260611_172303" src="https://github.com/user-attachments/assets/3f9be47c-bd16-4a6f-911d-7a652abf2f3a" />
+
+<img width="1920" height="1080" alt="Screenshot_20260611_172251" src="https://github.com/user-attachments/assets/9021b2bd-9a8a-4a53-9ea6-afd1a3e3f12a" />
 
 ---
 
