@@ -26,6 +26,38 @@
 <img width="1920" height="1080" alt="Screenshot_20260611_172251" src="https://github.com/user-attachments/assets/9021b2bd-9a8a-4a53-9ea6-afd1a3e3f12a" />
 
 ---
+Search the defaults or paste a link, pick your browser, and click install. That's it.
+
+Appify turns websites into real desktop apps with their own icons, launchers, and isolated browser profiles. Everything is handled automatically, but remains fully customizable if you want more control.
+
+Whether you're installing a built-in app or creating your own, the workflow is the same:
+
+Choose an app (or click install custom and paste a URL)
+Pick a browser
+Click Install
+
+Need extensions? Use a premade profile if the app has one, click Open Store, or paste an extension URL with Add Custom.
+
+Appify automatically detects app names from URLs, so pasting a link like GitHub automatically creates a GitHub app without any extra setup.
+
+Typical Setup Times
+Basic app: 10–20 seconds
+App + extensions: 60 seconds
+Fully custom setup: 90 seconds
+
+Included Categories
+Cloud Gaming
+Social Media
+Google Workspace
+Streaming
+Communication
+Productivity (including Google Workspaces)
+AI & Search
+Utilities
+Shopping
+News & Knowledge
+
+---
 
 ## What's New in 2.2.2
 
