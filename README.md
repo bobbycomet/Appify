@@ -176,7 +176,7 @@ For GeForce NOW, Amazon Luna, Boosteroid, and AirGPU, Appify defaults those entr
 **Debian/Ubuntu/Linux Mint/Pop!_OS and other Debian-based distros:**
 
 ```
-wget https://github.com/bobbycomet/Appify/releases/download/v2.2.2/Appify-2.2.3.deb
+wget https://github.com/bobbycomet/Appify/releases/download/v2.2.3/Appify-2.2.3.deb
 sudo dpkg -i Appify-2.2.3.deb
 sudo apt-get install -f
 ```
