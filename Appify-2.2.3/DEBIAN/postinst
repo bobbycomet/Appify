@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+chmod +x /usr/bin/pwamanager
+if command -v update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database -q /usr/share/applications
+fi
+mkdir -p /home/\$SUDO_USER/.pwa_manager 2>/dev/null || true
+exit 0
