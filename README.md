@@ -10,6 +10,8 @@
 
 **Every app runs in its own isolated profile with its own icon and launcher. Everything is handled automatically, but fully customizable if you want it.**
 
+**READ 2.2.3 UPDATES IN THE FAQS AND DEBUGGING IF YOU ARE A CURRENT USER THAT RAN INTO MIGRATION ISSUES:[FAQS](https://github.com/bobbycomet/Appify/wiki/FAQs) [DEBUGGING](https://github.com/bobbycomet/Appify/wiki/How-to-debug)**
+
 [![Latest Release](https://img.shields.io/badge/release-v2.2.2-blue)](https://github.com/bobbycomet/Appify/releases/tag/v2.2.2)
 [![Part of Griffin Linux](https://img.shields.io/badge/project-Griffin%20Linux-purple)](https://bobbycomet.github.io/Griffin-Linux-Landing-Page/)
 
@@ -56,6 +58,26 @@ AI & Search
 Utilities
 Shopping
 News & Knowledge
+
+Key New Features in 2.2.3
+1. Config Directory Migration (~/.pwa_manager → ~/.appify)
+
+- The default data directory has been renamed from ~/.pwa_manager to ~/.appify for better naming clarity.
+- Safe, user-controlled migration:
+- On first launch, a confirmation dialog appears.
+- Users can also trigger migration anytime via the hamburger menu (Migrate to .appify…).
+- The old directory is not deleted until the user confirms the migration.
+
+- After migration, a clear notice explains that browser extensions may need repair (a browser sandbox limitation).
+
+2. Export / Import System
+
+- Export All Data: Creates a zip archive of your entire ~/.appify folder (profiles, scripts, backups, config, etc.).
+- Import All Data: Restores from a previous export.
+- Automatically backs up your current data first.
+- Regenerates all launcher wrappers for the current machine (different browsers, Wayland/X11, Flatpak/Snap, etc.).
+
+- Export includes a warning that browser extensions cannot be transferred due to browser sandbox restrictions.
 
 ---
 
