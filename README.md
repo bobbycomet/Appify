@@ -171,13 +171,13 @@ For GeForce NOW, Amazon Luna, Boosteroid, and AirGPU, Appify defaults those entr
 
 ## Downloading and Installing
 
-**Latest version: 2.2.2**
+**Latest version: 2.2.3**
 
 **Debian/Ubuntu/Linux Mint/Pop!_OS and other Debian-based distros:**
 
 ```
 wget https://github.com/bobbycomet/Appify/releases/download/v2.2.2/Appify-2.2.3.deb
-sudo dpkg -i Appify-2.2.2.deb
+sudo dpkg -i Appify-2.2.3.deb
 sudo apt-get install -f
 ```
 
@@ -190,8 +190,8 @@ https://github.com/bobbycomet/Appify/releases/download/v2.2.3/Appify-2.2.3-x86_6
 ```
 
 ```
-chmod +x Appify2.2.2.AppImage
-./Appify2.2.2.AppImage
+chmod +x Appify-2.2.3-x86_64.AppImage
+./Appify-2.2.3-x86_64.AppImage
 ```
 
 You can move the AppImage anywhere you like, and it will run from there. No installation required.
