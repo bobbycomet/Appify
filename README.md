@@ -10,6 +10,8 @@
 
 **Every app runs in its own isolated profile with its own icon and launcher. Everything is handled automatically, but fully customizable if you want it.**
 
+**2.3.0 is coming with new features and a new PyQt6 look.**
+
 **READ 2.2.3 UPDATES IN THE FAQS AND DEBUGGING IF YOU ARE A CURRENT USER THAT RAN INTO MIGRATION ISSUES:[FAQS](https://github.com/bobbycomet/Appify/wiki/FAQs) [DEBUGGING](https://github.com/bobbycomet/Appify/wiki/How-to-debug)**
 
 [![Latest Release](https://img.shields.io/badge/release-v2.2.2-blue)](https://github.com/bobbycomet/Appify/releases/tag/v2.2.2)
