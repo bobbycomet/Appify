@@ -1,1 +1,1688 @@
-
+{
+  "schema_version": 1,
+  "generated_date": "2026-07-01",
+  "min_appify_version": "2.3.0",
+  "description": "Appify official app and extension catalog",
+  "validation": {
+    "required_app_fields": ["id", "name", "url", "category"],
+    "required_extension_fields": ["name", "store_url", "browser"],
+    "url_scheme": "https",
+    "allowed_categories": [
+      "AI & Search",
+      "Art & Design",
+      "Cloud Gaming",
+      "Communication",
+      "Developer Tools",
+      "Education",
+      "Finance",
+      "Music",
+      "News & Knowledge",
+      "Productivity",
+      "Shopping",
+      "Social",
+      "Streaming",
+      "Streaming Tools",
+      "Utilities"
+    ],
+    "allowed_browser_values": ["chromium", "firefox"]
+  },
+  "apps": [
+    {
+      "id": "chatgpt",
+      "name": "ChatGPT",
+      "url": "https://chatgpt.com",
+      "category": "AI & Search",
+      "kiosk": false,
+      "description": "OpenAI's conversational AI assistant"
+    },
+    {
+      "id": "claude",
+      "name": "Claude",
+      "url": "https://claude.ai",
+      "category": "AI & Search",
+      "kiosk": false,
+      "description": "Anthropic's Claude AI assistant"
+    },
+    {
+      "id": "grok",
+      "name": "Grok",
+      "url": "https://grok.x.ai",
+      "category": "AI & Search",
+      "kiosk": false,
+      "description": "xAI's Grok conversational AI"
+    },
+    {
+      "id": "gemini",
+      "name": "Gemini",
+      "url": "https://gemini.google.com",
+      "category": "AI & Search",
+      "kiosk": false,
+      "description": "Google's Gemini AI assistant"
+    },
+    {
+      "id": "perplexity",
+      "name": "Perplexity",
+      "url": "https://perplexity.ai",
+      "category": "AI & Search",
+      "kiosk": false,
+      "description": "AI-powered search and research assistant"
+    },
+    {
+      "id": "mistral",
+      "name": "Mistral",
+      "url": "https://chat.mistral.ai",
+      "category": "AI & Search",
+      "kiosk": false,
+      "description": "Mistral AI conversational assistant"
+    },
+    {
+      "id": "poe",
+      "name": "Poe",
+      "url": "https://poe.com",
+      "category": "AI & Search",
+      "kiosk": false,
+      "description": "Quora's multi-model AI chat platform"
+    },
+    {
+      "id": "character-ai",
+      "name": "Character.ai",
+      "url": "https://character.ai",
+      "category": "AI & Search",
+      "kiosk": false,
+      "description": "AI character roleplay and chat"
+    },
+    {
+      "id": "notebooklm",
+      "name": "NotebookLM",
+      "url": "https://notebooklm.google.com",
+      "category": "AI & Search",
+      "kiosk": false,
+      "description": "Google's AI-powered research notebook"
+    },
+    {
+      "id": "midjourney",
+      "name": "Midjourney",
+      "url": "https://www.midjourney.com",
+      "category": "AI & Search",
+      "kiosk": false,
+      "description": "AI image generation via web interface"
+    },
+    {
+      "id": "suno",
+      "name": "Suno",
+      "url": "https://suno.com",
+      "category": "AI & Search",
+      "kiosk": false,
+      "description": "AI music generation"
+    },
+    {
+      "id": "runway",
+      "name": "Runway",
+      "url": "https://app.runwayml.com",
+      "category": "AI & Search",
+      "kiosk": false,
+      "description": "AI video generation and editing"
+    },
+    {
+      "id": "ideogram",
+      "name": "Ideogram",
+      "url": "https://ideogram.ai",
+      "category": "AI & Search",
+      "kiosk": false,
+      "description": "AI image generation with strong text rendering"
+    },
+    {
+      "id": "gmail",
+      "name": "Gmail",
+      "url": "https://mail.google.com",
+      "category": "Productivity",
+      "kiosk": false,
+      "description": "Google's email service"
+    },
+    {
+      "id": "google-calendar",
+      "name": "Google Calendar",
+      "url": "https://calendar.google.com",
+      "category": "Productivity",
+      "kiosk": false,
+      "description": "Google's calendar and scheduling service"
+    },
+    {
+      "id": "google-keep",
+      "name": "Google Keep",
+      "url": "https://keep.google.com",
+      "category": "Productivity",
+      "kiosk": false,
+      "description": "Google's note-taking service"
+    },
+    {
+      "id": "google-drive",
+      "name": "Google Drive",
+      "url": "https://drive.google.com",
+      "category": "Productivity",
+      "kiosk": false,
+      "description": "Google's cloud storage"
+    },
+    {
+      "id": "google-docs",
+      "name": "Google Docs",
+      "url": "https://docs.google.com/document/",
+      "category": "Productivity",
+      "kiosk": false,
+      "description": "Google's online word processor"
+    },
+    {
+      "id": "google-sheets",
+      "name": "Google Sheets",
+      "url": "https://docs.google.com/spreadsheets/",
+      "category": "Productivity",
+      "kiosk": false,
+      "description": "Google's online spreadsheet"
+    },
+    {
+      "id": "google-slides",
+      "name": "Google Slides",
+      "url": "https://docs.google.com/presentation/",
+      "category": "Productivity",
+      "kiosk": false,
+      "description": "Google's online presentation tool"
+    },
+    {
+      "id": "microsoft-365",
+      "name": "Microsoft 365",
+      "url": "https://www.office.com",
+      "category": "Productivity",
+      "kiosk": false,
+      "description": "Microsoft's online Office suite"
+    },
+    {
+      "id": "outlook-web",
+      "name": "Outlook Web",
+      "url": "https://outlook.live.com",
+      "category": "Productivity",
+      "kiosk": false,
+      "description": "Microsoft Outlook on the web"
+    },
+    {
+      "id": "onedrive",
+      "name": "OneDrive",
+      "url": "https://onedrive.live.com",
+      "category": "Productivity",
+      "kiosk": false,
+      "description": "Microsoft's cloud storage service"
+    },
+    {
+      "id": "notion",
+      "name": "Notion",
+      "url": "https://www.notion.so",
+      "category": "Productivity",
+      "kiosk": false,
+      "description": "All-in-one workspace for notes, tasks, and wikis"
+    },
+    {
+      "id": "clickup",
+      "name": "ClickUp",
+      "url": "https://app.clickup.com",
+      "category": "Productivity",
+      "kiosk": false,
+      "description": "Project management and productivity platform"
+    },
+    {
+      "id": "trello",
+      "name": "Trello",
+      "url": "https://trello.com",
+      "category": "Productivity",
+      "kiosk": false,
+      "description": "Visual project boards"
+    },
+    {
+      "id": "todoist",
+      "name": "Todoist",
+      "url": "https://todoist.com",
+      "category": "Productivity",
+      "kiosk": false,
+      "description": "Task manager and to-do list"
+    },
+    {
+      "id": "ticktick",
+      "name": "TickTick",
+      "url": "https://ticktick.com",
+      "category": "Productivity",
+      "kiosk": false,
+      "description": "Task management with built-in Pomodoro timer"
+    },
+    {
+      "id": "miro",
+      "name": "Miro",
+      "url": "https://miro.com",
+      "category": "Productivity",
+      "kiosk": false,
+      "description": "Online collaborative whiteboard"
+    },
+    {
+      "id": "canva",
+      "name": "Canva",
+      "url": "https://www.canva.com",
+      "category": "Productivity",
+      "kiosk": false,
+      "description": "Online graphic design platform"
+    },
+    {
+      "id": "lucidchart",
+      "name": "Lucidchart",
+      "url": "https://lucid.app",
+      "category": "Productivity",
+      "kiosk": false,
+      "description": "Diagramming and flowchart tool"
+    },
+    {
+      "id": "excalidraw",
+      "name": "Excalidraw",
+      "url": "https://excalidraw.com",
+      "category": "Productivity",
+      "kiosk": false,
+      "description": "Open-source collaborative whiteboard with hand-drawn style"
+    },
+    {
+      "id": "diagrams-net",
+      "name": "diagrams.net",
+      "url": "https://app.diagrams.net",
+      "category": "Productivity",
+      "kiosk": false,
+      "description": "Free online diagram and flowchart editor"
+    },
+    {
+      "id": "linear",
+      "name": "Linear",
+      "url": "https://linear.app",
+      "category": "Productivity",
+      "kiosk": false,
+      "description": "Fast issue tracking for software teams"
+    },
+    {
+      "id": "asana",
+      "name": "Asana",
+      "url": "https://app.asana.com",
+      "category": "Productivity",
+      "kiosk": false,
+      "description": "Work management platform for teams"
+    },
+    {
+      "id": "monday-com",
+      "name": "Monday.com",
+      "url": "https://monday.com",
+      "category": "Productivity",
+      "kiosk": false,
+      "description": "Work OS and project management platform"
+    },
+    {
+      "id": "airtable",
+      "name": "Airtable",
+      "url": "https://airtable.com",
+      "category": "Productivity",
+      "kiosk": false,
+      "description": "Spreadsheet-database hybrid for teams"
+    },
+    {
+      "id": "coda",
+      "name": "Coda",
+      "url": "https://coda.io",
+      "category": "Productivity",
+      "kiosk": false,
+      "description": "All-in-one doc that brings teams together"
+    },
+    {
+      "id": "loom",
+      "name": "Loom",
+      "url": "https://www.loom.com",
+      "category": "Productivity",
+      "kiosk": false,
+      "description": "Async video messaging for work"
+    },
+    {
+      "id": "calendly",
+      "name": "Calendly",
+      "url": "https://calendly.com",
+      "category": "Productivity",
+      "kiosk": false,
+      "description": "Scheduling automation platform"
+    },
+    {
+      "id": "discord",
+      "name": "Discord",
+      "url": "https://discord.com/app",
+      "category": "Communication",
+      "kiosk": false,
+      "description": "Voice, video, and text chat for communities"
+    },
+    {
+      "id": "slack",
+      "name": "Slack",
+      "url": "https://app.slack.com",
+      "category": "Communication",
+      "kiosk": false,
+      "description": "Team messaging and collaboration"
+    },
+    {
+      "id": "microsoft-teams",
+      "name": "Microsoft Teams",
+      "url": "https://teams.microsoft.com",
+      "category": "Communication",
+      "kiosk": false,
+      "description": "Microsoft's team collaboration platform"
+    },
+    {
+      "id": "zoom-web",
+      "name": "Zoom Web",
+      "url": "https://zoom.us/join",
+      "category": "Communication",
+      "kiosk": false,
+      "description": "Zoom video conferencing in the browser"
+    },
+    {
+      "id": "google-meet",
+      "name": "Google Meet",
+      "url": "https://meet.google.com",
+      "category": "Communication",
+      "kiosk": false,
+      "description": "Google's video calling service"
+    },
+    {
+      "id": "telegram-web",
+      "name": "Telegram Web",
+      "url": "https://web.telegram.org",
+      "category": "Communication",
+      "kiosk": false,
+      "description": "Telegram messaging in the browser"
+    },
+    {
+      "id": "whatsapp-web",
+      "name": "WhatsApp Web",
+      "url": "https://web.whatsapp.com",
+      "category": "Communication",
+      "kiosk": false,
+      "description": "WhatsApp messaging in the browser"
+    },
+    {
+      "id": "revolt",
+      "name": "Revolt",
+      "url": "https://app.revolt.chat",
+      "category": "Communication",
+      "kiosk": false,
+      "description": "Open-source Discord alternative"
+    },
+    {
+      "id": "x-twitter",
+      "name": "X / Twitter",
+      "url": "https://x.com",
+      "category": "Social",
+      "kiosk": false,
+      "description": "X (formerly Twitter) social network"
+    },
+    {
+      "id": "reddit",
+      "name": "Reddit",
+      "url": "https://www.reddit.com",
+      "category": "Social",
+      "kiosk": false,
+      "description": "Social news and community platform"
+    },
+    {
+      "id": "instagram",
+      "name": "Instagram",
+      "url": "https://www.instagram.com",
+      "category": "Social",
+      "kiosk": false,
+      "description": "Photo and video sharing social network"
+    },
+    {
+      "id": "facebook",
+      "name": "Facebook",
+      "url": "https://www.facebook.com",
+      "category": "Social",
+      "kiosk": false,
+      "description": "Facebook social network"
+    },
+    {
+      "id": "linkedin",
+      "name": "LinkedIn",
+      "url": "https://www.linkedin.com",
+      "category": "Social",
+      "kiosk": false,
+      "description": "Professional networking platform"
+    },
+    {
+      "id": "pinterest",
+      "name": "Pinterest",
+      "url": "https://www.pinterest.com",
+      "category": "Social",
+      "kiosk": false,
+      "description": "Visual discovery and bookmarking platform"
+    },
+    {
+      "id": "bluesky",
+      "name": "Bluesky",
+      "url": "https://bsky.app",
+      "category": "Social",
+      "kiosk": false,
+      "description": "Decentralised social network (AT Protocol)"
+    },
+    {
+      "id": "threads",
+      "name": "Threads",
+      "url": "https://www.threads.net",
+      "category": "Social",
+      "kiosk": false,
+      "description": "Meta's text-based social network"
+    },
+    {
+      "id": "mastodon",
+      "name": "Mastodon",
+      "url": "https://mastodon.social",
+      "category": "Social",
+      "kiosk": false,
+      "description": "Open-source federated social network"
+    },
+    {
+      "id": "tumblr",
+      "name": "Tumblr",
+      "url": "https://www.tumblr.com",
+      "category": "Social",
+      "kiosk": false,
+      "description": "Blogging and social platform"
+    },
+    {
+      "id": "letterboxd",
+      "name": "Letterboxd",
+      "url": "https://letterboxd.com",
+      "category": "Social",
+      "kiosk": false,
+      "description": "Social film diary and review community"
+    },
+    {
+      "id": "5mind",
+      "name": "5MIND",
+      "url": "https://5mind.com/",
+      "category": "Social",
+      "kiosk": false,
+      "description": "5MIND social platform"
+    },
+    {
+      "id": "youtube",
+      "name": "YouTube",
+      "url": "https://www.youtube.com",
+      "category": "Streaming",
+      "kiosk": false,
+      "description": "Google's video streaming platform"
+    },
+    {
+      "id": "youtube-music",
+      "name": "YouTube Music",
+      "url": "https://music.youtube.com",
+      "category": "Streaming",
+      "kiosk": false,
+      "description": "YouTube's music streaming service"
+    },
+    {
+      "id": "netflix",
+      "name": "Netflix",
+      "url": "https://www.netflix.com",
+      "category": "Streaming",
+      "kiosk": false,
+      "description": "Video streaming service"
+    },
+    {
+      "id": "disney-plus",
+      "name": "Disney+",
+      "url": "https://www.disneyplus.com",
+      "category": "Streaming",
+      "kiosk": false,
+      "description": "Disney's streaming service"
+    },
+    {
+      "id": "prime-video",
+      "name": "Prime Video",
+      "url": "https://www.primevideo.com",
+      "category": "Streaming",
+      "kiosk": false,
+      "description": "Amazon's video streaming service"
+    },
+    {
+      "id": "spotify-web",
+      "name": "Spotify Web",
+      "url": "https://open.spotify.com",
+      "category": "Streaming",
+      "kiosk": false,
+      "description": "Spotify music streaming in the browser"
+    },
+    {
+      "id": "twitch",
+      "name": "Twitch",
+      "url": "https://www.twitch.tv",
+      "category": "Streaming",
+      "kiosk": false,
+      "description": "Live game and creative streaming platform"
+    },
+    {
+      "id": "crunchyroll",
+      "name": "Crunchyroll",
+      "url": "https://www.crunchyroll.com",
+      "category": "Streaming",
+      "kiosk": false,
+      "description": "Anime streaming service"
+    },
+    {
+      "id": "plex-web",
+      "name": "Plex Web",
+      "url": "https://app.plex.tv",
+      "category": "Streaming",
+      "kiosk": false,
+      "description": "Personal media server web client"
+    },
+    {
+      "id": "stremio-web",
+      "name": "Stremio Web",
+      "url": "https://web.stremio.com",
+      "category": "Streaming",
+      "kiosk": false,
+      "description": "Stremio media centre in the browser"
+    },
+    {
+      "id": "hulu",
+      "name": "Hulu",
+      "url": "https://www.hulu.com",
+      "category": "Streaming",
+      "kiosk": false,
+      "description": "Hulu streaming service"
+    },
+    {
+      "id": "max-hbo",
+      "name": "Max (HBO)",
+      "url": "https://max.com",
+      "category": "Streaming",
+      "kiosk": false,
+      "description": "HBO Max streaming service"
+    },
+    {
+      "id": "peacock",
+      "name": "Peacock",
+      "url": "https://www.peacocktv.com",
+      "category": "Streaming",
+      "kiosk": false,
+      "description": "NBCUniversal's streaming service"
+    },
+    {
+      "id": "paramount-plus",
+      "name": "Paramount+",
+      "url": "https://www.paramountplus.com",
+      "category": "Streaming",
+      "kiosk": false,
+      "description": "Paramount's streaming service"
+    },
+    {
+      "id": "apple-tv-plus",
+      "name": "Apple TV+",
+      "url": "https://tv.apple.com",
+      "category": "Streaming",
+      "kiosk": false,
+      "description": "Apple's streaming service"
+    },
+    {
+      "id": "kick",
+      "name": "Kick",
+      "url": "https://kick.com",
+      "category": "Streaming",
+      "kiosk": false,
+      "description": "Live streaming platform"
+    },
+    {
+      "id": "rumble",
+      "name": "Rumble",
+      "url": "https://rumble.com",
+      "category": "Streaming",
+      "kiosk": false,
+      "description": "Video streaming and hosting platform"
+    },
+    {
+      "id": "capcut",
+      "name": "CapCut",
+      "url": "https://www.capcut.com/",
+      "category": "Streaming",
+      "kiosk": false,
+      "description": "Online video editor"
+    },
+    {
+      "id": "animepahe",
+      "name": "AnimePahe",
+      "url": "https://animepahe.ru",
+      "category": "Streaming",
+      "kiosk": false,
+      "description": "Anime streaming site"
+    },
+    {
+      "id": "xbox-cloud-gaming",
+      "name": "Xbox Cloud Gaming",
+      "url": "https://www.xbox.com/play",
+      "category": "Cloud Gaming",
+      "kiosk": true,
+      "gamepad": true,
+      "description": "Microsoft's cloud gaming service — requires Edge or Chromium"
+    },
+    {
+      "id": "geforce-now",
+      "name": "GeForce NOW",
+      "url": "https://play.geforcenow.com",
+      "category": "Cloud Gaming",
+      "kiosk": true,
+      "browser_override": "firefox",
+      "description": "NVIDIA's cloud gaming service"
+    },
+    {
+      "id": "amazon-luna",
+      "name": "Amazon Luna",
+      "url": "https://luna.amazon.com",
+      "category": "Cloud Gaming",
+      "kiosk": true,
+      "browser_override": "firefox",
+      "description": "Amazon's cloud gaming service"
+    },
+    {
+      "id": "boosteroid",
+      "name": "Boosteroid",
+      "url": "https://boosteroid.com/go",
+      "category": "Cloud Gaming",
+      "kiosk": true,
+      "browser_override": "firefox",
+      "description": "Cloud gaming service with broad game library"
+    },
+    {
+      "id": "airgpu",
+      "name": "AirGPU",
+      "url": "https://airgpu.com",
+      "category": "Cloud Gaming",
+      "kiosk": true,
+      "browser_override": "firefox",
+      "description": "Cloud GPU gaming service"
+    },
+    {
+      "id": "photopea",
+      "name": "Photopea",
+      "url": "https://www.photopea.com",
+      "category": "Art & Design",
+      "kiosk": false,
+      "description": "Free online Photoshop alternative"
+    },
+    {
+      "id": "figma",
+      "name": "Figma",
+      "url": "https://www.figma.com",
+      "category": "Art & Design",
+      "kiosk": false,
+      "description": "Collaborative interface design tool"
+    },
+    {
+      "id": "clip-studio-paint-web",
+      "name": "Clip Studio Paint Web",
+      "url": "https://www.clipstudio.net",
+      "category": "Art & Design",
+      "kiosk": false,
+      "description": "Professional manga and illustration tool — web version"
+    },
+    {
+      "id": "sketchfab",
+      "name": "Sketchfab",
+      "url": "https://sketchfab.com",
+      "category": "Art & Design",
+      "kiosk": false,
+      "description": "3D model viewer and marketplace"
+    },
+    {
+      "id": "pixlr-editor",
+      "name": "Pixlr Editor",
+      "url": "https://pixlr.com",
+      "category": "Art & Design",
+      "kiosk": false,
+      "description": "Free online photo editor"
+    },
+    {
+      "id": "remove-bg",
+      "name": "Remove.bg",
+      "url": "https://www.remove.bg",
+      "category": "Art & Design",
+      "kiosk": false,
+      "description": "AI background remover"
+    },
+    {
+      "id": "framer",
+      "name": "Framer",
+      "url": "https://framer.com",
+      "category": "Art & Design",
+      "kiosk": false,
+      "description": "No-code website and prototype builder"
+    },
+    {
+      "id": "penpot",
+      "name": "Penpot",
+      "url": "https://penpot.app",
+      "category": "Art & Design",
+      "kiosk": false,
+      "description": "Open-source design and prototyping tool"
+    },
+    {
+      "id": "spline",
+      "name": "Spline",
+      "url": "https://app.spline.design",
+      "category": "Art & Design",
+      "kiosk": false,
+      "description": "3D design tool for the web"
+    },
+    {
+      "id": "rive",
+      "name": "Rive",
+      "url": "https://rive.app",
+      "category": "Art & Design",
+      "kiosk": false,
+      "description": "Interactive animation and motion graphics tool"
+    },
+    {
+      "id": "streamlabs-obs-web",
+      "name": "Streamlabs OBS Web",
+      "url": "https://streamlabs.com",
+      "category": "Streaming Tools",
+      "kiosk": false,
+      "description": "Streamlabs streaming dashboard"
+    },
+    {
+      "id": "ko-fi",
+      "name": "Ko-fi",
+      "url": "https://ko-fi.com",
+      "category": "Streaming Tools",
+      "kiosk": false,
+      "description": "Creator support and donation platform"
+    },
+    {
+      "id": "patreon",
+      "name": "Patreon",
+      "url": "https://www.patreon.com",
+      "category": "Streaming Tools",
+      "kiosk": false,
+      "description": "Membership platform for creators"
+    },
+    {
+      "id": "throne",
+      "name": "Throne (Wishlist)",
+      "url": "https://throne.com",
+      "category": "Streaming Tools",
+      "kiosk": false,
+      "description": "Creator wishlist and gifting platform"
+    },
+    {
+      "id": "streamelements",
+      "name": "Streamelements",
+      "url": "https://streamelements.com",
+      "category": "Streaming Tools",
+      "kiosk": false,
+      "description": "Streaming overlay and loyalty tools"
+    },
+    {
+      "id": "streamlabs-dashboard",
+      "name": "Streamlabs Dashboard",
+      "url": "https://streamlabs.com/dashboard",
+      "category": "Streaming Tools",
+      "kiosk": false,
+      "description": "Streamlabs analytics and dashboard"
+    },
+    {
+      "id": "youtube-studio",
+      "name": "YouTube Studio",
+      "url": "https://studio.youtube.com",
+      "category": "Streaming Tools",
+      "kiosk": false,
+      "description": "YouTube channel management"
+    },
+    {
+      "id": "muse",
+      "name": "Muse.ai",
+      "url": "https://muse.ai",
+      "category": "Streaming Tools",
+      "kiosk": false,
+      "description": "AI-powered video hosting for creators"
+    },
+    {
+      "id": "google-translate",
+      "name": "Google Translate",
+      "url": "https://translate.google.com",
+      "category": "Utilities",
+      "kiosk": false,
+      "description": "Google's translation service"
+    },
+    {
+      "id": "deepl-translate",
+      "name": "DeepL Translate",
+      "url": "https://www.deepl.com/translator",
+      "category": "Utilities",
+      "kiosk": false,
+      "description": "High-quality AI translation"
+    },
+    {
+      "id": "speedtest-net",
+      "name": "Speedtest.net",
+      "url": "https://www.speedtest.net",
+      "category": "Utilities",
+      "kiosk": false,
+      "description": "Internet speed testing by Ookla"
+    },
+    {
+      "id": "fast-com",
+      "name": "Fast.com",
+      "url": "https://fast.com",
+      "category": "Utilities",
+      "kiosk": false,
+      "description": "Netflix's internet speed test"
+    },
+    {
+      "id": "pomofocus-timer",
+      "name": "Pomofocus Timer",
+      "url": "https://pomofocus.io",
+      "category": "Utilities",
+      "kiosk": false,
+      "description": "Customisable Pomodoro timer"
+    },
+    {
+      "id": "mynoise-net",
+      "name": "myNoise.net",
+      "url": "https://mynoise.net",
+      "category": "Utilities",
+      "kiosk": false,
+      "description": "Online noise generator for focus and relaxation"
+    },
+    {
+      "id": "rainy-mood",
+      "name": "Rainy Mood",
+      "url": "https://www.rainymood.com",
+      "category": "Utilities",
+      "kiosk": false,
+      "description": "Ambient rain sounds for focus"
+    },
+    {
+      "id": "radio-garden",
+      "name": "Radio Garden",
+      "url": "https://radio.garden",
+      "category": "Utilities",
+      "kiosk": false,
+      "description": "Live radio from around the world on a globe"
+    },
+    {
+      "id": "ilovepdf",
+      "name": "ILovePDF",
+      "url": "https://www.ilovepdf.com",
+      "category": "Utilities",
+      "kiosk": false,
+      "description": "Online PDF tools (merge, split, compress)"
+    },
+    {
+      "id": "tinypng",
+      "name": "TinyPNG",
+      "url": "https://tinypng.com",
+      "category": "Utilities",
+      "kiosk": false,
+      "description": "Smart PNG and JPEG image compression"
+    },
+    {
+      "id": "duolingo",
+      "name": "Duolingo",
+      "url": "https://www.duolingo.com",
+      "category": "Utilities",
+      "kiosk": false,
+      "description": "Free language learning"
+    },
+    {
+      "id": "yummly",
+      "name": "Yummly (Recipes)",
+      "url": "https://www.yummly.com",
+      "category": "Utilities",
+      "kiosk": false,
+      "description": "Recipe discovery and meal planning"
+    },
+    {
+      "id": "starbucks-order",
+      "name": "Starbucks Order",
+      "url": "https://app.starbucks.com",
+      "category": "Utilities",
+      "kiosk": false,
+      "description": "Starbucks mobile order in the browser"
+    },
+    {
+      "id": "bitwarden",
+      "name": "Bitwarden",
+      "url": "https://vault.bitwarden.com",
+      "category": "Utilities",
+      "kiosk": false,
+      "description": "Open-source password manager web vault"
+    },
+    {
+      "id": "proton-mail",
+      "name": "Proton Mail",
+      "url": "https://mail.proton.me",
+      "category": "Utilities",
+      "kiosk": false,
+      "description": "End-to-end encrypted email"
+    },
+    {
+      "id": "proton-drive",
+      "name": "Proton Drive",
+      "url": "https://drive.proton.me",
+      "category": "Utilities",
+      "kiosk": false,
+      "description": "End-to-end encrypted cloud storage"
+    },
+    {
+      "id": "proton-calendar",
+      "name": "Proton Calendar",
+      "url": "https://calendar.proton.me",
+      "category": "Utilities",
+      "kiosk": false,
+      "description": "End-to-end encrypted calendar"
+    },
+    {
+      "id": "squoosh",
+      "name": "Squoosh",
+      "url": "https://squoosh.app",
+      "category": "Utilities",
+      "kiosk": false,
+      "description": "Google's browser-based image compression tool"
+    },
+    {
+      "id": "carbon",
+      "name": "Carbon",
+      "url": "https://carbon.now.sh",
+      "category": "Utilities",
+      "kiosk": false,
+      "description": "Create beautiful images of source code"
+    },
+    {
+      "id": "amazon",
+      "name": "Amazon",
+      "url": "https://www.amazon.com",
+      "category": "Shopping",
+      "kiosk": false,
+      "description": "Amazon online store"
+    },
+    {
+      "id": "ebay",
+      "name": "eBay",
+      "url": "https://www.ebay.com",
+      "category": "Shopping",
+      "kiosk": false,
+      "description": "Online auction and shopping"
+    },
+    {
+      "id": "aliexpress",
+      "name": "AliExpress",
+      "url": "https://www.aliexpress.com",
+      "category": "Shopping",
+      "kiosk": false,
+      "description": "Alibaba's global online retail"
+    },
+    {
+      "id": "walmart",
+      "name": "Walmart",
+      "url": "https://www.walmart.com",
+      "category": "Shopping",
+      "kiosk": false,
+      "description": "Walmart online store"
+    },
+    {
+      "id": "target",
+      "name": "Target",
+      "url": "https://www.target.com",
+      "category": "Shopping",
+      "kiosk": false,
+      "description": "Target online store"
+    },
+    {
+      "id": "best-buy",
+      "name": "Best Buy",
+      "url": "https://www.bestbuy.com",
+      "category": "Shopping",
+      "kiosk": false,
+      "description": "Best Buy electronics store"
+    },
+    {
+      "id": "etsy",
+      "name": "Etsy",
+      "url": "https://www.etsy.com",
+      "category": "Shopping",
+      "kiosk": false,
+      "description": "Marketplace for handmade and vintage goods"
+    },
+    {
+      "id": "trivago",
+      "name": "Trivago",
+      "url": "https://www.trivago.com",
+      "category": "Shopping",
+      "kiosk": false,
+      "description": "Hotel price comparison"
+    },
+    {
+      "id": "uber-web",
+      "name": "Uber Web",
+      "url": "https://m.uber.com",
+      "category": "Shopping",
+      "kiosk": false,
+      "description": "Uber ride booking in the browser"
+    },
+    {
+      "id": "wikipedia",
+      "name": "Wikipedia",
+      "url": "https://www.wikipedia.org",
+      "category": "News & Knowledge",
+      "kiosk": false,
+      "description": "Free online encyclopaedia"
+    },
+    {
+      "id": "bbc-news",
+      "name": "BBC News",
+      "url": "https://www.bbc.com/news",
+      "category": "News & Knowledge",
+      "kiosk": false,
+      "description": "BBC's international news service"
+    },
+    {
+      "id": "reuters",
+      "name": "Reuters",
+      "url": "https://www.reuters.com",
+      "category": "News & Knowledge",
+      "kiosk": false,
+      "description": "Reuters international news"
+    },
+    {
+      "id": "the-verge",
+      "name": "The Verge",
+      "url": "https://www.theverge.com",
+      "category": "News & Knowledge",
+      "kiosk": false,
+      "description": "Technology and science news"
+    },
+    {
+      "id": "techcrunch",
+      "name": "TechCrunch",
+      "url": "https://techcrunch.com",
+      "category": "News & Knowledge",
+      "kiosk": false,
+      "description": "Technology startup news"
+    },
+    {
+      "id": "hacker-news",
+      "name": "Hacker News",
+      "url": "https://news.ycombinator.com",
+      "category": "News & Knowledge",
+      "kiosk": false,
+      "description": "Y Combinator's technology and startup news aggregator"
+    },
+    {
+      "id": "wolfram-alpha",
+      "name": "Wolfram Alpha",
+      "url": "https://www.wolframalpha.com",
+      "category": "News & Knowledge",
+      "kiosk": false,
+      "description": "Computational intelligence engine"
+    },
+    {
+      "id": "cnn",
+      "name": "CNN",
+      "url": "https://edition.cnn.com",
+      "category": "News & Knowledge",
+      "kiosk": false,
+      "description": "CNN international news"
+    },
+    {
+      "id": "the-new-york-times",
+      "name": "The New York Times",
+      "url": "https://www.nytimes.com",
+      "category": "News & Knowledge",
+      "kiosk": false,
+      "description": "The New York Times"
+    },
+    {
+      "id": "the-washington-post",
+      "name": "The Washington Post",
+      "url": "https://www.washingtonpost.com",
+      "category": "News & Knowledge",
+      "kiosk": false,
+      "description": "The Washington Post"
+    },
+    {
+      "id": "forbes",
+      "name": "Forbes",
+      "url": "https://www.forbes.com",
+      "category": "News & Knowledge",
+      "kiosk": false,
+      "description": "Business and finance news"
+    },
+    {
+      "id": "ars-technica",
+      "name": "Ars Technica",
+      "url": "https://arstechnica.com",
+      "category": "News & Knowledge",
+      "kiosk": false,
+      "description": "In-depth technology and science news"
+    },
+    {
+      "id": "github",
+      "name": "GitHub",
+      "url": "https://github.com",
+      "category": "Developer Tools",
+      "kiosk": false,
+      "description": "Code hosting, version control, and collaboration"
+    },
+    {
+      "id": "gitlab",
+      "name": "GitLab",
+      "url": "https://gitlab.com",
+      "category": "Developer Tools",
+      "kiosk": false,
+      "description": "Open-source DevOps platform"
+    },
+    {
+      "id": "codepen",
+      "name": "CodePen",
+      "url": "https://codepen.io",
+      "category": "Developer Tools",
+      "kiosk": false,
+      "description": "Online code editor and front-end playground"
+    },
+    {
+      "id": "replit",
+      "name": "Replit",
+      "url": "https://replit.com",
+      "category": "Developer Tools",
+      "kiosk": false,
+      "description": "Browser-based IDE and cloud development environment"
+    },
+    {
+      "id": "stackoverflow",
+      "name": "Stack Overflow",
+      "url": "https://stackoverflow.com",
+      "category": "Developer Tools",
+      "kiosk": false,
+      "description": "Q&A platform for developers"
+    },
+    {
+      "id": "jsfiddle",
+      "name": "JSFiddle",
+      "url": "https://jsfiddle.net",
+      "category": "Developer Tools",
+      "kiosk": false,
+      "description": "Online JavaScript/CSS/HTML playground"
+    },
+    {
+      "id": "vercel",
+      "name": "Vercel",
+      "url": "https://vercel.com",
+      "category": "Developer Tools",
+      "kiosk": false,
+      "description": "Frontend cloud deployment platform"
+    },
+    {
+      "id": "netlify",
+      "name": "Netlify",
+      "url": "https://app.netlify.com",
+      "category": "Developer Tools",
+      "kiosk": false,
+      "description": "Web hosting and serverless backend platform"
+    },
+    {
+      "id": "railway",
+      "name": "Railway",
+      "url": "https://railway.app",
+      "category": "Developer Tools",
+      "kiosk": false,
+      "description": "Infrastructure deployment platform"
+    },
+    {
+      "id": "supabase",
+      "name": "Supabase",
+      "url": "https://supabase.com",
+      "category": "Developer Tools",
+      "kiosk": false,
+      "description": "Open-source Firebase alternative"
+    },
+    {
+      "id": "regex101",
+      "name": "Regex101",
+      "url": "https://regex101.com",
+      "category": "Developer Tools",
+      "kiosk": false,
+      "description": "Online regex tester and debugger"
+    },
+    {
+      "id": "bundlephobia",
+      "name": "Bundlephobia",
+      "url": "https://bundlephobia.com",
+      "category": "Developer Tools",
+      "kiosk": false,
+      "description": "Find the cost of adding an npm package"
+    },
+    {
+      "id": "khan-academy",
+      "name": "Khan Academy",
+      "url": "https://www.khanacademy.org",
+      "category": "Education",
+      "kiosk": false,
+      "description": "Free world-class education for anyone"
+    },
+    {
+      "id": "coursera",
+      "name": "Coursera",
+      "url": "https://www.coursera.org",
+      "category": "Education",
+      "kiosk": false,
+      "description": "Online courses from top universities"
+    },
+    {
+      "id": "udemy",
+      "name": "Udemy",
+      "url": "https://www.udemy.com",
+      "category": "Education",
+      "kiosk": false,
+      "description": "Online learning marketplace"
+    },
+    {
+      "id": "edx",
+      "name": "edX",
+      "url": "https://www.edx.org",
+      "category": "Education",
+      "kiosk": false,
+      "description": "Online courses from Harvard, MIT, and more"
+    },
+    {
+      "id": "brilliant",
+      "name": "Brilliant",
+      "url": "https://brilliant.org",
+      "category": "Education",
+      "kiosk": false,
+      "description": "Interactive STEM learning platform"
+    },
+    {
+      "id": "skillshare",
+      "name": "Skillshare",
+      "url": "https://www.skillshare.com",
+      "category": "Education",
+      "kiosk": false,
+      "description": "Online learning for creative skills"
+    },
+    {
+      "id": "codecademy",
+      "name": "Codecademy",
+      "url": "https://www.codecademy.com",
+      "category": "Education",
+      "kiosk": false,
+      "description": "Interactive coding courses"
+    },
+    {
+      "id": "freecodecamp",
+      "name": "freeCodeCamp",
+      "url": "https://www.freecodecamp.org",
+      "category": "Education",
+      "kiosk": false,
+      "description": "Free coding curriculum and certifications"
+    },
+    {
+      "id": "ankiweb",
+      "name": "AnkiWeb",
+      "url": "https://ankiweb.net",
+      "category": "Education",
+      "kiosk": false,
+      "description": "Flashcard-based spaced repetition learning"
+    },
+    {
+      "id": "soundcloud",
+      "name": "SoundCloud",
+      "url": "https://soundcloud.com",
+      "category": "Music",
+      "kiosk": false,
+      "description": "Music and audio sharing platform"
+    },
+    {
+      "id": "bandcamp",
+      "name": "Bandcamp",
+      "url": "https://bandcamp.com",
+      "category": "Music",
+      "kiosk": false,
+      "description": "Music platform supporting independent artists directly"
+    },
+    {
+      "id": "tidal",
+      "name": "Tidal",
+      "url": "https://listen.tidal.com",
+      "category": "Music",
+      "kiosk": false,
+      "description": "High-fidelity music streaming service"
+    },
+    {
+      "id": "apple-music",
+      "name": "Apple Music",
+      "url": "https://music.apple.com",
+      "category": "Music",
+      "kiosk": false,
+      "description": "Apple's music streaming service"
+    },
+    {
+      "id": "deezer",
+      "name": "Deezer",
+      "url": "https://www.deezer.com",
+      "category": "Music",
+      "kiosk": false,
+      "description": "Music streaming service"
+    },
+    {
+      "id": "mixcloud",
+      "name": "Mixcloud",
+      "url": "https://www.mixcloud.com",
+      "category": "Music",
+      "kiosk": false,
+      "description": "DJ mix and radio show streaming"
+    },
+    {
+      "id": "paypal",
+      "name": "PayPal",
+      "url": "https://www.paypal.com",
+      "category": "Finance",
+      "kiosk": false,
+      "description": "Online payment service"
+    },
+    {
+      "id": "wise",
+      "name": "Wise",
+      "url": "https://wise.com",
+      "category": "Finance",
+      "kiosk": false,
+      "description": "Low-cost international money transfers"
+    },
+    {
+      "id": "coinbase",
+      "name": "Coinbase",
+      "url": "https://www.coinbase.com",
+      "category": "Finance",
+      "kiosk": false,
+      "description": "Cryptocurrency exchange"
+    },
+    {
+      "id": "ynab",
+      "name": "YNAB",
+      "url": "https://app.youneedabudget.com",
+      "category": "Finance",
+      "kiosk": false,
+      "description": "You Need A Budget — personal budgeting tool"
+    },
+    {
+      "id": "stripe-dashboard",
+      "name": "Stripe Dashboard",
+      "url": "https://dashboard.stripe.com",
+      "category": "Finance",
+      "kiosk": false,
+      "description": "Stripe payment processing dashboard"
+    }
+  ],
+  "extension_presets": [
+    {
+      "app_id": "youtube",
+      "app_name": "YouTube",
+      "extensions": [
+        {
+          "name": "SponsorBlock",
+          "description": "Skip sponsored segments, intros, and outros in YouTube videos automatically",
+          "browser": "chromium",
+          "store_url": "https://chromewebstore.google.com/detail/sponsorblock-for-youtube/mnjggcdmjocbbbhaepdhchncahnbgone"
+        },
+        {
+          "name": "SponsorBlock",
+          "description": "Skip sponsored segments, intros, and outros in YouTube videos automatically",
+          "browser": "firefox",
+          "store_url": "https://addons.mozilla.org/en-US/firefox/addon/sponsorblock/"
+        },
+        {
+          "name": "uBlock Origin",
+          "description": "Efficient wide-spectrum ad and content blocker",
+          "browser": "chromium",
+          "store_url": "https://chromewebstore.google.com/detail/ublock-origin/cjpalhdlnbpafiamejdnhcphjbkeiagm"
+        },
+        {
+          "name": "uBlock Origin",
+          "description": "Efficient wide-spectrum ad and content blocker",
+          "browser": "firefox",
+          "store_url": "https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/"
+        },
+        {
+          "name": "Return YouTube Dislike",
+          "description": "Restores the dislike count on YouTube videos",
+          "browser": "chromium",
+          "store_url": "https://chromewebstore.google.com/detail/return-youtube-dislike/gebbhagfogifgggkldgodflihgfeippi"
+        },
+        {
+          "name": "Return YouTube Dislike",
+          "description": "Restores the dislike count on YouTube videos",
+          "browser": "firefox",
+          "store_url": "https://addons.mozilla.org/en-US/firefox/addon/return-youtube-dislikes/"
+        },
+        {
+          "name": "Unhook",
+          "description": "Remove YouTube recommendations, shorts, and distracting sidebar content",
+          "browser": "chromium",
+          "store_url": "https://chromewebstore.google.com/detail/unhook-remove-youtube-rec/khncfooichmfjbepaaaebmommgaepkcd"
+        },
+        {
+          "name": "Unhook",
+          "description": "Remove YouTube recommendations, shorts, and distracting sidebar content",
+          "browser": "firefox",
+          "store_url": "https://addons.mozilla.org/en-US/firefox/addon/youtube-recommended-videos/"
+        }
+      ]
+    },
+    {
+      "app_id": "twitch",
+      "app_name": "Twitch",
+      "extensions": [
+        {
+          "name": "BetterTTV",
+          "description": "Adds new emotes, features, and customisation options to Twitch",
+          "browser": "chromium",
+          "store_url": "https://chromewebstore.google.com/detail/betterttv/ajopnjidmegmdimjlfnijceegpefgped"
+        },
+        {
+          "name": "BetterTTV",
+          "description": "Adds new emotes, features, and customisation options to Twitch",
+          "browser": "firefox",
+          "store_url": "https://addons.mozilla.org/en-US/firefox/addon/betterttv/"
+        },
+        {
+          "name": "7TV",
+          "description": "Extended emote platform for Twitch with high-quality animated emotes",
+          "browser": "chromium",
+          "store_url": "https://chromewebstore.google.com/detail/7tv/ammjkodgmmoknidbanneddgankgfejfh"
+        },
+        {
+          "name": "7TV",
+          "description": "Extended emote platform for Twitch with high-quality animated emotes",
+          "browser": "firefox",
+          "store_url": "https://addons.mozilla.org/en-US/firefox/addon/7tv/"
+        },
+        {
+          "name": "FrankerFaceZ",
+          "description": "Classic Twitch emote and feature enhancement extension",
+          "browser": "chromium",
+          "store_url": "https://chromewebstore.google.com/detail/frankerfacez/fadndhdgpmmaapbmfcknlfgcflmmmieb"
+        },
+        {
+          "name": "FrankerFaceZ",
+          "description": "Classic Twitch emote and feature enhancement extension",
+          "browser": "firefox",
+          "store_url": "https://addons.mozilla.org/en-US/firefox/addon/frankerfacez/"
+        }
+      ]
+    },
+    {
+      "app_id": "kick",
+      "app_name": "Kick",
+      "extensions": [
+        {
+          "name": "NipahTV",
+          "description": "Emote integration and chat enhancements for Kick.com",
+          "browser": "chromium",
+          "store_url": "https://chromewebstore.google.com/detail/nipahtv/bjggmgekoncaaalaalhchepgkjoahjln"
+        },
+        {
+          "name": "7TV",
+          "description": "Extended emote platform — works on Kick in addition to Twitch",
+          "browser": "chromium",
+          "store_url": "https://chromewebstore.google.com/detail/7tv/ammjkodgmmoknidbanneddgankgfejfh"
+        },
+        {
+          "name": "7TV",
+          "description": "Extended emote platform — works on Kick in addition to Twitch",
+          "browser": "firefox",
+          "store_url": "https://addons.mozilla.org/en-US/firefox/addon/7tv/"
+        }
+      ]
+    },
+    {
+      "app_id": "reddit",
+      "app_name": "Reddit",
+      "extensions": [
+        {
+          "name": "Reddit Enhancement Suite",
+          "description": "Extensive suite of features for browsing Reddit — night mode, inline previews, and more",
+          "browser": "chromium",
+          "store_url": "https://chromewebstore.google.com/detail/reddit-enhancement-suite/kbmfpngjjgdllneeigpgjifpgocmfgmb"
+        },
+        {
+          "name": "Reddit Enhancement Suite",
+          "description": "Extensive suite of features for browsing Reddit — night mode, inline previews, and more",
+          "browser": "firefox",
+          "store_url": "https://addons.mozilla.org/en-US/firefox/addon/reddit-enhancement-suite/"
+        },
+        {
+          "name": "Old Reddit Redirect",
+          "description": "Automatically redirects new Reddit to old.reddit.com",
+          "browser": "chromium",
+          "store_url": "https://chromewebstore.google.com/detail/old-reddit-redirect/dneaehbmnbhcippjikoajpoabadpodje"
+        },
+        {
+          "name": "Old Reddit Redirect",
+          "description": "Automatically redirects new Reddit to old.reddit.com",
+          "browser": "firefox",
+          "store_url": "https://addons.mozilla.org/en-US/firefox/addon/old-reddit-redirect/"
+        }
+      ]
+    },
+    {
+      "app_id": "netflix",
+      "app_name": "Netflix",
+      "extensions": [
+        {
+          "name": "Teleparty",
+          "description": "Watch Netflix (and other streaming services) in sync with friends",
+          "browser": "chromium",
+          "store_url": "https://chromewebstore.google.com/detail/teleparty/oocalimimngaihdkbihfgmpkcpnmlaoa"
+        },
+        {
+          "name": "Teleparty",
+          "description": "Watch Netflix (and other streaming services) in sync with friends",
+          "browser": "firefox",
+          "store_url": "https://addons.mozilla.org/en-US/firefox/addon/netflix-party/"
+        }
+      ]
+    },
+    {
+      "app_id": "google-docs",
+      "app_name": "Google Docs",
+      "extensions": [
+        {
+          "name": "LanguageTool",
+          "description": "Grammar, style, and spell checker supporting 30+ languages",
+          "browser": "chromium",
+          "store_url": "https://chromewebstore.google.com/detail/grammar-spell-checker-lan/oldceeleldhonbafppcapldpdifcinji"
+        },
+        {
+          "name": "LanguageTool",
+          "description": "Grammar, style, and spell checker supporting 30+ languages",
+          "browser": "firefox",
+          "store_url": "https://addons.mozilla.org/en-US/firefox/addon/languagetool/"
+        },
+        {
+          "name": "Code Blocks for Google Docs",
+          "description": "Format and syntax-highlight code blocks inside Google Docs",
+          "browser": "chromium",
+          "store_url": "https://workspace.google.com/marketplace/app/code_blocks/100740430168"
+        },
+        {
+          "name": "Super Styles for Google Docs",
+          "description": "Paragraph and heading style presets for Google Docs",
+          "browser": "chromium",
+          "store_url": "https://workspace.google.com/marketplace/app/super_styles_for_google_docs/749048387655"
+        }
+      ]
+    },
+    {
+      "app_id": "google-calendar",
+      "app_name": "Google Calendar",
+      "extensions": [
+        {
+          "name": "Event Merge for Google Calendar",
+          "description": "Visually merge recurring events in Google Calendar for a cleaner view",
+          "browser": "chromium",
+          "store_url": "https://chromewebstore.google.com/detail/event-merge-for-google-ca/dlifekfklhbcbgponifgpdbcopbekmna"
+        }
+      ]
+    },
+    {
+      "app_id": "github",
+      "app_name": "GitHub",
+      "extensions": [
+        {
+          "name": "Refined GitHub",
+          "description": "Simplifies the GitHub interface and adds many useful features",
+          "browser": "chromium",
+          "store_url": "https://chromewebstore.google.com/detail/refined-github/hlepfoohegkhhmjieoechaddaejaokhf"
+        },
+        {
+          "name": "Refined GitHub",
+          "description": "Simplifies the GitHub interface and adds many useful features",
+          "browser": "firefox",
+          "store_url": "https://addons.mozilla.org/en-US/firefox/addon/refined-github/"
+        },
+        {
+          "name": "Octotree",
+          "description": "GitHub code tree — adds a file tree sidebar for easy navigation",
+          "browser": "chromium",
+          "store_url": "https://chromewebstore.google.com/detail/octotree-github-code-tree/bkhaagjahfmjljalopjnoealnfndnagc"
+        },
+        {
+          "name": "Octotree",
+          "description": "GitHub code tree — adds a file tree sidebar for easy navigation",
+          "browser": "firefox",
+          "store_url": "https://addons.mozilla.org/en-US/firefox/addon/octotree/"
+        }
+      ]
+    },
+    {
+      "app_id": "x-twitter",
+      "app_name": "X / Twitter",
+      "extensions": [
+        {
+          "name": "uBlock Origin",
+          "description": "Efficient ad and tracker blocker — especially effective on X/Twitter",
+          "browser": "chromium",
+          "store_url": "https://chromewebstore.google.com/detail/ublock-origin/cjpalhdlnbpafiamejdnhcphjbkeiagm"
+        },
+        {
+          "name": "uBlock Origin",
+          "description": "Efficient ad and tracker blocker — especially effective on X/Twitter",
+          "browser": "firefox",
+          "store_url": "https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/"
+        }
+      ]
+    }
+  ]
+}
