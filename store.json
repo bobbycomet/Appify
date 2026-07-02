@@ -584,6 +584,13 @@
       "kiosk": false,
       "description": "Anime streaming service"
     },
+    {"id": "anikoto",
+      "name": "Anikoto",
+      "url": "https://anikoto.cz/",
+      "category": "Streaming",
+      "kiosk": false,
+      "description": "Anime streaming service"
+    },
     {
       "id": "plex-web",
       "name": "Plex Web",
@@ -663,14 +670,6 @@
       "category": "Streaming",
       "kiosk": false,
       "description": "Online video editor"
-    },
-    {
-      "id": "animepahe",
-      "name": "AnimePahe",
-      "url": "https://animepahe.ru",
-      "category": "Streaming",
-      "kiosk": false,
-      "description": "Anime streaming site"
     },
     {
       "id": "xbox-cloud-gaming",
