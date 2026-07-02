@@ -4,8 +4,17 @@
   "min_appify_version": "2.3.0",
   "description": "Appify official app and extension catalog",
   "validation": {
-    "required_app_fields": ["id", "name", "url", "category"],
-    "required_extension_fields": ["name", "store_url", "browser"],
+    "required_app_fields": [
+      "id",
+      "name",
+      "url",
+      "category"
+    ],
+    "required_extension_fields": [
+      "name",
+      "store_url",
+      "browser"
+    ],
     "url_scheme": "https",
     "allowed_categories": [
       "AI & Search",
@@ -24,7 +33,11 @@
       "Streaming Tools",
       "Utilities"
     ],
-    "allowed_browser_values": ["chromium", "firefox"]
+    "allowed_browser_values": [
+      "chromium",
+      "firefox"
+    ],
+    "gamepad_note": "Firefox generally has better out-of-the-box gamepad support for cloud gaming. Chromium-based browsers need extra --enable-features=WebHID flags, which Appify adds automatically when gamepad:true is set."
   },
   "apps": [
     {
@@ -596,7 +609,7 @@
       "description": "Hulu streaming service"
     },
     {
-      "id": "max-hbo",
+      "id": "max",
       "name": "Max (HBO)",
       "url": "https://max.com",
       "category": "Streaming",
@@ -666,7 +679,8 @@
       "category": "Cloud Gaming",
       "kiosk": true,
       "gamepad": true,
-      "description": "Microsoft's cloud gaming service — requires Edge or Chromium"
+      "description": "Microsoft's cloud gaming service \u2014 requires Edge or Chromium",
+      "recommended_browser": "chromium"
     },
     {
       "id": "geforce-now",
@@ -675,7 +689,9 @@
       "category": "Cloud Gaming",
       "kiosk": true,
       "browser_override": "firefox",
-      "description": "NVIDIA's cloud gaming service"
+      "description": "NVIDIA's cloud gaming service",
+      "gamepad": true,
+      "recommended_browser": "firefox"
     },
     {
       "id": "amazon-luna",
@@ -684,7 +700,9 @@
       "category": "Cloud Gaming",
       "kiosk": true,
       "browser_override": "firefox",
-      "description": "Amazon's cloud gaming service"
+      "description": "Amazon's cloud gaming service",
+      "gamepad": true,
+      "recommended_browser": "firefox"
     },
     {
       "id": "boosteroid",
@@ -693,7 +711,9 @@
       "category": "Cloud Gaming",
       "kiosk": true,
       "browser_override": "firefox",
-      "description": "Cloud gaming service with broad game library"
+      "description": "Cloud gaming service with broad game library",
+      "gamepad": true,
+      "recommended_browser": "firefox"
     },
     {
       "id": "airgpu",
@@ -702,7 +722,9 @@
       "category": "Cloud Gaming",
       "kiosk": true,
       "browser_override": "firefox",
-      "description": "Cloud GPU gaming service"
+      "description": "Cloud GPU gaming service",
+      "gamepad": true,
+      "recommended_browser": "firefox"
     },
     {
       "id": "photopea",
@@ -726,7 +748,7 @@
       "url": "https://www.clipstudio.net",
       "category": "Art & Design",
       "kiosk": false,
-      "description": "Professional manga and illustration tool — web version"
+      "description": "Professional manga and illustration tool \u2014 web version"
     },
     {
       "id": "sketchfab",
@@ -1414,7 +1436,7 @@
       "url": "https://app.youneedabudget.com",
       "category": "Finance",
       "kiosk": false,
-      "description": "You Need A Budget — personal budgeting tool"
+      "description": "You Need A Budget \u2014 personal budgeting tool"
     },
     {
       "id": "stripe-dashboard",
@@ -1534,13 +1556,13 @@
         },
         {
           "name": "7TV",
-          "description": "Extended emote platform — works on Kick in addition to Twitch",
+          "description": "Extended emote platform \u2014 works on Kick in addition to Twitch",
           "browser": "chromium",
           "store_url": "https://chromewebstore.google.com/detail/7tv/ammjkodgmmoknidbanneddgankgfejfh"
         },
         {
           "name": "7TV",
-          "description": "Extended emote platform — works on Kick in addition to Twitch",
+          "description": "Extended emote platform \u2014 works on Kick in addition to Twitch",
           "browser": "firefox",
           "store_url": "https://addons.mozilla.org/en-US/firefox/addon/7tv/"
         }
@@ -1552,13 +1574,13 @@
       "extensions": [
         {
           "name": "Reddit Enhancement Suite",
-          "description": "Extensive suite of features for browsing Reddit — night mode, inline previews, and more",
+          "description": "Extensive suite of features for browsing Reddit \u2014 night mode, inline previews, and more",
           "browser": "chromium",
           "store_url": "https://chromewebstore.google.com/detail/reddit-enhancement-suite/kbmfpngjjgdllneeigpgjifpgocmfgmb"
         },
         {
           "name": "Reddit Enhancement Suite",
-          "description": "Extensive suite of features for browsing Reddit — night mode, inline previews, and more",
+          "description": "Extensive suite of features for browsing Reddit \u2014 night mode, inline previews, and more",
           "browser": "firefox",
           "store_url": "https://addons.mozilla.org/en-US/firefox/addon/reddit-enhancement-suite/"
         },
@@ -1654,13 +1676,13 @@
         },
         {
           "name": "Octotree",
-          "description": "GitHub code tree — adds a file tree sidebar for easy navigation",
+          "description": "GitHub code tree \u2014 adds a file tree sidebar for easy navigation",
           "browser": "chromium",
           "store_url": "https://chromewebstore.google.com/detail/octotree-github-code-tree/bkhaagjahfmjljalopjnoealnfndnagc"
         },
         {
           "name": "Octotree",
-          "description": "GitHub code tree — adds a file tree sidebar for easy navigation",
+          "description": "GitHub code tree \u2014 adds a file tree sidebar for easy navigation",
           "browser": "firefox",
           "store_url": "https://addons.mozilla.org/en-US/firefox/addon/octotree/"
         }
@@ -1672,13 +1694,67 @@
       "extensions": [
         {
           "name": "uBlock Origin",
-          "description": "Efficient ad and tracker blocker — especially effective on X/Twitter",
+          "description": "Efficient ad and tracker blocker \u2014 especially effective on X/Twitter",
           "browser": "chromium",
           "store_url": "https://chromewebstore.google.com/detail/ublock-origin/cjpalhdlnbpafiamejdnhcphjbkeiagm"
         },
         {
           "name": "uBlock Origin",
-          "description": "Efficient ad and tracker blocker — especially effective on X/Twitter",
+          "description": "Efficient ad and tracker blocker \u2014 especially effective on X/Twitter",
+          "browser": "firefox",
+          "store_url": "https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/"
+        }
+      ]
+    },
+    {
+      "app_id": "notion",
+      "app_name": "Notion",
+      "extensions": [
+        {
+          "name": "Notion Web Clipper",
+          "description": "Save any web page directly to Notion with one click",
+          "browser": "chromium",
+          "store_url": "https://chromewebstore.google.com/detail/notion-web-clipper/knheggckgoiihginacbkhaalnibhilkk"
+        },
+        {
+          "name": "Notion Web Clipper",
+          "description": "Save any web page directly to Notion with one click",
+          "browser": "firefox",
+          "store_url": "https://addons.mozilla.org/en-US/firefox/addon/notion-web-clipper/"
+        }
+      ]
+    },
+    {
+      "app_id": "spotify-web",
+      "app_name": "Spotify Web",
+      "extensions": [
+        {
+          "name": "Dark Reader",
+          "description": "Dark mode for every website \u2014 useful if Spotify's theme causes eye strain",
+          "browser": "chromium",
+          "store_url": "https://chromewebstore.google.com/detail/dark-reader/eimadpbcbfnmbkopoojfekhnkhdbieeh"
+        },
+        {
+          "name": "Dark Reader",
+          "description": "Dark mode for every website \u2014 useful if Spotify's theme causes eye strain",
+          "browser": "firefox",
+          "store_url": "https://addons.mozilla.org/en-US/firefox/addon/darkreader/"
+        }
+      ]
+    },
+    {
+      "app_id": "linkedin",
+      "app_name": "LinkedIn",
+      "extensions": [
+        {
+          "name": "uBlock Origin",
+          "description": "Block LinkedIn ads and tracking scripts",
+          "browser": "chromium",
+          "store_url": "https://chromewebstore.google.com/detail/ublock-origin/cjpalhdlnbpafiamejdnhcphjbkeiagm"
+        },
+        {
+          "name": "uBlock Origin",
+          "description": "Block LinkedIn ads and tracking scripts",
           "browser": "firefox",
           "store_url": "https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/"
         }
