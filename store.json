@@ -677,8 +677,8 @@
       "url": "https://www.xbox.com/play",
       "category": "Cloud Gaming",
       "kiosk": true,
-      "description": "Microsoft's cloud gaming service \u2014 requires firefox for best gamepad experience",
-      "recommended_browser": "frirefox"
+      "description": "Microsoft's cloud gaming service \u2014 requires Firefox for the best gamepad experience",
+      "recommended_browser": "firefox"
     },
     {
       "id": "geforce-now",
