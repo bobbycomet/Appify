@@ -679,8 +679,8 @@
       "category": "Cloud Gaming",
       "kiosk": true,
       "gamepad": true,
-      "description": "Microsoft's cloud gaming service \u2014 requires Edge or Chromium",
-      "recommended_browser": "chromium"
+      "description": "Microsoft's cloud gaming service \u2014 requires firefox for best gamepad experience",
+      "recommended_browser": "frirefox"
     },
     {
       "id": "geforce-now",
