@@ -678,7 +678,6 @@
       "url": "https://www.xbox.com/play",
       "category": "Cloud Gaming",
       "kiosk": true,
-      "gamepad": true,
       "description": "Microsoft's cloud gaming service \u2014 requires firefox for best gamepad experience",
       "recommended_browser": "frirefox"
     },
@@ -690,7 +689,6 @@
       "kiosk": true,
       "browser_override": "firefox",
       "description": "NVIDIA's cloud gaming service",
-      "gamepad": true,
       "recommended_browser": "firefox"
     },
     {
@@ -701,7 +699,6 @@
       "kiosk": true,
       "browser_override": "firefox",
       "description": "Amazon's cloud gaming service",
-      "gamepad": true,
       "recommended_browser": "firefox"
     },
     {
@@ -712,7 +709,6 @@
       "kiosk": true,
       "browser_override": "firefox",
       "description": "Cloud gaming service with broad game library",
-      "gamepad": true,
       "recommended_browser": "firefox"
     },
     {
@@ -723,7 +719,6 @@
       "kiosk": true,
       "browser_override": "firefox",
       "description": "Cloud GPU gaming service",
-      "gamepad": true,
       "recommended_browser": "firefox"
     },
     {
