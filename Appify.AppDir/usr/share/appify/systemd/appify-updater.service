@@ -1,0 +1,7 @@
+[Unit]
+Description=Appify Updater Service
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/appify-updater.sh

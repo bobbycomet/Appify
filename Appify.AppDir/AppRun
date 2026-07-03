@@ -1,0 +1,128 @@
+#!/bin/bash
+set -euo pipefail
+
+# =====================================
+# Appify AppRun
+# =====================================
+# Entry point for the Appify AppImage. On first run (or whenever the bundled
+# copies are newer than what's on disk) it stages the self-updater
+# infrastructure onto the real filesystem:
+#   usr/local/bin/appify-updater.sh              -> /usr/local/bin/
+#   usr/local/bin/appify-set-update-interval.sh   -> /usr/local/bin/
+#   usr/share/appify/systemd/appify-updater.service -> /etc/systemd/system/
+#   usr/share/appify/systemd/appify-updater.timer   -> /etc/systemd/system/
+# using the same pkexec-safe "build in /tmp, then atomic cp" pattern as the
+# rest of the Griffin tools. It then enables the timer and hands off to the
+# main Appify app.
+
+HERE="$(dirname "$(readlink -f "${0}")")"
+export APPDIR="${HERE}"
+
+BIN_SRC_DIR="${HERE}/usr/local/bin"
+SYSTEMD_SRC_DIR="${HERE}/usr/share/appify/systemd"
+
+BIN_DEST_DIR="/usr/local/bin"
+SYSTEMD_DEST_DIR="/etc/systemd/system"
+
+MARKER_DIR="${HOME}/.local/share/appify"
+MARKER_FILE="${MARKER_DIR}/.updater-installed"
+
+mkdir -p "${MARKER_DIR}" 2>/dev/null || true
+
+# =====================================
+# Helper: does the source file differ from (or simply not exist at) dest?
+# =====================================
+needs_install() {
+    local src="$1"
+    local dest="$2"
+    [ ! -f "$dest" ] && return 0
+    ! cmp -s "$src" "$dest"
+}
+
+# =====================================
+# Stage the updater scripts + systemd units onto the real filesystem.
+# Only touches disk (and only prompts for a password) when something is
+# actually missing or out of date, so normal launches stay silent.
+# =====================================
+install_updater_infra() {
+    local files_to_stage=()
+    local dest_paths=()
+
+    if needs_install "${BIN_SRC_DIR}/appify-updater.sh" "${BIN_DEST_DIR}/appify-updater.sh"; then
+        files_to_stage+=("${BIN_SRC_DIR}/appify-updater.sh")
+        dest_paths+=("${BIN_DEST_DIR}/appify-updater.sh")
+    fi
+    if needs_install "${BIN_SRC_DIR}/appify-set-update-interval.sh" "${BIN_DEST_DIR}/appify-set-update-interval.sh"; then
+        files_to_stage+=("${BIN_SRC_DIR}/appify-set-update-interval.sh")
+        dest_paths+=("${BIN_DEST_DIR}/appify-set-update-interval.sh")
+    fi
+    if needs_install "${SYSTEMD_SRC_DIR}/appify-updater.service" "${SYSTEMD_DEST_DIR}/appify-updater.service"; then
+        files_to_stage+=("${SYSTEMD_SRC_DIR}/appify-updater.service")
+        dest_paths+=("${SYSTEMD_DEST_DIR}/appify-updater.service")
+    fi
+    if needs_install "${SYSTEMD_SRC_DIR}/appify-updater.timer" "${SYSTEMD_DEST_DIR}/appify-updater.timer"; then
+        files_to_stage+=("${SYSTEMD_SRC_DIR}/appify-updater.timer")
+        dest_paths+=("${SYSTEMD_DEST_DIR}/appify-updater.timer")
+    fi
+
+    if [ "${#files_to_stage[@]}" -eq 0 ]; then
+        return 0
+    fi
+
+    if ! command -v pkexec &>/dev/null; then
+        echo "⚠️  pkexec not found; skipping install of the Appify self-updater." >&2
+        return 0
+    fi
+
+    echo "Setting up the Appify self-updater (first run, or an update is available)..."
+
+    local i
+    for i in "${!files_to_stage[@]}"; do
+        local src="${files_to_stage[$i]}"
+        local dest="${dest_paths[$i]}"
+        local tmp
+        tmp=$(mktemp "/tmp/appify-stage.XXXXXX")
+        cp "$src" "$tmp"
+        chmod 644 "$tmp"
+        if ! pkexec cp "$tmp" "$dest"; then
+            echo "⚠️  Failed to install $dest (continuing)." >&2
+            rm -f "$tmp"
+            continue
+        fi
+        rm -f "$tmp"
+
+        case "$dest" in
+            "${BIN_DEST_DIR}"/*)
+                pkexec chmod 755 "$dest" || true
+                ;;
+            "${SYSTEMD_DEST_DIR}"/*)
+                pkexec chmod 644 "$dest" || true
+                ;;
+        esac
+    done
+
+    if pkexec systemctl daemon-reload 2>/dev/null; then
+        pkexec systemctl enable --now appify-updater.timer 2>/dev/null || \
+            echo "⚠️  Could not enable appify-updater.timer (continuing)." >&2
+    fi
+
+    touch "${MARKER_FILE}"
+}
+
+# Only attempt the install if the bundled updater files actually exist in
+# this AppDir (keeps AppRun safe to reuse even if they're ever left out).
+if [ -d "${BIN_SRC_DIR}" ] && [ -d "${SYSTEMD_SRC_DIR}" ]; then
+    install_updater_infra
+fi
+
+# =====================================
+# Launch the actual application
+# =====================================
+export PATH="${HERE}/usr/bin:${HERE}/usr/local/bin:${PATH}"
+
+if [ -x "${HERE}/usr/bin/appify" ]; then
+    exec "${HERE}/usr/bin/appify" "$@"
+else
+    echo "❌ Could not find the Appify executable at ${HERE}/usr/bin/appify" >&2
+    exit 1
+fi

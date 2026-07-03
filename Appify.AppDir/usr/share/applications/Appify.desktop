@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Appify
+GenericName=Web App Manager
+Comment=Install and manage web apps as native-feeling desktop apps
+Exec=AppRun %U
+Icon=appify
+Categories=Utility;Network;
+Terminal=false
+StartupNotify=true
