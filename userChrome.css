@@ -1,0 +1,94 @@
+/* ================================================================
+   userChrome.css — Minimal "app-like" Firefox UI
+   ----------------------------------------------------------------
+   Visible after this:
+     - Back button
+     - Forward button
+     - Reload / Stop button
+     - App menu (hamburger ☰ — this is where Settings lives)
+     - Window controls (minimize / maximize-fullscreen / close)
+
+   Hidden:
+     - Tab bar
+     - Menu bar (File/Edit/View/...)
+     - Bookmarks toolbar
+     - Address bar / search bar
+     - Every other nav-bar button (downloads, extensions,
+       sidebar, PiP, etc.)
+   ================================================================ */
+
+/* --- Tab bar & window controls -------------------------------- */
+/* Keep #TabsToolbar itself intact — collapsing the whole toolbar
+   also zeroes out its child button box, which is why the window
+   controls disappeared before. Instead, hide only the tab strip
+   contents (tabs, new-tab button, etc.) and leave the toolbar
+   container in place so the window controls still have room to
+   render.
+   NOTE: On macOS the traffic-light buttons are drawn by the OS,
+   not Firefox, so they'll already stay visible regardless. */
+#TabsToolbar {
+  visibility: visible !important;
+  min-height: 33px !important;
+}
+
+#tabbrowser-tabs,
+#new-tab-button,
+#tabs-newtab-button,
+#alltabs-button,
+#firefox-view-button {
+  visibility: collapse !important;
+  display: none !important;
+}
+
+.titlebar-buttonbox-container,
+.titlebar-buttonbox,
+.titlebar-button {
+  visibility: visible !important;
+}
+
+/* --- Menu bar (File/Edit/View...) ------------------------------ */
+#toolbar-menubar {
+  visibility: collapse !important;
+}
+
+/* --- Bookmarks toolbar ------------------------------------------ */
+#PersonalToolbar {
+  visibility: collapse !important;
+}
+
+/* --- Address bar / search bar ----------------------------------- */
+#urlbar-container,
+#search-container {
+  display: none !important;
+}
+
+/* --- Nav-bar: keep ONLY back, forward, reload, app menu --------- */
+#nav-bar .toolbarbutton-1:not(#back-button):not(#forward-button):not(#stop-reload-button):not(#PanelUI-button) {
+  display: none !important;
+}
+
+/* Hide the overflow chevron (">>") if extra buttons try to spill over */
+#nav-bar-overflow-button {
+  display: none !important;
+}
+
+/* Clean up leftover separators/springs so there's no dead space
+   where hidden buttons used to be */
+#nav-bar toolbarseparator,
+#nav-bar toolbarspring,
+#nav-bar toolbarpaletteitem > toolbarseparator {
+  display: none !important;
+}
+
+/* --- Cosmetic tightening for an app-like feel -------------------- */
+#nav-bar {
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
+  box-shadow: none !important;
+  border-bottom: none !important;
+}
+
+/* Remove the little gap the collapsed tab bar can leave behind */
+#titlebar {
+  margin-bottom: 0 !important;
+}

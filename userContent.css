@@ -1,0 +1,18 @@
+/* ================================================================
+   userContent.css
+   ----------------------------------------------------------------
+   This file styles *web page content* and Firefox's internal pages
+   (about:newtab, about:blank, PDF viewer, reader view, etc.) — it
+   has no effect on toolbar buttons, tabs, or the address bar.
+   That's all handled in userChrome.css.
+
+   Left empty on purpose. Add rules below only if you also want to
+   restyle things like the New Tab page. Example (disabled by
+   default — remove the /* */ to use):
+
+   @-moz-document url("about:newtab") {
+     .top-sites, .thumbs-down, .search-wrapper {
+       display: none !important;
+     }
+   }
+*/
