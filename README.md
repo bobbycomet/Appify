@@ -17,7 +17,7 @@
 [![Latest Release](https://img.shields.io/badge/release-v3.0.0-blue)](https://github.com/bobbycomet/Appify/releases/tag/v3.0.0)
 [![Part of Griffin Linux](https://img.shields.io/badge/project-Griffin%20Linux-purple)](https://bobbycomet.github.io/Griffin-Linux-Landing-Page/)
 
-[Video Showcase](https://youtu.be/sCyWKTz_7Go?si=bcjcPYgJ3QqXZH2N) | [Full Comparison Table](https://bobbycomet.github.io/Appify/) | [Discord](https://discord.gg/7fEt5W7DPh)
+[Video Showcase](https://youtu.be/Ql2JzdyAA6M?si=vyLsMP9mZxMolYvI) | [Full Comparison Table](https://bobbycomet.github.io/Appify/) | [Discord](https://discord.gg/7fEt5W7DPh)
 
 ### The Old VS New Look
 
