@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "generated_date": "2026-07-01",
-  "min_appify_version": "2.3.0",
+  "min_appify_version": "3.0.0",
   "description": "Appify official app and extension catalog",
   "validation": {
     "required_app_fields": [
