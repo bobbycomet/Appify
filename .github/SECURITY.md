@@ -6,8 +6,8 @@ Only the latest stable release of Appify receives security fixes. Please update 
 
 | Version | Supported |
 |---|---|
-| 2.1.3 (latest) | ✅ |
-| 2.0.x | ❌ |
+| 3.x (latest) | ✅ |
+| 2.x | ❌ |
 | 1.x | ❌ |
 
 ---
@@ -29,7 +29,7 @@ A useful report contains:
 2. **Affected file and location** — which script or function is involved
 3. **Steps to reproduce** — a clear, minimal set of steps that trigger the issue
 4. **Proof of concept** — a script, command, or screenshot demonstrating the vulnerability
-5. **Upstream check** — does this issue exist in a dependency (GTK, Python stdlib, curl) rather than in Appify itself?
+5. **Upstream check** — does this issue exist in a dependency (PyQt6, Python stdlib, curl) rather than in Appify itself?
 
 The more detail you provide, the faster the issue can be triaged and fixed.
 
@@ -43,7 +43,7 @@ Appify is a solo open-source project and does not currently offer financial boun
 
 ## Security Architecture
 
-The following is a summary of the security measures built into Appify 2.1.0. This context may be useful when evaluating whether a behaviour is a bug or a known limitation.
+The following is a summary of the security measures built into Appify 3.0+. This context may be useful when evaluating whether a behaviour is a bug or a known limitation.
 
 ### File Operations
 
@@ -70,7 +70,7 @@ The following is a summary of the security measures built into Appify 2.1.0. Thi
 
 - **Magic-byte validation** — after downloading an icon, Appify reads the first 8 bytes of the file and confirms they match a known image format (PNG, JPEG, GIF, ICO, BMP, or WebP). Files that fail this check are deleted rather than kept.
 - **File size cap** — icon downloads are capped at 2 MB via `curl --max-filesize`. Files exceeding this limit are refused.
-- **Protocol restriction** — `curl` is invoked with `--proto https,http`, preventing `file://`, `ftp://`, and other schemes from being used even if a malicious redirect attempts it.
+- **Protocol restriction** — `curl` is invoked with `--proto https,http`, preventing `file://`, `ftp://`, and other schemes from being used even if a malicious redirect attempts to use them.
 
 ### Extension Store URLs
 
@@ -84,7 +84,25 @@ addons.opera.com
 workspace.google.com
 ```
 
-Any URL whose host does not match this allowlist is skipped and a warning is written to the log.
+Any URL whose host does not match this allowlist is skipped, and a warning is written to the log.
+
+### Adding Allowlisted URLs
+
+To protect users against malicious links, changes to `state.json` are strictly protected by `CODEOWNERS`. Any modifications to the allowlist require manual review and approval before they can be merged.
+
+If you would like to request a new site or extension store domain be added to the default configuration, you can do so in one of two ways:
+
+1. **Discord (Easiest):** Drop your suggestion in our Discord's [#feature-request](https://discord.gg/QtfBPYXTCN) channel. This is the preferred method for quick, casual requests.
+2. **GitHub Pull Request:** You can submit a PR modifying `state.json` directly. Please note that PRs are entirely public; if you prefer to keep a submission private until it is verified, please use the Discord route instead.
+
+**Submission Requirements (For Security & Safety):**
+To prevent bad actors from posting malicious links that could lead to session hijacking or token theft, **do not post raw, clickable URLs**. Instead, provide:
+
+-   **The exact domain name in plain text or code tags** (e.g., `domain [dot] com` or \`domain.com\`).
+-   **The site's purpose** — a brief explanation of what the site is used for.
+-   **Search context (SEO navigation)** — if the site shares a name with other common platforms, provide the specific search terms needed to find the official, authentic site.
+
+All requested domains will be manually verified for safety before being included in a future Appify 3.x release.
 
 ### Known Limitations
 
