@@ -1439,6 +1439,14 @@
       "category": "Finance",
       "kiosk": false,
       "description": "Stripe payment processing dashboard"
+    },
+    {
+      "id": "streamladder",
+      "name": "Streamladder",
+      "url": "https://streamladder.com/",
+      "category": "Streaming Tools",
+      "kiosk": false,
+      "description": "Stream clip creation and editing"
     }
   ],
   "extension_presets": [
