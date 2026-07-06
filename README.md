@@ -20,16 +20,12 @@
 [Video Showcase](https://youtu.be/Ql2JzdyAA6M?si=vyLsMP9mZxMolYvI) | [Full Comparison Table](https://bobbycomet.github.io/Appify/) | [Discord](https://discord.gg/7fEt5W7DPh)
 
 Tools that pair best with Appify:
-
-</div>
-
-
 [Griffin Updater](https://github.com/bobbycomet/GriffinUpdater) This will download and continuously update all of my tools without needing to go into GitHub.
+
 [Sentry](https://github.com/bobbycomet/Process-Sentry) This has flags so as not to slow down any Appified apps.
+
 [Kernel Autotune](https://github.com/bobbycomet/kernel-autotune-V2) Tunes your system for performance. Compliments both Sentry and Appify.
 
-
-<div align="center">
 ### The Old VS New Look
   
 </div>
