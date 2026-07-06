@@ -14,10 +14,16 @@
 
 **Upgrading from an older version? If you run into migration issues, check the [FAQs](https://github.com/bobbycomet/Appify/wiki/FAQs) and [Debugging](https://github.com/bobbycomet/Appify/wiki/How-to-debug) pages.**
 
-[![Latest Release](https://img.shields.io/badge/release-v3.0.0-blue)](https://github.com/bobbycomet/Appify/releases/tag/v3.0.0)
+[![Latest Release](https://img.shields.io/badge/release-v3.0.1-blue)](https://github.com/bobbycomet/Appify/releases/tag/v3.0.1)
 [![Part of Griffin Linux](https://img.shields.io/badge/project-Griffin%20Linux-purple)](https://bobbycomet.github.io/Griffin-Linux-Landing-Page/)
 
 [Video Showcase](https://youtu.be/Ql2JzdyAA6M?si=vyLsMP9mZxMolYvI) | [Full Comparison Table](https://bobbycomet.github.io/Appify/) | [Discord](https://discord.gg/7fEt5W7DPh)
+
+Tools that pair best with Appify:
+
+[Griffin Updater](https://github.com/bobbycomet/GriffinUpdater) This will download and continuously update all of my tools without needing to go into GitHub.
+[Sentry](https://github.com/bobbycomet/Process-Sentry) This has flags so as not to slow down any Appified apps.
+[Kernel Autotune](https://github.com/bobbycomet/kernel-autotune-V2) Tunes your system for performance. Compliments both Sentry and Appify.
 
 ### The Old VS New Look
 
@@ -147,13 +153,13 @@ For GeForce NOW, Amazon Luna, Boosteroid, and AirGPU, Appify defaults those entr
 
 ## Downloading and Installing
 
-**Latest version: 3.0.0**
+**Latest version: 3.0.1**
 
 **Debian/Ubuntu/Linux Mint/Pop!_OS and other Debian-based distros:**
 
 ```
-wget https://github.com/bobbycomet/Appify/releases/download/v3.0.0/Appify-3.0.0.deb
-sudo dpkg -i Appify-3.0.0.deb
+wget https://github.com/bobbycomet/Appify/releases/download/v3.0.0/Appify-3.0.1.deb
+sudo dpkg -i Appify-3.0.1.deb
 sudo apt-get install -f
 ```
 
@@ -162,12 +168,12 @@ Or open the `.deb` file with your software manager directly. Gdebi is also a sol
 **All other distros (Arch, Fedora, openSUSE, NixOS, etc.) and portable use:**
 
 ```
-https://github.com/bobbycomet/Appify/releases/download/v3.0.0/Appify-3.0.0-x86_64.AppImage
+https://github.com/bobbycomet/Appify/releases/download/v3.0.0/Appify-3.0.1-x86_64.AppImage
 ```
 
 ```
-chmod +x Appify-3.0.0-x86_64.AppImage
-./Appify-3.0.0-x86_64.AppImage
+chmod +x Appify-3.0.1-x86_64.AppImage
+./Appify-3.0.1-x86_64.AppImage
 ```
 
 You can move the AppImage anywhere you like, and it will run from there. No installation required. Once running, you can also point Appify at itself: open **☰ Menu → Update Settings…** to check for future updates or set up automatic checks, and Appify will keep updating in place — the AppImage overwrites itself at whatever path you originally put it, and the `.deb` upgrades through `apt`.
