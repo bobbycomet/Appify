@@ -287,4 +287,10 @@ For Firefox specifically, Appify writes a `user.js` to the profile directory tha
 - **Patreon (Beta Builds):** [Patreon](https://www.patreon.com/c/BobbyComet/membership)
 - **Support the Griffin Project:** [Ko-fi](https://ko-fi.com/bobby60908)
 
+<div align="center">
+  <img src="https://raw.githubusercontent.com/bobbycomet/Appify/main/Griffin-G.png" alt="Griffin Linux" width="15%"/>
+  <p><strong>Griffin Linux. Where power meets simplicity.</strong><br/>
+  Made with Windows switchers in mind. Built for everyone who wants a better PC.</p>
+</div>
+
 Appify is part of the [Griffin Linux project](https://bobbycomet.github.io/Griffin-Linux-Landing-Page/). The name Appify, the Griffin Linux name, and associated icons are protected under the GPLv3 to preserve the integrity of the branding in all distributed versions.
