@@ -281,6 +281,16 @@ For Firefox specifically, Appify writes a `user.js` to the profile directory tha
 
 ---
 
+Appify is licensed under the GPLv3, and forks and derivative projects are welcome.
+
+If you build on XKM, please:
+
+- Keep the GPLv3 license terms intact.
+- Give appropriate credit to the original Appify project.
+- Include a link back to this repository where practical.
+
+If you're building something cool with it, I'd love to hear about it!
+
 ## Community and Support
 
 - **Discord:** [Join Here](https://discord.gg/7fEt5W7DPh)
@@ -293,4 +303,6 @@ For Firefox specifically, Appify writes a `user.js` to the profile directory tha
   Made with Windows switchers in mind. Built for everyone who wants a better PC.</p>
 </div>
 
-Appify is part of the [Griffin Linux project](https://bobbycomet.github.io/Griffin-Linux-Landing-Page/). The name Appify, the Griffin Linux name, and associated icons are protected under the GPLv3 to preserve the integrity of the branding in all distributed versions.
+The Appify and Griffin Linux names, logos, and branding are not covered by the GPL license and may not be used to imply endorsement 
+or official affiliation without permission. Forks are encouraged, but please rename and rebrand modified versions unless you've 
+received permission to use the original branding.
