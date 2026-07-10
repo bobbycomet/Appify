@@ -283,7 +283,7 @@ For Firefox specifically, Appify writes a `user.js` to the profile directory tha
 
 Appify is licensed under the GPLv3, and forks and derivative projects are welcome.
 
-If you build on XKM, please:
+If you build on Appify, please:
 
 - Keep the GPLv3 license terms intact.
 - Give appropriate credit to the original Appify project.
