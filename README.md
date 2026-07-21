@@ -160,8 +160,8 @@ For GeForce NOW, Amazon Luna, Boosteroid, and AirGPU, Appify defaults those entr
 **Debian/Ubuntu/Linux Mint/Pop!_OS and other Debian-based distros:**
 
 ```
-wget https://github.com/bobbycomet/Appify/releases/download/v3.0.0/Appify-3.0.1.deb
-sudo dpkg -i Appify-3.0.1.deb
+wget https://github.com/bobbycomet/Appify/releases/download/v3.0.1-1/appify-3.0.1-1.deb
+sudo dpkg -i appify-3.0.1-1.deb
 sudo apt-get install -f
 ```
 
@@ -170,12 +170,12 @@ Or open the `.deb` file with your software manager directly. Gdebi is also a sol
 **All other distros (Arch, Fedora, openSUSE, NixOS, etc.) and portable use:**
 
 ```
-https://github.com/bobbycomet/Appify/releases/download/v3.0.0/Appify-3.0.1-x86_64.AppImage
+wget https://github.com/bobbycomet/Appify/releases/download/v3.0.1-1/Appify3.0.1-1.AppImage
 ```
 
 ```
-chmod +x Appify-3.0.1-x86_64.AppImage
-./Appify-3.0.1-x86_64.AppImage
+chmod +x Appify3.0.1-1.AppImage
+./Appify3.0.1-1.AppImage
 ```
 
 You can move the AppImage anywhere you like, and it will run from there. No installation required. Once running, you can also point Appify at itself: open **☰ Menu → Update Settings…** to check for future updates or set up automatic checks, and Appify will keep updating in place — the AppImage overwrites itself at whatever path you originally put it, and the `.deb` upgrades through `apt`.
