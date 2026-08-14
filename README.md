@@ -12,6 +12,8 @@
 
 **3.0 is here: a full PyQt6 rewrite, the Griffin Dark Theme, and a much deeper set of options. See Why 3.0? below.**
 
+**3.0.2 fixes the error in Chromium browsers, where a recent browser update broke the ability to type.**
+
 **Upgrading from an older version? If you run into migration issues, check the [FAQs](https://github.com/bobbycomet/Appify/wiki/FAQs) and [Debugging](https://github.com/bobbycomet/Appify/wiki/How-to-debug) pages.**
 
 [![Latest Release](https://img.shields.io/badge/release-v3.0.1-blue)](https://github.com/bobbycomet/Appify/releases/tag/v3.0.1)
