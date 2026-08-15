@@ -14,6 +14,8 @@
 
 **3.0.2 fixes the error in Chromium browsers, where a recent browser update broke the ability to type.**
 
+>**NOTE:** If you are having issues watching YouTube on a Chromium browser, it might be the extensions you use. Pie AdBlocker and Return the dislike seem to have issues with the --app flag. Suggestion: Use Brave for ad blocking and do not use those extensions. This is the same class issue that was found in 3.0.1-1. I will be looking to see if there is a fix. Otherwise, we have to wait for a fix from those extension developers.
+
 **Upgrading from an older version? If you run into migration issues, check the [FAQs](https://github.com/bobbycomet/Appify/wiki/FAQs) and [Debugging](https://github.com/bobbycomet/Appify/wiki/How-to-debug) pages.**
 
 [![Latest Release](https://img.shields.io/badge/release-v3.0.1-blue)](https://github.com/bobbycomet/Appify/releases/tag/v3.0.1)
