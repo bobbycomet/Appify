@@ -198,7 +198,6 @@ Everything that worked in 2.x continues to work in 3.x. **This is a rebuild of t
 
 ### Known Issues in 3.0
 
-* Toolbar icons and menu buttons can appear slightly smaller than intended under the Griffin Dark Theme. This is a cosmetic GTK4 → PyQt6 rendering difference and has no functional impact.
 * Xbox Cloud Gaming has a third-party gamepad limitation in Chromium-based browsers. This is upstream behavior from Xbox Cloud Gaming itself and is not something Appify can currently work around. See the Cloud Gaming section below for more information.
 
 ---
