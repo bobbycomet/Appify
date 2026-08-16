@@ -8,7 +8,7 @@
 
 **Three clicks to install apps from the catalog.**
 
-Appify is a Linux web-app manager that lets you pick from a catalog of **175+ popular services**, choose the browser you already use, and turn the service into an isolated desktop app in three clicks — with deep customization available when you want it.
+Appify is a Linux web-app manager that lets you pick from a catalog of **175+ popular services**, choose the browser you already use, and turn the service into an isolated desktop app in three clicks, with deep customization available when you want it.
 
 **Appify 3.0 is here:** a full PyQt6 rewrite, the Griffin Dark Theme, and a much deeper set of management and customization options.
 
