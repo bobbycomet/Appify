@@ -12,9 +12,7 @@
 
 **3.0 is here: a full PyQt6 rewrite, the Griffin Dark Theme, and a much deeper set of options. See Why 3.0? below.**
 
-**3.0.2 fixes the error in Chromium browsers, where a recent browser update broke the ability to type.**
-
->**NOTE:** If you are having issues watching YouTube on a Chromium browser, it might be the extensions you use. Pie AdBlocker and Return the dislike seem to have issues with the --app flag. Suggestion: Use Brave for ad blocking and do not use those extensions. This is the same class issue that was found in 3.0.1-1. I will be looking to see if there is a fix. Otherwise, we have to wait for a fix from those extension developers.
+**3.0.3 fixes the error in Chromium browsers, where a recent browser update broke the ability to type. Fixes the endless YouTube buffering when the Return YouTube Dislike extension is installed; the same issue that came from the same browser update. Added Brave/release/beta/nightly and the same with Brave Origin support (this detects commands, so if you upgraded from Brave to Origin, it will use the correct command, as the internal identity does not change from brave-browser). Firefox also now has the expanded family support, including Beta/Nightly/Dev/ESR. Just use the hamburger menu and click regenerate all wrappers for the fixes.**
 
 **Upgrading from an older version? If you run into migration issues, check the [FAQs](https://github.com/bobbycomet/Appify/wiki/FAQs) and [Debugging](https://github.com/bobbycomet/Appify/wiki/How-to-debug) pages.**
 
