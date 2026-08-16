@@ -16,7 +16,7 @@
 
 **Upgrading from an older version? If you run into migration issues, check the [FAQs](https://github.com/bobbycomet/Appify/wiki/FAQs) and [Debugging](https://github.com/bobbycomet/Appify/wiki/How-to-debug) pages.**
 
-[![Latest Release](https://img.shields.io/badge/release-v3.0.1-blue)](https://github.com/bobbycomet/Appify/releases/tag/v3.0.1)
+[![Latest Release](https://img.shields.io/badge/release-v3.0.3-blue)](https://github.com/bobbycomet/Appify/releases/tag/v3.0.3)
 [![Part of Griffin Linux](https://img.shields.io/badge/project-Griffin%20Linux-purple)](https://bobbycomet.github.io/Griffin-Linux-Landing-Page/)
 
 [Video Showcase](https://youtu.be/Ql2JzdyAA6M?si=vyLsMP9mZxMolYvI) | [Full Comparison Table](https://bobbycomet.github.io/Appify/) | [Discord](https://discord.gg/7fEt5W7DPh)
