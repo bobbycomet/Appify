@@ -170,7 +170,7 @@ While the interface was being rebuilt, 3.0 also added several features users had
 * **App sorting** — sort by Name, Category, Recently Used, or Installed First
 * **Bulk installation** — install an entire category at once
 * **Bulk backups** — back up the entire installed library in one operation
-* **Self-updating** — check for Appify updates manually or automatically
+* **Self-updating through Griffin Updater** — check for Appify updates manually or automatically
 * **One-click launching** — launch installed apps directly from Appify
 * **Data-driven app catalog** — new catalog entries can be added through `store.json` without waiting for an Appify release
 * **Firefox CSS support** — optionally apply `userChrome.css` and `userContent.css`
@@ -758,7 +758,7 @@ Only CSS is supported. Layouts requiring `.js` files will not be fully applied.
 
 Appify checks the GitHub Releases API during startup using a background thread. If a newer stable release is available, Appify displays an update notification.
 
-The update manager detects whether Appify is running from a `.deb` installation or an AppImage. The detection uses `dpkg` for Debian installations and `$APPIMAGE` for AppImage installations.
+The Griffin updater detects whether Appify is running from a `.deb` installation or an AppImage. The detection uses `dpkg` for Debian installations and `$APPIMAGE` for AppImage installations.
 
 The updater can then download and install the appropriate release.
 
