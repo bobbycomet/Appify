@@ -445,7 +445,7 @@ The catalog currently contains **175+ applications** spanning the categories lis
 ## Debian / Ubuntu / Linux Mint / Pop!_OS and Other Debian-Based Distros
 
 ```bash
-wget https://github.com/bobbycomet/Appify/releases/download/v3.0.1-1/appify_3.0.3.deb
+wget https://github.com/bobbycomet/Appify/releases/download/v3.0.3/appify_3.0.3.deb
 sudo dpkg -i appify_3.0.3.deb
 sudo apt-get install -f
 ```
@@ -457,7 +457,7 @@ You can also open the `.deb` file directly with your software manager. GDebi is 
 For Arch, Fedora, openSUSE, NixOS, and other distributions, use the AppImage:
 
 ```bash
-wget https://github.com/bobbycomet/Appify/releases/download/v3.0.1-1/Appify-3.0.3-x86_64.AppImage
+wget https://github.com/bobbycomet/Appify/releases/download/v3.0.3/Appify-3.0.3-x86_64.AppImage
 ```
 
 Then:
