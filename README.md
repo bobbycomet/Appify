@@ -42,6 +42,8 @@ Appify is part of the larger [Griffin Linux project](https://bobbycomet.github.i
 | **Browser Built-in "Install App"** | Open browser → navigate to site → Menu → Install            | Poor          | None           | 60–90 seconds                                                                     | Quick, but generally shares the browser's main profile          |
 | **Nativefier / CLI Tools**         | Install dependencies → run commands → configure flags       | **Excellent** | **Very High**  | 2–5+ minutes                                                                       | Powerful, but manual and heavier                                |
 
+>**NOTE:** This chart is not to say, "Appify is better." Appify doesn't try to eliminate the simpler tools or replace the more powerful ones. It sits between them: a simple installation experience with deeper control available when you need it.
+
 Appify's goal isn't to expose every option during installation. The normal path is intentionally simple:
 
 > **Find → Browser → Install**
