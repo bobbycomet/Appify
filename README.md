@@ -12,7 +12,7 @@ Appify is a Linux web-app manager that lets you pick from a catalog of **175+ po
 
 **Appify 3.0 is here:** a full PyQt6 rewrite, the Griffin Dark Theme, and a much deeper set of management and customization options.
 
-[![Latest Release](https://img.shields.io/badge/release-v3.0.3-blue)](https://github.com/bobbycomet/Appify/releases/tag/v3.0.3)
+[![Latest Release](https://img.shields.io/badge/release-v3.0.4-blue)](https://github.com/bobbycomet/Appify/releases/tag/v3.0.4)
 [![Part of Griffin Linux](https://img.shields.io/badge/project-Griffin%20Linux-purple)](https://bobbycomet.github.io/Griffin-Linux-Landing-Page/)
 
 [Video Showcase](https://youtu.be/Ql2JzdyAA6M?si=vyLsMP9mZxMolYvI) | [Full Comparison Table](https://bobbycomet.github.io/Appify/) | [Discord](https://discord.gg/7fEt5W7DPh) | [Browser Support Philosophy](https://github.com/bobbycomet/Appify/wiki/Browser-Support-Philosophy)
