@@ -197,6 +197,7 @@ Everything that worked in 2.x continues to work in 3.x. **This is a rebuild of t
 | **Firefox extension store**  | Could falsely report Firefox as already running  | Reliably opens the existing Firefox window or starts a new one                     |
 | **Firefox appearance**       | Not supported                                    | Optional `userChrome.css` / `userContent.css` support                              |
 | **Browser support**          | Existing browser families                        | Expanded Brave and Firefox family support                                          |
+| **Remove navigation bar**    | Firefox apps                                     |Can optionally hide tabs, the address bar, bookmarks toolbar, menu bar, etc.        |
 
 ### Known Issues in 3.0
 
