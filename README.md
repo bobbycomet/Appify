@@ -123,6 +123,9 @@ You can also add your own sites when something isn't already in the catalog.
 
 The goal is simple: **you shouldn't have to think about how to make a web app. You should only have to decide which web app you want.**
 
+<details>
+<summary>Optional Features</summary>
+
 ---
 
 # Optional Features
@@ -405,9 +408,8 @@ Griffin Updater is the recommended tool to update, but if you prefer the in-app 
 
 Use this command:
 
-```
+```text
 ./Appify-3.0.4-x86_64.AppImage --install
-
 ```
 
 This adds the polkit and helper.
@@ -442,7 +444,7 @@ A single `pkexec` prompt is used to authorize the system-level installation. The
 
 To remove (this does not remove any apps you installed):
 
-```
+```text
 ./Appify-3.0.4-x86_64.AppImage --uninstall
 ```
 
@@ -618,8 +620,6 @@ When a custom icon is selected, Appify stores it in the application's icon slot 
 Selecting **Reset to Auto** removes the custom icon setting and allows Appify to download the favicon again.
 
 ---
-
-<details>
 
 # Technical Details
 
