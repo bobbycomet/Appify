@@ -15,7 +15,7 @@ Appify is a Linux web-app manager that lets you pick from a catalog of **175+ po
 [![Latest Release](https://img.shields.io/badge/release-v3.0.3-blue)](https://github.com/bobbycomet/Appify/releases/tag/v3.0.3)
 [![Part of Griffin Linux](https://img.shields.io/badge/project-Griffin%20Linux-purple)](https://bobbycomet.github.io/Griffin-Linux-Landing-Page/)
 
-[Video Showcase](https://youtu.be/Ql2JzdyAA6M?si=vyLsMP9mZxMolYvI) | [Full Comparison Table](https://bobbycomet.github.io/Appify/) | [Discord](https://discord.gg/7fEt5W7DPh)
+[Video Showcase](https://youtu.be/Ql2JzdyAA6M?si=vyLsMP9mZxMolYvI) | [Full Comparison Table](https://bobbycomet.github.io/Appify/) | [Discord](https://discord.gg/7fEt5W7DPh) | [Browser Support Philosophy](https://github.com/bobbycomet/Appify/wiki/Browser-Support-Philosophy)
 
 </div>
 
@@ -183,21 +183,21 @@ Everything that worked in 2.x continues to work in 3.x. **This is a rebuild of t
 ### What's New in 3.0
 
 | Feature                     | Before 3.0                                      | After 3.0                                                                         |
-| ---------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------ |
-| **Interface**                | GTK4 + libadwaita                                | Full PyQt6 rewrite, styled as the Griffin Dark Theme                               |
-| **Advanced options**         | Flat list of checkboxes                          | Collapsible **Advanced Options** panel with hover tooltips explaining each option  |
-| **App icons**                | Auto-downloaded favicon only                     | Browse for PNG/JPEG/GIF/BMP/ICO/SVG icons or reset to automatic                    |
-| **Finding apps**             | Search or browse                                 | Search, browse by category, and sort                                               |
-| **Sorting**                  | Not available                                    | Name, Category, Recently Used, Installed First                                     |
-| **Installing several apps**  | One at a time                                    | **Install All in Category**                                                        |
-| **Backups**                  | One app at a time                                | **Backup All Installed Apps**                                                      |
-| **Appify updates**           | Check GitHub manually                            | Check now, one-click update, or automatic scheduled checks                         |
-| **Testing apps**             | Reopen through the desktop launcher              | **Launch** directly from Appify                                                    |
-| **App catalog**              | Built into the application                       | Data-driven `store.json`                                                           |
-| **Firefox extension store**  | Could falsely report Firefox as already running  | Reliably opens the existing Firefox window or starts a new one                     |
-| **Firefox appearance**       | Not supported                                    | Optional `userChrome.css` / `userContent.css` support                              |
-| **Browser support**          | Existing browser families                        | Expanded Brave and Firefox family support                                          |
-| **Remove navigation bar**    | Firefox apps                                     |Can optionally hide tabs, the address bar, bookmarks toolbar, menu bar, etc.        |
+| --------------------------- | ----------------------------------------------- | --------------------------------------------------------------------------------- |
+| **Interface**               | GTK4 + libadwaita                               | Full PyQt6 rewrite, styled as the Griffin Dark Theme                              |
+| **Advanced options**        | Flat list of checkboxes                         | Collapsible **Advanced Options** panel with hover tooltips explaining each option |
+| **App icons**               | Auto-downloaded favicon only                    | Browse for PNG/JPEG/GIF/BMP/ICO/SVG icons or reset to automatic                   |
+| **Finding apps**            | Search or browse                                | Search, browse by category, and sort                                              |
+| **Sorting**                 | Not available                                   | Name, Category, Recently Used, Installed First                                    |
+| **Installing several apps** | One at a time                                   | **Install All in Category**                                                       |
+| **Backups**                 | One app at a time                               | **Backup All Installed Apps**                                                     |
+| **Appify updates**          | Check GitHub manually                           | Check now, one-click update, or automatic scheduled checks                        |
+| **Testing apps**            | Reopen through the desktop launcher             | **Launch** directly from Appify                                                   |
+| **App catalog**             | Built into the application                      | Data-driven `store.json`                                                          |
+| **Firefox extension store** | Could falsely report Firefox as already running | Reliably opens the existing Firefox window or starts a new one                    |
+| **Firefox appearance**      | Not supported                                   | Optional `userChrome.css` / `userContent.css` support                             |
+| **Browser support**         | Existing browser families                       | Expanded Brave and Firefox family support                                         |
+| **Remove navigation bar**   | Firefox apps                                    | Can optionally hide tabs, the address bar, bookmarks toolbar, menu bar, etc.      |
 
 ### Known Issues in 3.0
 
@@ -619,6 +619,8 @@ Selecting **Reset to Auto** removes the custom icon setting and allows Appify to
 
 ---
 
+<details>
+
 # Technical Details
 
 Appify stores its configuration and application profiles in:
@@ -791,7 +793,8 @@ Scheduled update checks use systemd timers and can be configured for:
 * Weekly
 * Custom `OnCalendar` expressions
 
----
+</details>
+
 
 # Community and Support
 
