@@ -172,7 +172,7 @@ While the interface was being rebuilt, 3.0 also added several features users had
 * **App sorting** — sort by Name, Category, Recently Used, or Installed First
 * **Bulk installation** — install an entire category at once
 * **Bulk backups** — back up the entire installed library in one operation
-* **Self-updating** — check for Appify updates manually or automatically (no longer needs Griffin Updater to do so)
+* **Self-updating (AppImage only)** — check for Appify updates manually or automatically (no longer needs Griffin Updater to do so)
 * **One-click launching** — launch installed apps directly from Appify
 * **Data-driven app catalog** — new catalog entries can be added through `store.json` without waiting for an Appify release
 * **Firefox CSS support** — optionally apply `userChrome.css` and `userContent.css`
@@ -442,13 +442,13 @@ The catalog currently contains **175+ applications** spanning the categories lis
 
 # Downloading and Installing
 
-**Latest version: 3.0.3**
+**Latest version: 3.0.4**
 
 ## Debian / Ubuntu / Linux Mint / Pop!_OS and Other Debian-Based Distros
 
 ```bash
-wget https://github.com/bobbycomet/Appify/releases/download/v3.0.3/appify_3.0.3.deb
-sudo dpkg -i appify_3.0.3.deb
+wget https://github.com/bobbycomet/Appify/releases/download/v3.0.4/appify_3.0.4.deb
+sudo dpkg -i appify_3.0.4.deb
 sudo apt-get install -f
 ```
 
