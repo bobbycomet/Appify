@@ -286,7 +286,7 @@ Appify also enables `toolkit.legacyUserProfileCustomizations.stylesheets` automa
 
 Some layouts on firefoxcss-store also contain `.js` files for additional behavior. Appify only applies `userChrome.css` and `userContent.css`. Layouts requiring JavaScript will therefore not be fully functional through Appify.
 
-Two test files are included in the repository:
+Two test files are included in the repository (these were used to make the new feature to remove the navigation bar):
 
 * [`userChrome.css`](https://github.com/bobbycomet/Appify/blob/main/userChrome.css)
 * [`userContent.css`](https://github.com/bobbycomet/Appify/blob/main/userContent.css)
@@ -398,7 +398,18 @@ Backups can also be moved to another computer by placing them in the appropriate
 
 ---
 
-# Appify Self-Update
+# Appify Self-Update (AppImage)
+
+Griffin Updater is the recommended tool to update, but if you prefer the in-app method.
+
+Use this command:
+
+```
+./Appify-3.0.4-x86_64.AppImage --install
+
+```
+
+This adds the polkit and helper.
 
 Appify can update itself without requiring you to manually download every release.
 
@@ -427,6 +438,14 @@ These are installed to:
 ```
 
 A single `pkexec` prompt is used to authorize the system-level installation. The schedule can be selected from the interface, including a custom `OnCalendar` expression. No manual systemd file editing is required.
+
+To remove (this does not remove any apps you installed):
+
+```
+./Appify-3.0.4-x86_64.AppImage --uninstall
+```
+
+For the Deb version, use the Griffin Updater.
 
 ---
 
