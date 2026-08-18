@@ -172,7 +172,7 @@ While the interface was being rebuilt, 3.0 also added several features users had
 * **App sorting** — sort by Name, Category, Recently Used, or Installed First
 * **Bulk installation** — install an entire category at once
 * **Bulk backups** — back up the entire installed library in one operation
-* **Self-updating through Griffin Updater** — check for Appify updates manually or automatically
+* **Self-updating** — check for Appify updates manually or automatically (no longer needs Griffin Updater to do so)
 * **One-click launching** — launch installed apps directly from Appify
 * **Data-driven app catalog** — new catalog entries can be added through `store.json` without waiting for an Appify release
 * **Firefox CSS support** — optionally apply `userChrome.css` and `userContent.css`
@@ -459,14 +459,14 @@ You can also open the `.deb` file directly with your software manager. GDebi is 
 For Arch, Fedora, openSUSE, NixOS, and other distributions, use the AppImage:
 
 ```bash
-wget https://github.com/bobbycomet/Appify/releases/download/v3.0.3/Appify-3.0.3-x86_64.AppImage
+wget https://github.com/bobbycomet/Appify/releases/download/v3.0.4/Appify-3.0.4-x86_64.AppImage
 ```
 
 Then:
 
 ```bash
-chmod +x Appify-3.0.3-x86_64.AppImage
-./Appify-3.0.3-x86_64.AppImage
+chmod +x Appify-3.0.4-x86_64.AppImage
+./Appify-3.0.4-x86_64.AppImage
 ```
 
 The AppImage can be moved anywhere and run directly. No installation is required.
