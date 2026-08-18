@@ -406,12 +406,6 @@ Backups can also be moved to another computer by placing them in the appropriate
 
 Griffin Updater is the recommended tool to update, but if you prefer the in-app method.
 
-Use this command:
-
-```text
-./Appify-3.0.4-x86_64.AppImage --install
-```
-
 This adds the polkit and helper.
 
 Appify can update itself without requiring you to manually download every release.
@@ -444,11 +438,60 @@ A single `pkexec` prompt is used to authorize the system-level installation. The
 
 To remove (this does not remove any apps you installed):
 
-```text
-./Appify-3.0.4-x86_64.AppImage --uninstall
-```
 
 For the Deb version, use the Griffin Updater.
+
+---
+
+## Polkit and helper 
+
+They are only for **raising I/O and CPU priority** on running Appify apps (mainly cloud gaming/streaming). Everything else works without them.
+
+### `appify-helper`
+A small root helper, meant to be run only via **pkexec** (not directly). It supports:
+
+| Command | What it does |
+|--------|----------------|
+| `ionice <class> <level> <pid>` | Set disk I/O priority for that process |
+| `nice <value> <pid>` | Set CPU nice value for that process |
+| `version` | Print helper version |
+
+It checks that the target PID belongs to the user who called pkexec, so you can’t change someone else’s processes.
+
+### Polkit policy (`com.griffinlinux.appify.policy`)
+Defines the two actions:
+
+- `com.griffinlinux.appify.ionice`
+- `com.griffinlinux.appify.nice`
+
+So when Appify needs higher priority, the desktop shows a **password prompt** instead of requiring you to run the whole app as root.
+
+### When you need `--install`
+Only if you use **realtime I/O** (`ionice` class 1) or negative nice values that need privileges. Typical browsing / PWAs don’t need it.
+
+Without `--install`:
+
+- Appify launches and runs normally  
+- Profiles, wrappers, CSS, kiosk, etc. all work  
+- Priority tweaks that need root simply won’t apply (or fall back)
+
+With `--install`:
+
+```text
+/usr/local/bin/appify-helper
+/usr/share/polkit-1/actions/com.griffinlinux.appify.policy
+```
+
+Then Appify can call the helper through Polkit when an app is set to use elevated nice/ionice.
+
+Install or uninstall them:
+
+```
+./Appify-3.0.4-x86_64.AppImage --install
+```
+```
+./Appify-3.0.4-x86_64.AppImage --uninstall
+```
 
 ---
 
