@@ -1466,6 +1466,16 @@
           "browser": "firefox",
           "store_url": "https://addons.mozilla.org/en-US/firefox/addon/sponsorblock/"
         },
+        { "name": "youtube gif comments",
+          "description": "Add gifs to youtube comments",
+          "browser": "chromium",
+          "store_url": "https://chromewebstore.google.com/detail/youtube-gif-comments/hkehcgbaabkabphofkgilpgjdnpkcife"
+        },
+        { "name": "youtube gif comments",
+          "description": "Add gifs to youtube comments",
+          "browser": "chromium",
+          "store_url": "https://chromewebstore.google.com/detail/youtube-gif-comments/hkehcgbaabkabphofkgilpgjdnpkcife"
+        },
         {
           "name": "uBlock Origin",
           "description": "Efficient wide-spectrum ad and content blocker",
