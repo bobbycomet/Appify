@@ -1,8 +1,8 @@
 # Appify on Windows
 
-`appify` is now one cross-platform source file. On Windows 10/11 it does the same
+`appify` is one cross-platform source file. On Windows 10/11 and macOS it does the same
 job as on Linux (turn a website into its own app window with an isolated browser
-profile), using native Windows mechanisms instead of Linux ones.
+profile), using each platform's native mechanisms.
 
 ## What the Windows build does differently
 
@@ -33,13 +33,23 @@ Run the workflow manually (Actions tab → *Build Windows* → *Run workflow*). 
 outputs are workflow artifacts only and are never attached to GitHub Releases;
 upload the installer to Ko-fi for purchasers to access.
 
-Windows checks `windows-update.json` for the latest Ko-fi version. After uploading
-a new installer to Ko-fi, update that file's `version` value. The app notifies
+Windows and macOS check `windows-update.json` for the latest Ko-fi version. After uploading
+a new paid build to Ko-fi, update that file's `version` value. The app notifies
 users and directs them to sign in to Ko-fi and open **Payments & Orders**; it
 does not download or install paid files automatically.
 
 The app version comes from `CURRENT_VERSION` in `appify`; keep the installer
 version and update manifest aligned with the file currently available to buyers.
+The Linux AppDir source has its own `CURRENT_VERSION` in
+`Appify.AppDir/usr/bin/appify`; keep it in sync when building a Linux package.
+
+## macOS builds
+
+`.github/workflows/build-macos.yml` builds Apple Silicon and Intel DMGs on pull
+requests or manual dispatch. The workflow bundles `store.json`, smoke-tests the
+packaged app, and saves each architecture as a workflow artifact rather than
+publishing binaries to GitHub Releases. See [`macos/README.md`](../macos/README.md)
+for installation and local build instructions.
 
 ## Building locally (optional)
 
@@ -54,13 +64,16 @@ Run from source for development: `pip install -r requirements.txt` then `python 
 ## Repo layout
 
 ```
-appify                         # the app (Linux + Windows)  <- replaces your current file
+appify                         # the app (Linux + Windows + macOS)
 requirements.txt               # PyQt6, packaging
 windows/appify.ico             # exe / installer icon
 windows/appify.png             # bundled window icon
 windows/appify.iss             # Inno Setup installer script
 windows/build.ps1              # local build helper
+macos/appify.icns, appify.png  # macOS app and bundle icons
+macos/build.sh, README.md      # local build helper and documentation
 .github/workflows/build-windows.yml
+.github/workflows/build-macos.yml
 ```
 The Linux files (`AppRun`, `.desktop`, `appify-updater.*`, `appify-set-update-interval.sh`) are untouched.
 
@@ -72,4 +85,3 @@ The Linux files (`AppRun`, `.desktop`, `appify-updater.*`, `appify-set-update-in
   `Appify Apps`. Use Appify's **Uninstall** button for each app first if you want them gone.
 * Export/Import works between Linux and Windows for the app list and settings; browser profiles are
   browser/OS specific, so extensions and logins need to be redone on the other OS.
-* macOS is not supported by this change.

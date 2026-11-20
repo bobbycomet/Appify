@@ -107,10 +107,11 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal, QObject, QSize, QMetaObject, Q_ARG, QTime
 from PyQt6.QtGui import QAction, QIcon, QPalette, QColor, QFont, QTextOption, QPixmap, QPainter
 
-CURRENT_VERSION = "3.0.7"
+CURRENT_VERSION = "3.0.8"
 CONFIG_VERSION  = 2
 
 IS_WINDOWS = sys.platform == "win32"
+IS_MAC = sys.platform == "darwin"
 IS_FROZEN  = bool(getattr(sys, "frozen", False))   # True inside a PyInstaller build
 
 # A windowed (no-console) PyInstaller build has sys.stdout / sys.stderr == None,
@@ -233,6 +234,8 @@ def open_url(url: str) -> None:
     try:
         if IS_WINDOWS:
             os.startfile(url)  # type: ignore[attr-defined]
+        elif IS_MAC:
+            subprocess.Popen(["open", url])
         else:
             subprocess.Popen(["xdg-open", url])
     except Exception as exc:
@@ -339,6 +342,8 @@ def is_x11_session() -> bool:
 def get_session_type() -> str:
     if IS_WINDOWS:
         return "windows"
+    if IS_MAC:
+        return "macos"
     if is_wayland_session():
         return "wayland"
     elif is_x11_session():
@@ -386,7 +391,7 @@ def detect_wayland_compositor() -> str:
     return "unknown"
 
 def get_display_backend_flags(browser_key: str = "") -> str:
-    if IS_WINDOWS:
+    if IS_WINDOWS or IS_MAC:
         return ""          # Wayland/X11/Ozone flags are Linux-only
     session = get_session_type()
     chromium_browsers = ["edge","brave","vivaldi","chrome","chromium","opera","ungoogled-chromium"]
@@ -414,6 +419,56 @@ def get_display_backend_flags(browser_key: str = "") -> str:
         return f"{base},WaylandWindowDecorations"
     return "--ozone-platform-hint=auto"
 
+_MAC_BROWSER_BINARIES: "dict[str, str]" = {
+    "firefox":            "Firefox.app/Contents/MacOS/firefox",
+    "edge":               "Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+    "brave":              "Brave Browser.app/Contents/MacOS/Brave Browser",
+    "vivaldi":            "Vivaldi.app/Contents/MacOS/Vivaldi",
+    "chrome":             "Google Chrome.app/Contents/MacOS/Google Chrome",
+    "chromium":           "Chromium.app/Contents/MacOS/Chromium",
+    "opera":              "Opera.app/Contents/MacOS/Opera",
+    "ungoogled-chromium": "Ungoogled Chromium.app/Contents/MacOS/Chromium",
+}
+
+_MAC_BUNDLE_ID_MAP = {
+    "com.google.chrome": "chrome", "com.microsoft.edgemac": "edge",
+    "org.mozilla.firefox": "firefox", "com.brave.browser": "brave",
+    "com.vivaldi.vivaldi": "vivaldi", "com.operasoftware.opera": "opera",
+    "org.chromium.chromium": "chromium",
+}
+
+
+def _mac_find_browser(browser_key: str) -> str:
+    """Return a browser executable inside its macOS app bundle, if installed."""
+    relative_path = _MAC_BROWSER_BINARIES.get(browser_key)
+    if not relative_path:
+        return ""
+    for base in (Path("/Applications"), Path.home() / "Applications"):
+        executable = base / relative_path
+        if executable.is_file() and os.access(str(executable), os.X_OK):
+            return str(executable)
+    return ""
+
+
+def _mac_default_browser_key(plist_path: "Path | None" = None) -> str:
+    """Return the Appify key for the default HTTP(S) handler, if supported."""
+    import plistlib
+    plist_path = plist_path or (
+        Path.home() / "Library" / "Preferences" / "com.apple.LaunchServices" /
+        "com.apple.launchservices.secure.plist")
+    try:
+        with open(plist_path, "rb") as file:
+            handlers = plistlib.load(file).get("LSHandlers", [])
+    except Exception:
+        return ""
+    for scheme in ("https", "http"):
+        for handler in handlers:
+            if str(handler.get("LSHandlerURLScheme", "")).lower() == scheme:
+                bundle_id = str(handler.get("LSHandlerRoleAll", "")).lower()
+                return _MAC_BUNDLE_ID_MAP.get(bundle_id, "")
+    return ""
+
+
 def detect_browser_installation(browser_key: str) -> dict:
     browsers_info = {
         "firefox":            {"native_cmds": ["firefox", "/usr/bin/firefox"],
@@ -438,6 +493,13 @@ def detect_browser_installation(browser_key: str) -> dict:
     info = browsers_info[browser_key]
     if IS_WINDOWS:
         exe = _win_find_browser(browser_key)
+        if exe:
+            return {'type': 'native', 'cmd': exe,
+                    'display_name': f"{info['name']} (Installed)"}
+        return {'type': 'not_found', 'cmd': '',
+                'display_name': f"{info['name']} (Not Installed)"}
+    if IS_MAC:
+        exe = _mac_find_browser(browser_key)
         if exe:
             return {'type': 'native', 'cmd': exe,
                     'display_name': f"{info['name']} (Installed)"}
@@ -481,6 +543,15 @@ def get_default_browser() -> str:
             if detect_browser_installation(browser)['type'] != 'not_found':
                 return browser
         return 'edge'      # ships with every Windows 10/11 install
+    if IS_MAC:
+        key = _mac_default_browser_key()
+        if key and detect_browser_installation(key)['type'] != 'not_found':
+            return key
+        # Safari is not supported for isolated Appify app windows.
+        for browser in ['chrome', 'edge', 'firefox', 'brave', 'vivaldi', 'opera', 'chromium']:
+            if detect_browser_installation(browser)['type'] != 'not_found':
+                return browser
+        return 'chrome'
     try:
         result = subprocess.run(
             ["xdg-settings", "get", "default-web-browser"],
@@ -553,10 +624,10 @@ _PORTAL_BACKENDS: dict[str, str] = {
 }
 
 def check_webhid_portal() -> dict:
-    if IS_WINDOWS:
+    if IS_WINDOWS or IS_MAC:
         return {"ok": True, "portal": "built-in", "running": True,
                 "backend_found": True,
-                "reason": "Windows handles HID device permissions natively "
+                "reason": "The operating system handles HID device permissions natively "
                           "(no xdg-desktop-portal needed)."}
     compositor = detect_wayland_compositor() if is_wayland_session() else "x11"
     portal_pkg = _PORTAL_BACKENDS.get(compositor, "xdg-desktop-portal-gtk")
@@ -647,20 +718,20 @@ def get_hostname_from_url(url: str) -> str:
     except Exception:
         return ""
 
-WINDOWS_UPDATE_MANIFEST_URL = (
+PAID_UPDATE_MANIFEST_URL = (
     "https://raw.githubusercontent.com/bobbycomet/Appify/main/windows-update.json")
-WINDOWS_UPDATE_INSTRUCTIONS = (
+PAID_UPDATE_INSTRUCTIONS = (
     "Free updates are available to existing purchasers. Sign in to your Ko-fi account "
     "and open Payments & Orders to download the latest Appify version.")
 
 
-def check_windows_latest_version() -> "str | None":
-    """Read the public version notice for Windows builds distributed through Ko-fi."""
+def check_paid_latest_version() -> "str | None":
+    """Read the public version notice for paid desktop builds distributed through Ko-fi."""
     try:
         import urllib.request
         import ssl
         req = urllib.request.Request(
-            WINDOWS_UPDATE_MANIFEST_URL,
+            PAID_UPDATE_MANIFEST_URL,
             headers={"Accept": "application/json",
                      "User-Agent": f"Appify/{CURRENT_VERSION}"})
         with urllib.request.urlopen(req, context=ssl.create_default_context(),
@@ -669,18 +740,18 @@ def check_windows_latest_version() -> "str | None":
                 return None
             data = json.loads(resp.read().decode("utf-8"))
     except Exception as exc:
-        _logger.debug("Windows update check failed: %s", exc)
+        _logger.debug("Paid app update check failed: %s", exc)
         return None
 
     version = data.get("version") if isinstance(data, dict) else None
     if not isinstance(version, str) or not version.strip():
-        _logger.warning("Windows update manifest has no version")
+        _logger.warning("Paid app update manifest has no version")
         return None
     version = version.strip()
     try:
         Version(version)
     except Exception as exc:
-        _logger.warning("Invalid Windows update version %r: %s", version, exc)
+        _logger.warning("Invalid paid app update version %r: %s", version, exc)
         return None
     return version
 
@@ -688,11 +759,11 @@ def check_windows_latest_version() -> "str | None":
 def check_for_updates(callback):
     def _check():
         try:
-            if IS_WINDOWS:
-                latest_version = check_windows_latest_version()
+            if IS_WINDOWS or IS_MAC:
+                latest_version = check_paid_latest_version()
                 if latest_version and Version(latest_version) > Version(CURRENT_VERSION):
                     msg = (f"New version available: {latest_version}!\n"
-                           f"{WINDOWS_UPDATE_INSTRUCTIONS}")
+                           f"{PAID_UPDATE_INSTRUCTIONS}")
                     GLib.idle_add(callback, msg)
                 return
 
@@ -779,6 +850,11 @@ def _detect_appify_install_type() -> "tuple[str, str]":
             # Inno Setup drops unins000.exe next to the app; a zip extract doesn't.
             kind = "windows-installer" if (exe.parent / "unins000.exe").exists() else "windows-portable"
             return kind, str(exe)
+        return "unknown", ""
+    if IS_MAC:
+        executable = Path(sys.executable).resolve()
+        if IS_FROZEN and len(executable.parents) > 2 and executable.parents[2].suffix == ".app":
+            return "macos-app", str(executable.parents[2])
         return "unknown", ""
     env_appimage = os.environ.get("APPIMAGE", "")
     if env_appimage and Path(env_appimage).is_file():
@@ -1115,11 +1191,13 @@ def get_desktop_file_path(app: dict) -> Path:
     Windows: Start Menu\\Programs\\Appify Apps\\<Name>.lnk"""
     if IS_WINDOWS:
         return DESKTOP_DIR / f"{_win_safe_filename(app['name'])}.lnk"
+    if IS_MAC:
+        return DESKTOP_DIR / f"{_win_safe_filename(app['name'])}.app"
     return DESKTOP_DIR / f"pwa-{slugify(app['name'])}-manager.desktop"
 
 def _update_icon_cache():
     """Refresh the GTK icon cache (Linux only; no-op elsewhere)."""
-    if IS_WINDOWS:
+    if IS_WINDOWS or IS_MAC:
         return
     try:
         icon_theme_root = ICON_DIR.parents[1]
@@ -1386,35 +1464,40 @@ def _win_default_browser_key() -> str:
     return ""
 
 
-def _win_png_to_ico(src: Path, dst: Path) -> bool:
-    """Convert any Qt-readable image (PNG/JPG/ICO/…) into a multi-size .ico
-    (PNG-compressed entries, supported by Windows Vista and newer)."""
-    import struct
+def _icon_png_variants(src: Path, sizes) -> "list[tuple[int, bytes]] | None":
+    """Render an image on a transparent square canvas at each requested size."""
     from PyQt6.QtCore import QBuffer, QByteArray, QIODevice
     from PyQt6.QtGui import QImage, QPainter
+    img = QImage(str(src))
+    if img.isNull():
+        return None
+    img = img.convertToFormat(QImage.Format.Format_ARGB32)
+    side = max(img.width(), img.height())
+    canvas = QImage(side, side, QImage.Format.Format_ARGB32)
+    canvas.fill(0)
+    painter = QPainter(canvas)
+    painter.drawImage((side - img.width()) // 2, (side - img.height()) // 2, img)
+    painter.end()
+    pngs = []
+    for size in sizes:
+        scaled = canvas.scaled(size, size, Qt.AspectRatioMode.IgnoreAspectRatio,
+                               Qt.TransformationMode.SmoothTransformation)
+        ba = QByteArray()
+        buf = QBuffer(ba)
+        buf.open(QIODevice.OpenModeFlag.WriteOnly)
+        scaled.save(buf, "PNG")
+        buf.close()
+        pngs.append((size, bytes(ba)))
+    return pngs
+
+
+def _win_png_to_ico(src: Path, dst: Path) -> bool:
+    """Convert any Qt-readable image into a multi-size .ico."""
+    import struct
     try:
-        img = QImage(str(src))
-        if img.isNull():
+        pngs = _icon_png_variants(src, (256, 48, 32, 16))
+        if not pngs:
             return False
-        img = img.convertToFormat(QImage.Format.Format_ARGB32)
-        side = max(img.width(), img.height())
-        canvas = QImage(side, side, QImage.Format.Format_ARGB32)   # square, transparent
-        canvas.fill(0)
-        painter = QPainter(canvas)
-        painter.drawImage((side - img.width()) // 2, (side - img.height()) // 2, img)
-        painter.end()
-
-        pngs = []
-        for size in (256, 48, 32, 16):
-            scaled = canvas.scaled(size, size, Qt.AspectRatioMode.IgnoreAspectRatio,
-                                   Qt.TransformationMode.SmoothTransformation)
-            ba = QByteArray()
-            buf = QBuffer(ba)
-            buf.open(QIODevice.OpenModeFlag.WriteOnly)
-            scaled.save(buf, "PNG")
-            buf.close()
-            pngs.append((size, bytes(ba)))
-
         header = struct.pack("<HHH", 0, 1, len(pngs))
         offset = 6 + 16 * len(pngs)
         entries, blobs = b"", b""
@@ -1428,6 +1511,27 @@ def _win_png_to_ico(src: Path, dst: Path) -> bool:
         return True
     except Exception as exc:
         _logger.warning("ICO conversion failed for %s: %s", src, exc)
+        return False
+
+
+_ICNS_TYPES = {16: b"icp4", 32: b"icp5", 64: b"icp6",
+               128: b"ic07", 256: b"ic08", 512: b"ic09"}
+
+
+def _mac_png_to_icns(src: Path, dst: Path) -> bool:
+    """Convert a Qt-readable image to a PNG-compressed macOS icon."""
+    import struct
+    try:
+        pngs = _icon_png_variants(src, tuple(_ICNS_TYPES))
+        if not pngs:
+            return False
+        body = b"".join(_ICNS_TYPES[size] + struct.pack(">I", 8 + len(data)) + data
+                        for size, data in pngs)
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_bytes(b"icns" + struct.pack(">I", 8 + len(body)) + body)
+        return True
+    except Exception as exc:
+        _logger.warning("ICNS conversion failed for %s: %s", src, exc)
         return False
 
 
@@ -1512,7 +1616,7 @@ _FIREFOX_LOCK_NAMES = ("lock", ".parentlock", "parent.lock")
 
 
 def launch_app_windows(app: dict, browser_key: str = "") -> "tuple[bool, str]":
-    """Start an installed app now (Launch button / --launch-app on Windows)."""
+    """Start an installed app now (Launch button / --launch-app)."""
     profile_cfg = load_profile_config(app)
     browser_key = (browser_key or profile_cfg.get("browser") or app.get("browser")
                    or CONFIG.get("browser", "edge")).lower()
@@ -1525,15 +1629,22 @@ def launch_app_windows(app: dict, browser_key: str = "") -> "tuple[bool, str]":
     if browser_key == "firefox":
         env["MOZ_APP_REMOTINGNAME"] = slugify(app["name"])
     nice = profile_cfg.get("nice", CONFIG.get("nice", 0))
-    flags = (getattr(subprocess, "DETACHED_PROCESS", 0x00000008)
-             | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0x00000200)
-             | _win_priority_flags(nice))
+    popen_options = dict(
+        env=env, close_fds=True, stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    if IS_WINDOWS:
+        popen_options["creationflags"] = (
+            getattr(subprocess, "DETACHED_PROCESS", 0x00000008)
+            | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0x00000200)
+            | _win_priority_flags(nice))
+    else:
+        popen_options["start_new_session"] = True
+        if int(nice) > 0:
+            argv = ["nice", "-n", str(int(nice))] + argv
     try:
-        subprocess.Popen(argv, env=env, creationflags=flags, close_fds=True,
-                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                         stderr=subprocess.DEVNULL)
+        subprocess.Popen(argv, **popen_options)
     except Exception as exc:
-        _logger.error("Windows launch failed: %s", exc)
+        _logger.error("Native app launch failed: %s", exc)
         return False, f"Launch failed: {exc}"
     profile_cfg["last_launched"] = datetime.datetime.now().timestamp()
     try:
@@ -1574,6 +1685,70 @@ def _create_windows_shortcut(app: dict, status_callback=None):
         status_callback(f"Shortcut: {app['name']}" if ok else f"Shortcut failed: {err}")
 
 
+def _create_mac_app_bundle(app: dict, status_callback=None):
+    """Create the Finder/Launchpad launcher bundle for an installed web app."""
+    import plistlib
+    profile_cfg = load_profile_config(app)
+    browser_key = (profile_cfg.get("browser") or app.get("browser")
+                   or CONFIG.get("browser", "chrome")).lower()
+    argv = build_windows_launch_argv(app, browser_key, CONFIG.get("gpu", True))
+    if not argv:
+        if status_callback:
+            status_callback(f"Launcher failed: {browser_key} not found")
+        return
+
+    nice = int(profile_cfg.get("nice", CONFIG.get("nice", 0)))
+    bundle = get_desktop_file_path(app)
+    try:
+        if bundle.exists():
+            shutil.rmtree(bundle)
+        macos_dir = bundle / "Contents" / "MacOS"
+        resources_dir = bundle / "Contents" / "Resources"
+        macos_dir.mkdir(parents=True)
+        resources_dir.mkdir(parents=True)
+        slug = slugify(app["name"])
+        lines = ["#!/bin/bash", "# Generated by Appify - do not edit by hand."]
+        if browser_key == "firefox":
+            profile_dir = get_profile_dir(app)
+            lines.extend([
+                f"export MOZ_APP_REMOTINGNAME={shlex.quote(slug)}",
+                "# Remove stale Firefox profile locks before launch",
+                f"rm -f {shlex.quote(str(profile_dir / '.parentlock'))} "
+                f"{shlex.quote(str(profile_dir / 'lock'))}",
+            ])
+        command = " ".join(shlex.quote(argument) for argument in argv)
+        if nice > 0:
+            command = f"nice -n {nice} {command}"
+        lines.append(f"exec {command}")
+        launcher = macos_dir / "launcher"
+        launcher.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        launcher.chmod(0o755)
+        info = {
+            "CFBundleName": app["name"][:15] or "App",
+            "CFBundleDisplayName": app["name"],
+            "CFBundleIdentifier": f"com.bobbycomet.appify.{slug}",
+            "CFBundleExecutable": "launcher",
+            "CFBundlePackageType": "APPL",
+            "CFBundleVersion": "1",
+            "CFBundleShortVersionString": "1.0",
+            "LSMinimumSystemVersion": "10.13",
+            "LSUIElement": True,
+            "NSHighResolutionCapable": True,
+        }
+        icon = get_icon_path(app)
+        if icon.exists() and _mac_png_to_icns(icon, resources_dir / "app.icns"):
+            info["CFBundleIconFile"] = "app"
+        (bundle / "Contents" / "Info.plist").write_bytes(plistlib.dumps(info))
+        os.utime(bundle, None)
+    except Exception as exc:
+        _logger.error("create_mac_app_bundle failed: %s", exc)
+        if status_callback:
+            status_callback(f"Launcher failed: {exc}")
+        return
+    if status_callback:
+        status_callback(f"Launcher: {bundle.name}")
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Config Paths
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1584,6 +1759,10 @@ if IS_WINDOWS:
     CONFIG_DIR  = _LOCALAPPDATA / "Appify"
     ICON_DIR    = CONFIG_DIR / "icons"
     DESKTOP_DIR = _APPDATA / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Appify Apps"
+elif IS_MAC:
+    CONFIG_DIR  = Path.home() / "Library" / "Application Support" / "Appify"
+    ICON_DIR    = CONFIG_DIR / "icons"
+    DESKTOP_DIR = Path.home() / "Applications" / "Appify Apps"
 else:
     CONFIG_DIR  = Path(os.path.expanduser("~/.appify"))
     ICON_DIR    = Path(os.path.expanduser("~/.local/share/icons/hicolor/512x512/apps/"))
@@ -2138,8 +2317,8 @@ def make_launcher_wrapper(app: dict, browser_key: str, nice: int, ionice: int, g
     except Exception:
         pass
 
-    if IS_WINDOWS:
-        # No script on Windows: the Start Menu .lnk *is* the launcher.
+    if IS_WINDOWS or IS_MAC:
+        # Native shortcut bundles are the launchers on Windows and macOS.
         return get_desktop_file_path(app)
 
     browser_cfg = get_browsers().get(browser_key, {})
@@ -2291,6 +2470,9 @@ def create_desktop_file(app: dict, script_path: str, status_callback=None):
     if IS_WINDOWS:
         _create_windows_shortcut(app, status_callback)
         return
+    if IS_MAC:
+        _create_mac_app_bundle(app, status_callback)
+        return
     desktop_path = get_desktop_file_path(app)
     icon_path = get_icon_path(app)
     app_name = sanitize_shell_string(app["name"])
@@ -2368,9 +2550,13 @@ def remove_app_files(app_to_remove):
     (CONFIG_DIR / "scripts" / f"pwa-launch-{app_slug}.sh").unlink(missing_ok=True)
     profile_dir = get_profile_dir(app_to_remove)
     (profile_dir / "installed.marker").unlink(missing_ok=True)
-    get_desktop_file_path(app_to_remove).unlink(missing_ok=True)
+    launcher = get_desktop_file_path(app_to_remove)
+    if launcher.is_dir():
+        shutil.rmtree(launcher, ignore_errors=True)
+    else:
+        launcher.unlink(missing_ok=True)
     get_icon_path(app_to_remove).unlink(missing_ok=True)
-    if IS_WINDOWS:
+    if IS_WINDOWS or IS_MAC:
         get_icon_path(app_to_remove).with_suffix(".ico").unlink(missing_ok=True)
         return
     try:
@@ -2429,7 +2615,7 @@ def backup_profile(app: dict, status_callback=None) -> "Path | None":
             if wrapper.exists():
                 tar.add(wrapper, arcname=f"scripts/pwa-launch-{slug}.sh")
             desktop = get_desktop_file_path(app)
-            if desktop.exists() and not IS_WINDOWS:
+            if desktop.exists() and not (IS_WINDOWS or IS_MAC):
                 tar.add(desktop, arcname=f"desktop/pwa-{slug}-manager.desktop")
             icon = get_icon_path(app)
             if icon.exists():
@@ -2527,7 +2713,7 @@ def restore_profile(backup_path: Path, app: dict, status_callback=None) -> bool:
                 shutil.copy2(src_wrapper, dst_wrapper)
                 dst_wrapper.chmod(0o755)
             src_desktop = tmp / "desktop" / f"pwa-{slug}-manager.desktop"
-            if src_desktop.exists() and not IS_WINDOWS:
+            if src_desktop.exists() and not (IS_WINDOWS or IS_MAC):
                 dst_desktop = get_desktop_file_path(app)
                 dst_desktop.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(src_desktop, dst_desktop)
@@ -2580,7 +2766,7 @@ def launch_app_from_cli(app_name: str):
     if detection['type'] == 'not_found':
         print(f"ERROR: Browser '{browser_key}' not found.", file=sys.stderr)
         sys.exit(1)
-    if IS_WINDOWS:
+    if IS_WINDOWS or IS_MAC:
         ok, msg = launch_app_windows(app, browser_key)
         if not ok:
             print(f"ERROR: {msg}", file=sys.stderr)
@@ -2722,7 +2908,7 @@ def _firefox_lock_is_stale(profile_dir: Path) -> bool:
 def _scrub_firefox_locks(profile_dir: Path):
     """Remove leftover Firefox profile locks before launching. On Windows only
     when no live Firefox holds them; on Linux unconditionally (existing behaviour)."""
-    if IS_WINDOWS and not _firefox_lock_is_stale(profile_dir):
+    if (IS_WINDOWS or IS_MAC) and not _firefox_lock_is_stale(profile_dir):
         return
     for name in _FIREFOX_LOCK_NAMES:
         try:
@@ -2775,7 +2961,7 @@ def _open_url_in_pwa_browser(browser_key: str, profile_dir: Path, url: str, app:
 
 def cleanup_stale_pwa_desktop_files(status_callback=None) -> int:
     fixed = 0
-    if IS_WINDOWS:
+    if IS_WINDOWS or IS_MAC:
         return fixed
     if not DESKTOP_DIR.is_dir():
         return fixed
@@ -3762,7 +3948,8 @@ class _UpdateBanner(QFrame):
         self._label.setProperty("class", "banner-label")
         layout.addWidget(self._label, 1)
 
-        btn = QPushButton(tr("How to update") if IS_WINDOWS else tr("View Releases"))
+        btn = QPushButton(
+            tr("How to update") if (IS_WINDOWS or IS_MAC) else tr("View Releases"))
         btn.setProperty("class", "suggested")
         btn.setMaximumWidth(130)
         btn.clicked.connect(self.button_clicked)
@@ -3841,9 +4028,9 @@ class PWAManagerWindow(QMainWindow):
             ("Backup Manager",          self.on_open_backup_manager),
             ("Backup All Installed Apps", self.on_backup_all),
             ("Install All in Category…", self.on_install_all_in_category),
-            ("Regenerate All Shortcuts" if IS_WINDOWS else "Regenerate All Wrappers",
+            ("Regenerate All Shortcuts" if (IS_WINDOWS or IS_MAC) else "Regenerate All Wrappers",
              self.on_regenerate_wrappers),
-            *([] if IS_WINDOWS else [("Migrate to .appify…", self.on_migrate_dir)]),
+            *([] if (IS_WINDOWS or IS_MAC) else [("Migrate to .appify…", self.on_migrate_dir)]),
             ("Export All Data…",        self.on_export_data),
             ("Import All Data…",        self.on_import_data),
             ("Update Settings…",        self.on_open_update_settings),
@@ -3883,9 +4070,9 @@ class PWAManagerWindow(QMainWindow):
 
         # Update banner
         self._update_banner = _UpdateBanner()
-        if IS_WINDOWS:
+        if IS_WINDOWS or IS_MAC:
             self._update_banner.button_clicked.connect(
-                lambda: self._show_windows_update_instructions())
+                lambda: self._show_paid_update_instructions())
         else:
             self._update_banner.button_clicked.connect(
                 lambda: open_url("https://github.com/bobbycomet/Appify/releases"))
@@ -4145,14 +4332,18 @@ class PWAManagerWindow(QMainWindow):
         self.ionice_spin.setToolTip(ionice_tip)
         perf_grid.addWidget(self.ionice_spin, 1, 1)
 
-        if IS_WINDOWS:
-            # No Wayland/XWayland and no ionice on Windows.
+        if IS_WINDOWS or IS_MAC:
+            # No Wayland/XWayland or ionice on Windows/macOS.
             self.x11_fallback_check.setVisible(False)
             ionice_label.setVisible(False)
             self.ionice_spin.setVisible(False)
-            nice_tip = ("Process priority when the app is started from Appify "
-                        "(Launch button).\nNegative = higher, positive = lower. "
-                        "Start Menu shortcuts always run at normal priority.")
+            if IS_WINDOWS:
+                nice_tip = ("Process priority when the app is started from Appify "
+                            "(Launch button).\nNegative = higher, positive = lower. "
+                            "Start Menu shortcuts always run at normal priority.")
+            else:
+                nice_tip = ("CPU priority (0 to 19; higher = lower priority). "
+                            "Negative values need administrator rights and are ignored.")
             nice_label.setToolTip(nice_tip)
             self.nice_spin.setToolTip(nice_tip)
             self.gamepad_check.setToolTip(
@@ -4387,7 +4578,7 @@ class PWAManagerWindow(QMainWindow):
         self._update_banner.set_revealed(True)
         self.status_push(tr("Update available!"))
 
-    def _show_windows_update_instructions(self):
+    def _show_paid_update_instructions(self):
         _q_msg(
             self,
             tr("Get the free Appify update"),
@@ -4951,7 +5142,7 @@ class PWAManagerWindow(QMainWindow):
         if not app:
             return
         slug = slugify(app["name"])
-        if IS_WINDOWS:
+        if IS_WINDOWS or IS_MAC:
             if slug not in set(list_installed_apps()):
                 self.status_push(f"{app['name']} is not installed — install it first")
                 return
@@ -5538,7 +5729,8 @@ class PWAManagerWindow(QMainWindow):
             "deb":      tr("Debian package (.deb)"),
             "windows-installer": tr("Windows installer (%(path)s)") % {"path": appimage_path},
             "windows-portable":  tr("Windows portable build (%(path)s)") % {"path": appimage_path},
-            "unknown":  tr("Unknown — not detected as a deb, AppImage or Windows install"),
+            "macos-app": tr("macOS app (%(path)s)") % {"path": appimage_path},
+            "unknown":  tr("Unknown — not detected as a deb, AppImage, Windows or macOS install"),
         }[install_type]
         can_self_update = install_type in ("appimage", "deb", "windows-installer")
 
@@ -5556,7 +5748,7 @@ class PWAManagerWindow(QMainWindow):
         check_row = QHBoxLayout()
         check_btn = QPushButton(tr("Check Now"))
         releases_btn = QPushButton(
-            tr("How to get free updates") if IS_WINDOWS
+            tr("How to get free updates") if (IS_WINDOWS or IS_MAC)
             else tr("Open GitHub Releases"))
         check_row.addWidget(check_btn)
         check_row.addWidget(releases_btn)
@@ -5567,7 +5759,7 @@ class PWAManagerWindow(QMainWindow):
         install_update_btn.style().unpolish(install_update_btn)
         install_update_btn.style().polish(install_update_btn)
         install_update_btn.setEnabled(False)
-        if IS_WINDOWS:
+        if IS_WINDOWS or IS_MAC:
             install_update_btn.setVisible(False)
         layout.addWidget(install_update_btn)
 
@@ -5641,8 +5833,8 @@ class PWAManagerWindow(QMainWindow):
         sched_layout.addLayout(sched_btn_row)
 
         layout.addWidget(sched_grp)
-        if IS_WINDOWS:
-            # Windows checks the public version manifest at every launch.
+        if IS_WINDOWS or IS_MAC:
+            # Windows and macOS check the public Ko-fi version manifest at launch.
             sched_grp.setVisible(False)
             note = QLabel(tr("Appify checks for updates automatically each time it "
                              "starts and shows a banner when a new version is available. "
@@ -5674,8 +5866,8 @@ class PWAManagerWindow(QMainWindow):
             check_btn.setEnabled(False)
             latest_lbl.setText(tr("Latest version: checking…"))
             def _worker():
-                if IS_WINDOWS:
-                    latest_version = check_windows_latest_version()
+                if IS_WINDOWS or IS_MAC:
+                    latest_version = check_paid_latest_version()
                     def _apply_windows():
                         check_btn.setEnabled(True)
                         if not latest_version:
@@ -5714,8 +5906,8 @@ class PWAManagerWindow(QMainWindow):
             threading.Thread(target=_worker, daemon=True).start()
 
         def _open_releases():
-            if IS_WINDOWS:
-                self._show_windows_update_instructions()
+            if IS_WINDOWS or IS_MAC:
+                self._show_paid_update_instructions()
                 return
             release = _state["release"]
             url = release["html_url"] if release else f"https://github.com/{APPIFY_GITHUB_REPO}/releases"
@@ -5862,7 +6054,7 @@ def main():
         except Exception:
             pass
     app = QApplication(sys.argv)
-    if IS_WINDOWS:
+    if IS_WINDOWS or IS_MAC:
         _icon_file = resource_path("appify.png")
         if _icon_file.exists():
             app.setWindowIcon(QIcon(str(_icon_file)))

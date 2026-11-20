@@ -1,0 +1,90 @@
+name: Build macOS
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: macOS ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-15
+          - arch: x86_64
+            runner: macos-15-intel
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt "pyinstaller>=6.10,<7"
+
+      - name: Read version from source
+        id: ver
+        run: |
+          V=$(sed -n 's/^CURRENT_VERSION *= *"\([^"]*\)".*/\1/p' appify | head -n1)
+          [ -n "$V" ] || { echo "Could not read CURRENT_VERSION from ./appify"; exit 1; }
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "Appify version: $V (${{ matrix.arch }})"
+
+      - name: Build with PyInstaller
+        run: |
+          mkdir -p build_src
+          cp appify build_src/appify_main.py
+          python -m PyInstaller --noconfirm --clean --windowed --name Appify \
+            --icon "$PWD/macos/appify.icns" \
+            --osx-bundle-identifier com.bobbycomet.appify \
+            --add-data "$PWD/macos/appify.png:." \
+            --add-data "$PWD/store.json:." \
+            --exclude-module tkinter \
+            build_src/appify_main.py
+
+      - name: Set version and ad-hoc sign
+        run: |
+          V="${{ steps.ver.outputs.version }}"
+          PLIST=dist/Appify.app/Contents/Info.plist
+          for key in CFBundleShortVersionString CFBundleVersion; do
+            /usr/libexec/PlistBuddy -c "Set :$key $V" "$PLIST" 2>/dev/null \
+              || /usr/libexec/PlistBuddy -c "Add :$key string $V" "$PLIST"
+          done
+          codesign --force --deep --sign - dist/Appify.app
+          codesign --verify --deep --strict dist/Appify.app
+
+      - name: Smoke-test the packaged app
+        timeout-minutes: 3
+        run: |
+          dist/Appify.app/Contents/MacOS/Appify --selftest "$PWD/selftest.txt"
+          [ -f selftest.txt ] || { echo "Self-test produced no output: the packaged app failed to start."; exit 1; }
+          echo "Self-test: $(cat selftest.txt)"
+
+      - name: Create DMG + checksum
+        run: |
+          V="${{ steps.ver.outputs.version }}"
+          mkdir -p dmg_src release
+          cp -R dist/Appify.app dmg_src/
+          ln -s /Applications dmg_src/Applications
+          hdiutil create -volname "Appify $V" -srcfolder dmg_src -ov -format UDZO \
+            "release/Appify-$V-macos-${{ matrix.arch }}.dmg"
+          (cd release && shasum -a 256 Appify-*.dmg > "SHA256SUMS-macos-${{ matrix.arch }}.txt")
+          ls -lh release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: appify-macos-${{ matrix.arch }}
+          path: release/*
+          if-no-files-found: error
