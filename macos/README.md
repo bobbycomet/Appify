@@ -20,7 +20,7 @@ Supported browsers: Chrome, Edge, Firefox, Brave, Vivaldi, Opera, Chromium, Ungo
 
 ## Install (users)
 
-1. Download the latest `Appify-<version>-macos-arm64.dmg` (Apple Silicon: M1 or newer) or `...-x86_64.dmg` (Intel) from Ko-fi **Payments & Orders**.
+1. Download the latest `Appify-<version>-macos-arm64.dmg` (Apple Silicon: M1 or newer) or `...-x86_64.dmg` (Intel) from Ko-fi **Payments & Orders**. [Get Appify for macOS on Ko-fi](https://ko-fi.com/s/9709aa201e).
 2. Open it and drag **Appify** onto **Applications**.
 3. First launch: the app is not notarized, so macOS will refuse a normal double-click.
    **Right-click Appify → Open → Open** (once). On newer macOS, if there is no Open button:
