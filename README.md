@@ -12,7 +12,9 @@ Appify is a Linux web-app manager that lets you pick from a catalog of **175+ po
 
 > Version 3.0.5+ is only for the Windows build, Linux users will not need to update Appify, unless a newer version needed a patch or security update.
 >
-> Where to get Appify for Windows [Kofi](https://ko-fi.com/s/48cf8f3ed3)
+> [Get Appify for Windows on Kofi](https://ko-fi.com/s/48cf8f3ed3)
+>
+> [Get Appify for macOS on Ko-fi](https://ko-fi.com/s/9709aa201e).
 
 **Appify 3.0 is here:** a full PyQt6 rewrite, the Griffin Dark Theme, and a much deeper set of management and customization options.
 
