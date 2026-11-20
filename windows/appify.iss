@@ -1,5 +1,5 @@
 ; Inno Setup script for Appify (Windows).
-; Build:  ISCC.exe /DMyAppVersion=3.0.5 windows\appify.iss
+; Build:  ISCC.exe /DMyAppVersion=3.0.6 windows\appify.iss
 ; Expects the PyInstaller one-folder build in ..\dist\Appify\ (see windows\build.ps1).
 
 #ifndef MyAppVersion

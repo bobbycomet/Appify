@@ -23,6 +23,7 @@ Copy-Item appify build_src\appify_main.py      # PyInstaller wants a .py file na
 pyinstaller --noconfirm --clean --windowed --name Appify `
     --icon "$PWD\windows\appify.ico" `
     --add-data "$PWD\windows\appify.png;." `
+    --add-data "$PWD\store.json;." `
     --hidden-import winreg `
     --exclude-module tkinter `
     build_src\appify_main.py

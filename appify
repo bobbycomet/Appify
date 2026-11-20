@@ -107,7 +107,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal, QObject, QSize, QMetaObject, Q_ARG, QTime
 from PyQt6.QtGui import QAction, QIcon, QPalette, QColor, QFont, QTextOption, QPixmap, QPainter
 
-CURRENT_VERSION = "3.0.5"
+CURRENT_VERSION = "3.0.6"
 CONFIG_VERSION  = 2
 
 IS_WINDOWS = sys.platform == "win32"
@@ -1643,6 +1643,44 @@ def _validate_store(data: dict) -> "list[str]":
     return errors
 
 
+def _parse_store_data(raw: str, source: str) -> "dict | None":
+    """Parse and validate store JSON from a local or network source."""
+    try:
+        data = json.loads(raw)
+    except Exception as exc:
+        _logger.warning("%s store JSON parse error: %s", source, exc)
+        return None
+
+    if not isinstance(data, dict):
+        _logger.warning("%s store JSON must contain an object", source)
+        return None
+
+    schema_ver = data.get("schema_version")
+    if schema_ver != 1:
+        _logger.warning("%s unsupported store schema_version: %s", source, schema_ver)
+        return None
+
+    errs = _validate_store(data)
+    if errs:
+        _logger.warning("%s store validation errors (%d); first: %s",
+                        source, len(errs), errs[0])
+        return None
+    return data
+
+
+def _load_store_from_bundle() -> "dict | None":
+    """Load the catalog bundled beside the app or in the PyInstaller bundle."""
+    store_file = resource_path("store.json")
+    try:
+        raw = store_file.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return None
+    except Exception as exc:
+        _logger.warning("Bundled store read failed (%s): %s", store_file, exc)
+        return None
+    return _parse_store_data(raw, "Bundled")
+
+
 def _fetch_store_from_network() -> "dict | None":
     """Download and validate store.json from GitHub. Returns parsed dict or None."""
     try:
@@ -1660,20 +1698,8 @@ def _fetch_store_from_network() -> "dict | None":
         _logger.warning("Store fetch failed: %s", exc)
         return None
 
-    try:
-        data = json.loads(raw)
-    except Exception as exc:
-        _logger.warning("Store JSON parse error: %s", exc)
-        return None
-
-    schema_ver = data.get("schema_version")
-    if schema_ver != 1:
-        _logger.warning("Unsupported store schema_version: %s", schema_ver)
-        return None
-
-    errs = _validate_store(data)
-    if errs:
-        _logger.warning("Store validation errors (%d); first: %s", len(errs), errs[0])
+    data = _parse_store_data(raw, "Network")
+    if data is None:
         return None
 
     # Cache to disk
@@ -1773,7 +1799,17 @@ def _load_store_catalog(status_callback=None):
                              args=(status_callback,), daemon=True).start()
         return
 
-    # No cache — must fetch
+    bundled = _load_store_from_bundle()
+    if bundled:
+        _apply_store_catalog(bundled)
+        if status_callback:
+            status_callback(
+                f"Catalog loaded from bundled store.json ({len(bundled.get('apps', []))} apps)")
+        threading.Thread(target=_background_store_refresh,
+                         args=(status_callback,), daemon=True).start()
+        return
+
+    # No cache or bundled catalog — must fetch
     if status_callback:
         status_callback("Fetching app catalog from GitHub…")
     data = _fetch_store_from_network()
@@ -5767,8 +5803,13 @@ def main():
         # Build the whole UI, spin the event loop once, report success, exit.
         # Used by the GitHub Actions workflow to prove the packaged exe starts.
         app.processEvents()
-        Path(args.selftest).write_text(f"OK {CURRENT_VERSION} {get_session_type()}\n",
-                                       encoding="utf-8")
+        bundled_store = _load_store_from_bundle()
+        if not bundled_store:
+            raise RuntimeError("Bundled store.json could not be loaded")
+        Path(args.selftest).write_text(
+            f"OK {CURRENT_VERSION} {get_session_type()} "
+            f"{len(bundled_store.get('apps', []))} apps\n",
+            encoding="utf-8")
         os._exit(0)
 
     sys.exit(app.exec())

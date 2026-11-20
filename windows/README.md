@@ -26,13 +26,16 @@ Supported browsers: Edge, Chrome, Firefox, Brave, Vivaldi, Opera, Chromium, Ungo
 * `Appify-<version>-windows-portable.zip` — unzip and run
 * `SHA256SUMS-windows.txt`
 
+The build bundles `store.json`, so the app catalog is available immediately and
+offline; Appify refreshes it from GitHub in the background when a connection is available.
+
 It runs when you **push a `v*` tag**, when you **publish a release** in the GitHub UI, or
 manually (Actions tab → *Build Windows* → *Run workflow*; put an existing tag in
 `release_tag` to attach the files to that release, or leave it blank to just download the artifacts).
 On tag/release runs the files are attached to the release next to your AppImage and .deb.
 
 > The version comes from `CURRENT_VERSION` in `appify`. Keep it equal to the tag
-> (`v3.0.5` ⇄ `"3.0.5"`) or the app will keep offering an update to itself.
+> (`v3.0.6` ⇄ `"3.0.6"`) or the app will keep offering an update to itself.
 
 > If your Linux workflow *creates* the release with the default `GITHUB_TOKEN`, GitHub does
 > not fire the `release: published` trigger for it. The `push: tags` trigger covers that case.
