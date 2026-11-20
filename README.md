@@ -10,7 +10,9 @@
 
 Appify is a Linux web-app manager that lets you pick from a catalog of **175+ popular services**, choose the browser you already use, and turn the service into an isolated desktop app in three clicks, with deep customization available when you want it.
 
-> Version 3.0.5 is only for the Windows build, Linux users will not need to update Appify.
+> Version 3.0.5+ is only for the Windows build, Linux users will not need to update Appify, unless a newer version needed a patch or security update.
+>
+> Where to get Appify for Windows [Kofi](https://ko-fi.com/s/48cf8f3ed3)
 
 **Appify 3.0 is here:** a full PyQt6 rewrite, the Griffin Dark Theme, and a much deeper set of management and customization options.
 
