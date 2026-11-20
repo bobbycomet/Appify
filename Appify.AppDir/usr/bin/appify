@@ -107,7 +107,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal, QObject, QSize, QMetaObject, Q_ARG, QTime
 from PyQt6.QtGui import QAction, QIcon, QPalette, QColor, QFont, QTextOption, QPixmap, QPainter
 
-CURRENT_VERSION = "3.0.6"
+CURRENT_VERSION = "3.0.7"
 CONFIG_VERSION  = 2
 
 IS_WINDOWS = sys.platform == "win32"
@@ -647,9 +647,55 @@ def get_hostname_from_url(url: str) -> str:
     except Exception:
         return ""
 
+WINDOWS_UPDATE_MANIFEST_URL = (
+    "https://raw.githubusercontent.com/bobbycomet/Appify/main/windows-update.json")
+WINDOWS_UPDATE_INSTRUCTIONS = (
+    "Free updates are available to existing purchasers. Sign in to your Ko-fi account "
+    "and open Payments & Orders to download the latest Appify version.")
+
+
+def check_windows_latest_version() -> "str | None":
+    """Read the public version notice for Windows builds distributed through Ko-fi."""
+    try:
+        import urllib.request
+        import ssl
+        req = urllib.request.Request(
+            WINDOWS_UPDATE_MANIFEST_URL,
+            headers={"Accept": "application/json",
+                     "User-Agent": f"Appify/{CURRENT_VERSION}"})
+        with urllib.request.urlopen(req, context=ssl.create_default_context(),
+                                   timeout=8) as resp:
+            if resp.status != 200:
+                return None
+            data = json.loads(resp.read().decode("utf-8"))
+    except Exception as exc:
+        _logger.debug("Windows update check failed: %s", exc)
+        return None
+
+    version = data.get("version") if isinstance(data, dict) else None
+    if not isinstance(version, str) or not version.strip():
+        _logger.warning("Windows update manifest has no version")
+        return None
+    version = version.strip()
+    try:
+        Version(version)
+    except Exception as exc:
+        _logger.warning("Invalid Windows update version %r: %s", version, exc)
+        return None
+    return version
+
+
 def check_for_updates(callback):
     def _check():
         try:
+            if IS_WINDOWS:
+                latest_version = check_windows_latest_version()
+                if latest_version and Version(latest_version) > Version(CURRENT_VERSION):
+                    msg = (f"New version available: {latest_version}!\n"
+                           f"{WINDOWS_UPDATE_INSTRUCTIONS}")
+                    GLib.idle_add(callback, msg)
+                return
+
             import urllib.request
             import ssl
             url = "https://api.github.com/repos/bobbycomet/Appify/releases/latest"
@@ -3716,7 +3762,7 @@ class _UpdateBanner(QFrame):
         self._label.setProperty("class", "banner-label")
         layout.addWidget(self._label, 1)
 
-        btn = QPushButton("View Releases")
+        btn = QPushButton(tr("How to update") if IS_WINDOWS else tr("View Releases"))
         btn.setProperty("class", "suggested")
         btn.setMaximumWidth(130)
         btn.clicked.connect(self.button_clicked)
@@ -3837,8 +3883,12 @@ class PWAManagerWindow(QMainWindow):
 
         # Update banner
         self._update_banner = _UpdateBanner()
-        self._update_banner.button_clicked.connect(
-            lambda: open_url("https://github.com/bobbycomet/Appify/releases"))
+        if IS_WINDOWS:
+            self._update_banner.button_clicked.connect(
+                lambda: self._show_windows_update_instructions())
+        else:
+            self._update_banner.button_clicked.connect(
+                lambda: open_url("https://github.com/bobbycomet/Appify/releases"))
         self._content_layout.addWidget(self._update_banner)
 
         self._content_layout.addStretch()
@@ -4336,6 +4386,14 @@ class PWAManagerWindow(QMainWindow):
         self._update_banner.set_title(version_line)
         self._update_banner.set_revealed(True)
         self.status_push(tr("Update available!"))
+
+    def _show_windows_update_instructions(self):
+        _q_msg(
+            self,
+            tr("Get the free Appify update"),
+            tr("Sign in to your Ko-fi account, open Payments & Orders, and download "
+               "the latest Appify version. Updates are free for existing purchasers."),
+            [(tr("OK"), "default")])
 
     # ── Dark mode ─────────────────────────────────────────────────────────────
 
@@ -5497,7 +5555,9 @@ class PWAManagerWindow(QMainWindow):
 
         check_row = QHBoxLayout()
         check_btn = QPushButton(tr("Check Now"))
-        releases_btn = QPushButton(tr("Open GitHub Releases"))
+        releases_btn = QPushButton(
+            tr("How to get free updates") if IS_WINDOWS
+            else tr("Open GitHub Releases"))
         check_row.addWidget(check_btn)
         check_row.addWidget(releases_btn)
         layout.addLayout(check_row)
@@ -5507,6 +5567,8 @@ class PWAManagerWindow(QMainWindow):
         install_update_btn.style().unpolish(install_update_btn)
         install_update_btn.style().polish(install_update_btn)
         install_update_btn.setEnabled(False)
+        if IS_WINDOWS:
+            install_update_btn.setVisible(False)
         layout.addWidget(install_update_btn)
 
         sep = QFrame()
@@ -5580,18 +5642,15 @@ class PWAManagerWindow(QMainWindow):
 
         layout.addWidget(sched_grp)
         if IS_WINDOWS:
-            # The systemd timer is Linux-only; Windows checks at every launch.
+            # Windows checks the public version manifest at every launch.
             sched_grp.setVisible(False)
             note = QLabel(tr("Appify checks for updates automatically each time it "
-                             "starts, and shows a banner when a new version is available."))
+                             "starts and shows a banner when a new version is available. "
+                             "Free updates for existing purchasers are in Ko-fi under "
+                             "Payments & Orders."))
             note.setWordWrap(True)
             note.setProperty("class", "caption")
             layout.addWidget(note)
-            if install_type == "windows-portable":
-                port = QLabel(tr("This is the portable build — it can't update itself. "
-                                 "Download the new .zip from GitHub Releases."))
-                port.setWordWrap(True)
-                layout.addWidget(port)
 
         close_btn = QPushButton(tr("Close"))
         close_btn.clicked.connect(dlg.accept)
@@ -5615,6 +5674,25 @@ class PWAManagerWindow(QMainWindow):
             check_btn.setEnabled(False)
             latest_lbl.setText(tr("Latest version: checking…"))
             def _worker():
+                if IS_WINDOWS:
+                    latest_version = check_windows_latest_version()
+                    def _apply_windows():
+                        check_btn.setEnabled(True)
+                        if not latest_version:
+                            latest_lbl.setText(
+                                tr("Latest version: could not check (no network)"))
+                            return
+                        try:
+                            is_newer = Version(latest_version) > Version(CURRENT_VERSION)
+                        except Exception:
+                            is_newer = latest_version != CURRENT_VERSION
+                        suffix = tr("(update available)") if is_newer else tr("(up to date)")
+                        latest_lbl.setText(
+                            tr("Latest version: %(v)s %(suffix)s") % {
+                                "v": latest_version, "suffix": suffix})
+                    GLib.idle_add(_apply_windows)
+                    return
+
                 release = check_appify_latest_release()
                 def _apply():
                     check_btn.setEnabled(True)
@@ -5636,6 +5714,9 @@ class PWAManagerWindow(QMainWindow):
             threading.Thread(target=_worker, daemon=True).start()
 
         def _open_releases():
+            if IS_WINDOWS:
+                self._show_windows_update_instructions()
+                return
             release = _state["release"]
             url = release["html_url"] if release else f"https://github.com/{APPIFY_GITHUB_REPO}/releases"
             open_url(url)

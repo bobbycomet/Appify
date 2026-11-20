@@ -1,22 +1,10 @@
 name: Build Windows
 
 on:
-  # Build + attach to the release whenever a version tag is pushed...
-  push:
-    tags: ["v*"]
-  # ...or whenever a release is published by hand in the GitHub UI.
-  release:
-    types: [published]
-  # Manual run. Leave release_tag blank to just build and download the artifacts.
   workflow_dispatch:
-    inputs:
-      release_tag:
-        description: "Existing release tag to attach the Windows files to (blank = build only)"
-        required: false
-        default: ""
 
 permissions:
-  contents: write   # needed to upload release assets
+  contents: read
 
 jobs:
   windows:
@@ -46,12 +34,6 @@ jobs:
           $v = $m.Matches[0].Groups[1].Value
           "version=$v" >> $env:GITHUB_OUTPUT
           Write-Host "Appify version: $v"
-          if ("${{ github.ref_type }}" -eq "tag") {
-            $tag = "${{ github.ref_name }}".TrimStart("v")
-            if ($tag -ne $v) {
-              Write-Host "::warning::Tag '$tag' does not match CURRENT_VERSION '$v' in ./appify. The app would keep offering an update to itself."
-            }
-          }
 
       - name: Build with PyInstaller
         shell: pwsh
@@ -100,11 +82,3 @@ jobs:
           name: appify-windows-${{ steps.ver.outputs.version }}
           path: release/*
           if-no-files-found: error
-
-      - name: Attach to GitHub release
-        if: github.event_name == 'push' || github.event_name == 'release' || inputs.release_tag != ''
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ inputs.release_tag || github.event.release.tag_name || github.ref_name }}
-          files: release/*
-          fail_on_unmatched_files: true

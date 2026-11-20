@@ -29,18 +29,17 @@ Supported browsers: Edge, Chrome, Firefox, Brave, Vivaldi, Opera, Chromium, Ungo
 The build bundles `store.json`, so the app catalog is available immediately and
 offline; Appify refreshes it from GitHub in the background when a connection is available.
 
-It runs when you **push a `v*` tag**, when you **publish a release** in the GitHub UI, or
-manually (Actions tab → *Build Windows* → *Run workflow*; put an existing tag in
-`release_tag` to attach the files to that release, or leave it blank to just download the artifacts).
-On tag/release runs the files are attached to the release next to your AppImage and .deb.
+Run the workflow manually (Actions tab → *Build Windows* → *Run workflow*). Its
+outputs are workflow artifacts only and are never attached to GitHub Releases;
+upload the installer to Ko-fi for purchasers to access.
 
-> The version comes from `CURRENT_VERSION` in `appify`. Keep it equal to the tag
-> (`v3.0.6` ⇄ `"3.0.6"`) or the app will keep offering an update to itself.
+Windows checks `windows-update.json` for the latest Ko-fi version. After uploading
+a new installer to Ko-fi, update that file's `version` value. The app notifies
+users and directs them to sign in to Ko-fi and open **Payments & Orders**; it
+does not download or install paid files automatically.
 
-> If your Linux workflow *creates* the release with the default `GITHUB_TOKEN`, GitHub does
-> not fire the `release: published` trigger for it. The `push: tags` trigger covers that case.
-> If both workflows create the release, make sure only one of them does (the other should
-> just upload to the existing release).
+The app version comes from `CURRENT_VERSION` in `appify`; keep the installer
+version and update manifest aligned with the file currently available to buyers.
 
 ## Building locally (optional)
 
