@@ -2,6 +2,12 @@
 """
 Appify 3.0.1-1 - PyQt6 Port with Griffin Dark Theme
 
+WINDOWS SUPPORT: this single file now runs on Linux AND Windows 10/11.
+  Linux   -> bash wrappers + .desktop files (unchanged behaviour)
+  Windows -> registry-based browser detection, Start Menu .lnk shortcuts,
+             process-priority launching, installer-based self-update.
+  See the "Windows platform support" section below and windows/README.md.
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 NEW in 3.0.2
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -101,8 +107,23 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal, QObject, QSize, QMetaObject, Q_ARG, QTime
 from PyQt6.QtGui import QAction, QIcon, QPalette, QColor, QFont, QTextOption, QPixmap, QPainter
 
-CURRENT_VERSION = "3.0.2"
+CURRENT_VERSION = "3.0.5"
 CONFIG_VERSION  = 2
+
+IS_WINDOWS = sys.platform == "win32"
+IS_FROZEN  = bool(getattr(sys, "frozen", False))   # True inside a PyInstaller build
+
+# A windowed (no-console) PyInstaller build has sys.stdout / sys.stderr == None,
+# which makes print(..., file=sys.stderr) and logging.StreamHandler blow up.
+for _stream_name in ("stdout", "stderr"):
+    if getattr(sys, _stream_name) is None:
+        setattr(sys, _stream_name, open(os.devnull, "w", encoding="utf-8"))
+
+
+def resource_path(name: str) -> Path:
+    """Locate a bundled data file (works from source and from PyInstaller)."""
+    base = getattr(sys, "_MEIPASS", None)
+    return (Path(base) if base else Path(__file__).resolve().parent) / name
 
 # ─────────────────────────────────────────────────────────────────────────────
 # GLib stub — replaces gi.repository.GLib so all original GLib.idle_add /
@@ -207,6 +228,17 @@ def log_debug(msg: str):
     _logger.debug(msg)
 
 
+def open_url(url: str) -> None:
+    """Open a URL in the user's default browser (xdg-open on Linux)."""
+    try:
+        if IS_WINDOWS:
+            os.startfile(url)  # type: ignore[attr-defined]
+        else:
+            subprocess.Popen(["xdg-open", url])
+    except Exception as exc:
+        _logger.warning("Could not open %s: %s", url, exc)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Internationalization
 # ─────────────────────────────────────────────────────────────────────────────
@@ -295,6 +327,9 @@ _SNAP_NAMES: dict[str, str] = {
     "ungoogled-chromium": "ungoogled-chromium",
 }
 
+_CHROMIUM_KEYS = ("edge", "brave", "vivaldi", "chrome", "chromium", "opera",
+                  "ungoogled-chromium")
+
 def is_wayland_session() -> bool:
     return bool(os.environ.get('WAYLAND_DISPLAY'))
 
@@ -302,6 +337,8 @@ def is_x11_session() -> bool:
     return bool(os.environ.get('DISPLAY')) and not is_wayland_session()
 
 def get_session_type() -> str:
+    if IS_WINDOWS:
+        return "windows"
     if is_wayland_session():
         return "wayland"
     elif is_x11_session():
@@ -349,6 +386,8 @@ def detect_wayland_compositor() -> str:
     return "unknown"
 
 def get_display_backend_flags(browser_key: str = "") -> str:
+    if IS_WINDOWS:
+        return ""          # Wayland/X11/Ozone flags are Linux-only
     session = get_session_type()
     chromium_browsers = ["edge","brave","vivaldi","chrome","chromium","opera","ungoogled-chromium"]
     if browser_key.lower() not in chromium_browsers:
@@ -397,6 +436,13 @@ def detect_browser_installation(browser_key: str) -> dict:
     if browser_key not in browsers_info:
         return {'type': 'not_found', 'cmd': '', 'display_name': browser_key}
     info = browsers_info[browser_key]
+    if IS_WINDOWS:
+        exe = _win_find_browser(browser_key)
+        if exe:
+            return {'type': 'native', 'cmd': exe,
+                    'display_name': f"{info['name']} (Installed)"}
+        return {'type': 'not_found', 'cmd': '',
+                'display_name': f"{info['name']} (Not Installed)"}
     for cmd in info["native_cmds"]:
         if shutil.which(cmd):
             return {'type': 'native', 'cmd': cmd,
@@ -427,6 +473,14 @@ def detect_browser_installation(browser_key: str) -> dict:
             'display_name': f"{info['name']} (Not Installed)"}
 
 def get_default_browser() -> str:
+    if IS_WINDOWS:
+        key = _win_default_browser_key()
+        if key and detect_browser_installation(key)['type'] != 'not_found':
+            return key
+        for browser in ['edge', 'chrome', 'firefox', 'brave', 'vivaldi', 'opera', 'chromium']:
+            if detect_browser_installation(browser)['type'] != 'not_found':
+                return browser
+        return 'edge'      # ships with every Windows 10/11 install
     try:
         result = subprocess.run(
             ["xdg-settings", "get", "default-web-browser"],
@@ -499,6 +553,11 @@ _PORTAL_BACKENDS: dict[str, str] = {
 }
 
 def check_webhid_portal() -> dict:
+    if IS_WINDOWS:
+        return {"ok": True, "portal": "built-in", "running": True,
+                "backend_found": True,
+                "reason": "Windows handles HID device permissions natively "
+                          "(no xdg-desktop-portal needed)."}
     compositor = detect_wayland_compositor() if is_wayland_session() else "x11"
     portal_pkg = _PORTAL_BACKENDS.get(compositor, "xdg-desktop-portal-gtk")
     result: dict = {"ok": False, "portal": portal_pkg, "reason": "",
@@ -574,7 +633,7 @@ def save_profile_config(app: dict, data: dict):
     try:
         tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
         tmp.chmod(0o600)
-        tmp.rename(target)
+        tmp.replace(target)
     except Exception as exc:
         _logger.error("save_profile_config failed: %s", exc)
         tmp.unlink(missing_ok=True)
@@ -640,23 +699,41 @@ def check_appify_latest_release() -> "dict | None":
         return None
     appimage_url = ""
     deb_url = ""
+    exe_url = ""
+    exe_sha256 = ""
     for asset in data.get("assets", []):
         url = asset.get("browser_download_url", "")
+        name = (asset.get("name") or url.rsplit("/", 1)[-1]).lower()
         if url.lower().endswith(".appimage"):
             appimage_url = url
         elif url.lower().endswith(".deb"):
             deb_url = url
+        elif name.endswith(".exe") and "setup" in name:      # Windows installer
+            exe_url = url
+            digest = str(asset.get("digest") or "")
+            if digest.startswith("sha256:"):
+                exe_sha256 = digest[len("sha256:"):].lower()
     return {
         "tag": tag,
         "version": tag.lstrip("v"),
         "appimage_url": appimage_url,
         "deb_url": deb_url,
+        "exe_url": exe_url,
+        "exe_sha256": exe_sha256,
         "html_url": data.get("html_url", f"https://github.com/{APPIFY_GITHUB_REPO}/releases"),
     }
 
 
 def _detect_appify_install_type() -> "tuple[str, str]":
-    """Returns (install_type, appimage_path). install_type is 'appimage', 'deb', or 'unknown'."""
+    """Returns (install_type, path). install_type is 'appimage', 'deb',
+    'windows-installer', 'windows-portable' or 'unknown'."""
+    if IS_WINDOWS:
+        if IS_FROZEN:
+            exe = Path(sys.executable)
+            # Inno Setup drops unins000.exe next to the app; a zip extract doesn't.
+            kind = "windows-installer" if (exe.parent / "unins000.exe").exists() else "windows-portable"
+            return kind, str(exe)
+        return "unknown", ""
     env_appimage = os.environ.get("APPIMAGE", "")
     if env_appimage and Path(env_appimage).is_file():
         return "appimage", env_appimage
@@ -796,10 +873,57 @@ def disable_appify_updater(status_callback=None) -> bool:
     return ok
 
 
+def _install_windows_update(release: dict, status_callback=None) -> bool:
+    """Download the Setup.exe from the release and run it silently. The Inno
+    Setup script closes Appify, upgrades in place and relaunches it."""
+    import hashlib
+    url = release.get("exe_url")
+    if not url:
+        if status_callback:
+            status_callback("No Windows installer (Setup.exe) is attached to the "
+                            "latest release yet.")
+        return False
+    target = Path(tempfile.gettempdir()) / f"Appify-Setup-{release['version']}.exe"
+    if status_callback:
+        status_callback(f"Downloading Appify {release['version']} (Windows installer)…")
+    if not download_file(url, target, timeout=600, max_size=600 * 1024 * 1024):
+        if status_callback:
+            status_callback("Download failed.")
+        return False
+    expected = release.get("exe_sha256", "")
+    if expected:
+        digest = hashlib.sha256(target.read_bytes()).hexdigest()
+        if digest != expected:
+            target.unlink(missing_ok=True)
+            if status_callback:
+                status_callback("Download failed: checksum mismatch — update cancelled.")
+            return False
+    try:
+        subprocess.Popen(
+            [str(target), "/SILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CLOSEAPPLICATIONS"],
+            close_fds=True,
+            creationflags=(getattr(subprocess, "DETACHED_PROCESS", 0x8)
+                           | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0x200)))
+    except Exception as exc:
+        if status_callback:
+            status_callback(f"Could not start the installer: {exc}")
+        return False
+    if status_callback:
+        status_callback(f"Installing Appify {release['version']} — Appify will restart…")
+    return True
+
+
 def install_appify_update(release: dict, status_callback=None) -> bool:
     """Download and install the latest Appify release, matching the current
-    install type (AppImage overwritten in place, or apt-get install for .deb)."""
+    install type (AppImage overwritten in place, apt-get install for .deb, or
+    the Setup.exe installer on Windows)."""
     install_type, appimage_path = _detect_appify_install_type()
+    if install_type == "windows-installer":
+        return _install_windows_update(release, status_callback)
+    if install_type == "windows-portable":
+        if status_callback:
+            status_callback("Portable build: download the new .zip from GitHub Releases.")
+        return False
     if install_type == "unknown":
         if status_callback:
             status_callback("Could not detect how Appify is installed — cannot self-update.")
@@ -813,7 +937,8 @@ def install_appify_update(release: dict, status_callback=None) -> bool:
         tmp_file = Path(tempfile.mktemp(suffix=".AppImage"))
         if status_callback:
             status_callback(f"Downloading Appify {release['version']} (AppImage)…")
-        if not download_file(release["appimage_url"], tmp_file, timeout=60):
+        if not download_file(release["appimage_url"], tmp_file, timeout=300,
+                             max_size=1024 * 1024 * 1024):
             if status_callback:
                 status_callback("Download failed.")
             return False
@@ -849,7 +974,8 @@ def install_appify_update(release: dict, status_callback=None) -> bool:
         tmp_file = Path(tempfile.mktemp(suffix=".deb"))
         if status_callback:
             status_callback(f"Downloading Appify {release['version']} (.deb)…")
-        if not download_file(release["deb_url"], tmp_file, timeout=60):
+        if not download_file(release["deb_url"], tmp_file, timeout=300,
+                             max_size=1024 * 1024 * 1024):
             if status_callback:
                 status_callback("Download failed.")
             return False
@@ -934,20 +1060,68 @@ def save_installed_extensions(app, exts):
 def get_icon_path(app: dict) -> Path:
     return ICON_DIR / f"{slugify(app['name'])}.png"
 
+def _win_safe_filename(name: str) -> str:
+    cleaned = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "", name).strip().rstrip(".")
+    return cleaned or "Appify App"
+
 def get_desktop_file_path(app: dict) -> Path:
+    """Linux: ~/.local/share/applications/pwa-<slug>-manager.desktop
+    Windows: Start Menu\\Programs\\Appify Apps\\<Name>.lnk"""
+    if IS_WINDOWS:
+        return DESKTOP_DIR / f"{_win_safe_filename(app['name'])}.lnk"
     return DESKTOP_DIR / f"pwa-{slugify(app['name'])}-manager.desktop"
 
-def download_file(url: str, path: Path, timeout: int = 10) -> bool:
+def _update_icon_cache():
+    """Refresh the GTK icon cache (Linux only; no-op elsewhere)."""
+    if IS_WINDOWS:
+        return
     try:
+        icon_theme_root = ICON_DIR.parents[1]
         subprocess.run(
-            ["curl", "-fLs", "--proto", "https,http",
-             "--max-filesize", "2097152",
-             "--connect-timeout", "5",
-             "--max-time", str(timeout),
-             "--no-sessionid", "-o", str(path), url],
-            check=True, timeout=timeout + 5)
-        return True
+            ["gtk-update-icon-cache", "-f", "-t", str(icon_theme_root)],
+            check=False, capture_output=True, timeout=5)
     except Exception:
+        pass
+
+def download_file(url: str, path: Path, timeout: int = 10,
+                  max_size: int = 2 * 1024 * 1024) -> bool:
+    """Download http(s) `url` to `path`. Pure Python (no curl needed, so it works
+    on Windows too). Aborts if the file exceeds `max_size` bytes or `timeout`
+    seconds. The default 2 MB cap suits icons; pass a larger max_size for
+    installers / AppImages."""
+    import urllib.request, ssl, time
+    part = Path(str(path) + ".part")
+    try:
+        if not validate_url(url):
+            return False
+        req = urllib.request.Request(
+            url, headers={"User-Agent": f"Appify/{CURRENT_VERSION}", "Accept": "*/*"})
+        ctx = ssl.create_default_context()
+        deadline = time.monotonic() + timeout
+        with urllib.request.urlopen(req, context=ctx, timeout=min(timeout, 15)) as resp:
+            if urlparse(resp.geturl()).scheme not in ("http", "https"):
+                return False
+            length = resp.headers.get("Content-Length", "")
+            if length.isdigit() and int(length) > max_size:
+                return False
+            size = 0
+            with open(part, "wb") as fh:
+                while True:
+                    chunk = resp.read(65536)
+                    if not chunk:
+                        break
+                    size += len(chunk)
+                    if size > max_size or time.monotonic() > deadline:
+                        raise ValueError("download too large or too slow")
+                    fh.write(chunk)
+        os.replace(part, path)
+        return True
+    except Exception as exc:
+        _logger.debug("download_file(%s) failed: %s", url, exc)
+        try:
+            part.unlink(missing_ok=True)
+        except OSError:
+            pass
         return False
 
 def validate_url(url: str) -> bool:
@@ -999,13 +1173,7 @@ def download_icon(app: dict, status_callback=None):
                 label = "Icon" if src == sources[0] else "Fallback icon"
                 if status_callback:
                     status_callback(f"{label}: {hostname}")
-                try:
-                    icon_theme_root = ICON_DIR.parents[1]
-                    subprocess.run(
-                        ["gtk-update-icon-cache", "-f", "-t", str(icon_theme_root)],
-                        check=False, capture_output=True, timeout=5)
-                except Exception:
-                    pass
+                _update_icon_cache()
                 return
             else:
                 icon_path.unlink(missing_ok=True)
@@ -1031,13 +1199,7 @@ def set_custom_icon(app: dict, source_path: Path, status_callback=None) -> bool:
             if status_callback:
                 status_callback("Failed to save icon")
             return False
-        try:
-            icon_theme_root = ICON_DIR.parents[1]
-            subprocess.run(
-                ["gtk-update-icon-cache", "-f", "-t", str(icon_theme_root)],
-                check=False, capture_output=True, timeout=5)
-        except Exception:
-            pass
+        _update_icon_cache()
         profile_cfg = load_profile_config(app)
         profile_cfg["custom_icon"] = True
         save_profile_config(app, profile_cfg)
@@ -1059,14 +1221,328 @@ def reset_icon_to_auto(app: dict, status_callback=None):
     download_icon(app, status_callback)
 
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Windows platform support
+# ─────────────────────────────────────────────────────────────────────────────
+# Everything below is only *executed* on Windows (the helpers are defined on
+# every platform so they can be unit-tested on Linux CI).
+#
+#   • Browsers are located via well-known install paths + the App Paths
+#     registry key (no PATH / flatpak / snap on Windows).
+#   • Each installed web app becomes a Start Menu .lnk that points straight at
+#     the browser exe with --user-data-dir/--app arguments. That is exactly how
+#     Chrome/Edge's own "Install as app" shortcuts work, so taskbar pinning,
+#     Start search and icons behave natively. No console window ever flashes.
+#   • "Nice" priority maps to a Windows process priority class when the app is
+#     started from Appify (Launch button / --launch-app). I/O priority and the
+#     X11/Wayland options have no Windows equivalent and are hidden.
+
+_WIN_BROWSER_SPECS: "dict[str, dict]" = {
+    "firefox": {"exe": "firefox.exe", "app_paths": True, "paths": [
+        r"%ProgramFiles%\Mozilla Firefox\firefox.exe",
+        r"%ProgramFiles(x86)%\Mozilla Firefox\firefox.exe",
+        r"%LOCALAPPDATA%\Mozilla Firefox\firefox.exe"]},
+    "edge": {"exe": "msedge.exe", "app_paths": True, "paths": [
+        r"%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe",
+        r"%ProgramFiles%\Microsoft\Edge\Application\msedge.exe",
+        r"%LOCALAPPDATA%\Microsoft\Edge\Application\msedge.exe"]},
+    "brave": {"exe": "brave.exe", "app_paths": True, "paths": [
+        r"%ProgramFiles%\BraveSoftware\Brave-Browser\Application\brave.exe",
+        r"%ProgramFiles(x86)%\BraveSoftware\Brave-Browser\Application\brave.exe",
+        r"%LOCALAPPDATA%\BraveSoftware\Brave-Browser\Application\brave.exe"]},
+    "vivaldi": {"exe": "vivaldi.exe", "app_paths": True, "paths": [
+        r"%LOCALAPPDATA%\Vivaldi\Application\vivaldi.exe",
+        r"%ProgramFiles%\Vivaldi\Application\vivaldi.exe",
+        r"%ProgramFiles(x86)%\Vivaldi\Application\vivaldi.exe"]},
+    "chrome": {"exe": "chrome.exe", "app_paths": True, "paths": [
+        r"%ProgramFiles%\Google\Chrome\Application\chrome.exe",
+        r"%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe",
+        r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"]},
+    # chrome.exe is also Chromium's file name, so no App Paths / PATH lookup here.
+    "chromium": {"exe": "chrome.exe", "app_paths": False, "paths": [
+        r"%LOCALAPPDATA%\Chromium\Application\chrome.exe",
+        r"%ProgramFiles%\Chromium\Application\chrome.exe"]},
+    "opera": {"exe": "opera.exe", "app_paths": True, "paths": [
+        r"%LOCALAPPDATA%\Programs\Opera\opera.exe",
+        r"%ProgramFiles%\Opera\opera.exe",
+        r"%ProgramFiles(x86)%\Opera\opera.exe"]},
+    "ungoogled-chromium": {"exe": "ungoogled-chromium.exe", "app_paths": False,
+                           "which": True, "paths": [
+        r"%LOCALAPPDATA%\ungoogled-chromium\chrome.exe"]},
+}
+
+# Windows default-browser ProgId substrings -> Appify browser key (first match wins)
+_WIN_PROGID_MAP = [
+    ("msedge", "edge"), ("chromehtml", "chrome"), ("chromiumhtm", "chromium"),
+    ("firefox", "firefox"), ("brave", "brave"), ("vivaldi", "vivaldi"),
+    ("opera", "opera"),
+]
+
+
+def _win_app_path(exe: str) -> str:
+    """Resolve an exe through HKCU/HKLM ...\\App Paths (both registry views)."""
+    try:
+        import winreg
+    except ImportError:
+        return ""
+    sub = rf"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\{exe}"
+    for root in (winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE):
+        for view in (0, winreg.KEY_WOW64_64KEY, winreg.KEY_WOW64_32KEY):
+            try:
+                with winreg.OpenKey(root, sub, 0, winreg.KEY_READ | view) as key:
+                    value, _ = winreg.QueryValueEx(key, None)
+                value = os.path.expandvars(str(value).strip().strip('"'))
+                if os.path.isfile(value):
+                    return value
+            except OSError:
+                continue
+    return ""
+
+
+def _win_find_browser(browser_key: str) -> str:
+    """Full path to the browser's exe, or '' if it isn't installed."""
+    spec = _WIN_BROWSER_SPECS.get(browser_key)
+    if not spec:
+        return ""
+    for raw in spec["paths"]:
+        path = os.path.expandvars(raw)
+        if "%" not in path and os.path.isfile(path):   # '%' left = var undefined
+            return path
+    if spec["app_paths"]:
+        path = _win_app_path(spec["exe"])
+        if path:
+            return path
+    if spec.get("which", spec["app_paths"]):
+        found = shutil.which(spec["exe"])
+        if found:
+            return found
+    return ""
+
+
+def _win_default_browser_key() -> str:
+    """Appify browser key of the user's default https handler ('' if unknown)."""
+    try:
+        import winreg
+    except ImportError:
+        return ""
+    for scheme in ("https", "http"):
+        sub = (r"Software\Microsoft\Windows\Shell\Associations\UrlAssociations"
+               rf"\{scheme}\UserChoice")
+        try:
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, sub) as key:
+                prog_id = str(winreg.QueryValueEx(key, "ProgId")[0]).lower()
+        except OSError:
+            continue
+        for needle, browser_key in _WIN_PROGID_MAP:
+            if needle in prog_id:
+                return browser_key
+    return ""
+
+
+def _win_png_to_ico(src: Path, dst: Path) -> bool:
+    """Convert any Qt-readable image (PNG/JPG/ICO/…) into a multi-size .ico
+    (PNG-compressed entries, supported by Windows Vista and newer)."""
+    import struct
+    from PyQt6.QtCore import QBuffer, QByteArray, QIODevice
+    from PyQt6.QtGui import QImage, QPainter
+    try:
+        img = QImage(str(src))
+        if img.isNull():
+            return False
+        img = img.convertToFormat(QImage.Format.Format_ARGB32)
+        side = max(img.width(), img.height())
+        canvas = QImage(side, side, QImage.Format.Format_ARGB32)   # square, transparent
+        canvas.fill(0)
+        painter = QPainter(canvas)
+        painter.drawImage((side - img.width()) // 2, (side - img.height()) // 2, img)
+        painter.end()
+
+        pngs = []
+        for size in (256, 48, 32, 16):
+            scaled = canvas.scaled(size, size, Qt.AspectRatioMode.IgnoreAspectRatio,
+                                   Qt.TransformationMode.SmoothTransformation)
+            ba = QByteArray()
+            buf = QBuffer(ba)
+            buf.open(QIODevice.OpenModeFlag.WriteOnly)
+            scaled.save(buf, "PNG")
+            buf.close()
+            pngs.append((size, bytes(ba)))
+
+        header = struct.pack("<HHH", 0, 1, len(pngs))
+        offset = 6 + 16 * len(pngs)
+        entries, blobs = b"", b""
+        for size, data in pngs:
+            dim = 0 if size >= 256 else size            # 0 means 256 in ICO
+            entries += struct.pack("<BBBBHHII", dim, dim, 0, 0, 1, 32, len(data), offset)
+            blobs += data
+            offset += len(data)
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_bytes(header + entries + blobs)
+        return True
+    except Exception as exc:
+        _logger.warning("ICO conversion failed for %s: %s", src, exc)
+        return False
+
+
+def _win_create_lnk(lnk_path: Path, target: str, arguments: str,
+                    icon: str, workdir: str, description: str) -> "tuple[bool, str]":
+    """Create a .lnk via PowerShell/WScript.Shell. Values travel through
+    environment variables so no quoting/escaping can go wrong."""
+    ps = shutil.which("powershell") or shutil.which("pwsh")
+    if not ps:
+        return False, "PowerShell not found"
+    script = (
+        "$ErrorActionPreference='Stop';"
+        "$w=New-Object -ComObject WScript.Shell;"
+        "$s=$w.CreateShortcut($env:APPIFY_LNK);"
+        "$s.TargetPath=$env:APPIFY_TARGET;"
+        "$s.Arguments=$env:APPIFY_ARGS;"
+        "$s.WorkingDirectory=$env:APPIFY_WORKDIR;"
+        "$s.Description=$env:APPIFY_DESC;"
+        "if($env:APPIFY_ICON){$s.IconLocation=$env:APPIFY_ICON+',0'};"
+        "$s.Save()")
+    env = os.environ.copy()
+    env.update({"APPIFY_LNK": str(lnk_path), "APPIFY_TARGET": target,
+                "APPIFY_ARGS": arguments, "APPIFY_WORKDIR": workdir,
+                "APPIFY_DESC": description[:250], "APPIFY_ICON": icon})
+    try:
+        proc = subprocess.run(
+            [ps, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+             "-Command", script],
+            env=env, capture_output=True, text=True, timeout=30,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000))
+    except Exception as exc:
+        return False, str(exc)
+    if proc.returncode != 0 or not lnk_path.exists():
+        return False, (proc.stderr or proc.stdout or f"exit {proc.returncode}").strip()
+    return True, ""
+
+
+def build_windows_launch_argv(app: dict, browser_key: str, gpu: bool = True) -> "list[str] | None":
+    """Full argv [browser.exe, args…] for an app, or None if the browser is missing.
+    Built as a list (never a shell string) so URLs/paths need no escaping."""
+    detection = detect_browser_installation(browser_key)
+    if detection['type'] == 'not_found':
+        return None
+    url = app.get('url', '')
+    if not validate_url(url):
+        return None
+    cfg = get_browsers().get(browser_key, {})
+    args_data = cfg.get('args', '{profile_dir} {url}')
+    template = ' '.join(args_data) if isinstance(args_data, list) else str(args_data)
+    kiosk_flag = cfg.get('kiosk_flag', '') if app.get('kiosk', False) else ''
+    values = dict(profile_dir=str(get_profile_dir(app)), url=url, kiosk_flag=kiosk_flag)
+    argv = [detection['cmd']]
+    argv += [t for t in (tok.format(**values) for tok in template.split()) if t]
+    if browser_key.lower() in _CHROMIUM_KEYS:
+        if app.get('gamepad', False):
+            extra = (cfg.get('extra_flags', '') or "").strip() or (
+                "--enable-features=WebHID --enable-gamepad-button-axis-events"
+                " --disable-features=WebHidBlocklist")
+            argv += extra.split()
+        # Skip first-run / default-browser prompts in the fresh per-app profile.
+        argv += ["--no-first-run", "--no-default-browser-check"]
+        if not gpu:
+            argv.append("--disable-gpu")
+    return argv
+
+
+def _win_priority_flags(nice: int) -> int:
+    """Map a Unix-style nice value (-20…19) to a Windows priority class."""
+    nice = int(nice)
+    if nice <= -10:
+        return 0x00000080      # HIGH_PRIORITY_CLASS
+    if nice < 0:
+        return 0x00008000      # ABOVE_NORMAL_PRIORITY_CLASS
+    if nice == 0:
+        return 0
+    if nice < 10:
+        return 0x00004000      # BELOW_NORMAL_PRIORITY_CLASS
+    return 0x00000040          # IDLE_PRIORITY_CLASS
+
+
+_FIREFOX_LOCK_NAMES = ("lock", ".parentlock", "parent.lock")
+
+
+def launch_app_windows(app: dict, browser_key: str = "") -> "tuple[bool, str]":
+    """Start an installed app now (Launch button / --launch-app on Windows)."""
+    profile_cfg = load_profile_config(app)
+    browser_key = (browser_key or profile_cfg.get("browser") or app.get("browser")
+                   or CONFIG.get("browser", "edge")).lower()
+    argv = build_windows_launch_argv(app, browser_key, CONFIG.get("gpu", True))
+    if not argv:
+        return False, f"Browser '{browser_key}' not found (or app URL invalid)."
+    if browser_key == "firefox":
+        _scrub_firefox_locks(get_profile_dir(app))
+    env = os.environ.copy()
+    if browser_key == "firefox":
+        env["MOZ_APP_REMOTINGNAME"] = slugify(app["name"])
+    nice = profile_cfg.get("nice", CONFIG.get("nice", 0))
+    flags = (getattr(subprocess, "DETACHED_PROCESS", 0x00000008)
+             | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0x00000200)
+             | _win_priority_flags(nice))
+    try:
+        subprocess.Popen(argv, env=env, creationflags=flags, close_fds=True,
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL)
+    except Exception as exc:
+        _logger.error("Windows launch failed: %s", exc)
+        return False, f"Launch failed: {exc}"
+    profile_cfg["last_launched"] = datetime.datetime.now().timestamp()
+    try:
+        save_profile_config(app, profile_cfg)
+    except Exception:
+        pass
+    log_debug(f"LAUNCH: {app.get('name')} via {argv[0]}")
+    return True, ""
+
+
+def _create_windows_shortcut(app: dict, status_callback=None):
+    """Create/refresh the Start Menu shortcut for an installed app."""
+    profile_cfg = load_profile_config(app)
+    browser_key = (profile_cfg.get('browser') or app.get('browser')
+                   or CONFIG.get('browser', 'edge')).lower()
+    argv = build_windows_launch_argv(app, browser_key, CONFIG.get('gpu', True))
+    if not argv:
+        if status_callback:
+            status_callback(f"Shortcut failed: {browser_key} not found")
+        return
+    icon_png = get_icon_path(app)
+    icon_ico = icon_png.with_suffix(".ico")
+    if icon_png.exists() and _win_png_to_ico(icon_png, icon_ico):
+        icon_loc = str(icon_ico)
+    else:
+        icon_loc = argv[0]            # fall back to the browser's own icon
+    lnk = get_desktop_file_path(app)
+    try:
+        lnk.parent.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        if status_callback:
+            status_callback(f"Shortcut failed: {exc}")
+        return
+    ok, err = _win_create_lnk(
+        lnk, argv[0], subprocess.list2cmdline(argv[1:]), icon_loc,
+        str(Path(argv[0]).parent), f"{app['name']} (Appify)")
+    if status_callback:
+        status_callback(f"Shortcut: {app['name']}" if ok else f"Shortcut failed: {err}")
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Config Paths
 # ─────────────────────────────────────────────────────────────────────────────
 
-CONFIG_DIR  = Path(os.path.expanduser("~/.appify"))
+if IS_WINDOWS:
+    _LOCALAPPDATA = Path(os.environ.get("LOCALAPPDATA") or (Path.home() / "AppData" / "Local"))
+    _APPDATA      = Path(os.environ.get("APPDATA") or (Path.home() / "AppData" / "Roaming"))
+    CONFIG_DIR  = _LOCALAPPDATA / "Appify"
+    ICON_DIR    = CONFIG_DIR / "icons"
+    DESKTOP_DIR = _APPDATA / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Appify Apps"
+else:
+    CONFIG_DIR  = Path(os.path.expanduser("~/.appify"))
+    ICON_DIR    = Path(os.path.expanduser("~/.local/share/icons/hicolor/512x512/apps/"))
+    DESKTOP_DIR = Path(os.path.expanduser("~/.local/share/applications/"))
 CONFIG_FILE = CONFIG_DIR / "config.json"
-ICON_DIR    = Path(os.path.expanduser("~/.local/share/icons/hicolor/512x512/apps/"))
-DESKTOP_DIR = Path(os.path.expanduser("~/.local/share/applications/"))
 LOG_FILE    = CONFIG_DIR / "launch.log"
 
 _OLD_CONFIG_DIR = Path(os.path.expanduser("~/.pwa_manager"))
@@ -1084,7 +1560,7 @@ def save_config():
         payload = json.dumps(CONFIG, indent=2)
         tmp_path.write_text(payload, encoding="utf-8")
         tmp_path.chmod(0o600)
-        tmp_path.rename(CONFIG_FILE)
+        tmp_path.replace(CONFIG_FILE)
     except Exception as exc:
         _logger.error("save_config failed: %s", exc)
         tmp_path.unlink(missing_ok=True)
@@ -1208,7 +1684,7 @@ def _fetch_store_from_network() -> "dict | None":
         tmp = STORE_CACHE_FILE.with_suffix(".json.tmp")
         tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
         tmp.chmod(0o600)
-        tmp.rename(STORE_CACHE_FILE)
+        tmp.replace(STORE_CACHE_FILE)
         _logger.info("Store catalog cached: %d apps, %d ext presets",
                      len(data.get("apps", [])),
                      len(data.get("extension_presets", [])))
@@ -1580,6 +2056,10 @@ def make_launcher_wrapper(app: dict, browser_key: str, nice: int, ionice: int, g
     except Exception:
         pass
 
+    if IS_WINDOWS:
+        # No script on Windows: the Start Menu .lnk *is* the launcher.
+        return get_desktop_file_path(app)
+
     browser_cfg = get_browsers().get(browser_key, {})
     browser_detection = detect_browser_installation(browser_key)
 
@@ -1726,6 +2206,9 @@ def make_launcher_wrapper(app: dict, browser_key: str, nice: int, ionice: int, g
     return wrapper
 
 def create_desktop_file(app: dict, script_path: str, status_callback=None):
+    if IS_WINDOWS:
+        _create_windows_shortcut(app, status_callback)
+        return
     desktop_path = get_desktop_file_path(app)
     icon_path = get_icon_path(app)
     app_name = sanitize_shell_string(app["name"])
@@ -1753,12 +2236,7 @@ def create_desktop_file(app: dict, script_path: str, status_callback=None):
         desktop_path.write_text(desktop_content)
         desktop_path.chmod(0o755)
         subprocess.run(["update-desktop-database", str(DESKTOP_DIR)], check=False, timeout=10)
-        try:
-            icon_theme_root = ICON_DIR.parents[1]
-            subprocess.run(["gtk-update-icon-cache", "-f", "-t", str(icon_theme_root)],
-                           check=False, capture_output=True, timeout=5)
-        except Exception:
-            pass
+        _update_icon_cache()
         if status_callback:
             status_callback(f"Desktop: {app_name}")
     except Exception as e:
@@ -1810,7 +2288,14 @@ def remove_app_files(app_to_remove):
     (profile_dir / "installed.marker").unlink(missing_ok=True)
     get_desktop_file_path(app_to_remove).unlink(missing_ok=True)
     get_icon_path(app_to_remove).unlink(missing_ok=True)
-    subprocess.run(["update-desktop-database", "-q", str(DESKTOP_DIR)], check=False, timeout=10)
+    if IS_WINDOWS:
+        get_icon_path(app_to_remove).with_suffix(".ico").unlink(missing_ok=True)
+        return
+    try:
+        subprocess.run(["update-desktop-database", "-q", str(DESKTOP_DIR)],
+                       check=False, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        pass
 
 def uninstall_app(name):
     app_slug = slugify(name)
@@ -1834,6 +2319,19 @@ MAX_BACKUPS_PER_APP = 10
 def _backup_timestamp() -> str:
     return datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 
+def _tar_add_tree(tar: tarfile.TarFile, root: Path, arcroot: str):
+    """Add a directory tree to `tar`, skipping files that can't be read (on
+    Windows a running browser keeps some profile files locked)."""
+    tar.add(root, arcname=arcroot, recursive=False)
+    for dirpath, dirnames, filenames in os.walk(root):
+        for name in dirnames + filenames:
+            full = Path(dirpath) / name
+            arc = f"{arcroot}/{full.relative_to(root).as_posix()}"
+            try:
+                tar.add(full, arcname=arc, recursive=False)
+            except OSError as exc:
+                _logger.warning("Backup: skipped %s (%s)", full, exc)
+
 def backup_profile(app: dict, status_callback=None) -> "Path | None":
     slug = slugify(app["name"])
     app_backup_dir = BACKUP_DIR / slug
@@ -1844,12 +2342,12 @@ def backup_profile(app: dict, status_callback=None) -> "Path | None":
         with tarfile.open(archive, "w:gz") as tar:
             profile_dir = get_profile_dir(app)
             if profile_dir.exists():
-                tar.add(profile_dir, arcname=f"profile/{slug}")
+                _tar_add_tree(tar, profile_dir, f"profile/{slug}")
             wrapper = CONFIG_DIR / "scripts" / f"pwa-launch-{slug}.sh"
             if wrapper.exists():
                 tar.add(wrapper, arcname=f"scripts/pwa-launch-{slug}.sh")
             desktop = get_desktop_file_path(app)
-            if desktop.exists():
+            if desktop.exists() and not IS_WINDOWS:
                 tar.add(desktop, arcname=f"desktop/pwa-{slug}-manager.desktop")
             icon = get_icon_path(app)
             if icon.exists():
@@ -1947,7 +2445,7 @@ def restore_profile(backup_path: Path, app: dict, status_callback=None) -> bool:
                 shutil.copy2(src_wrapper, dst_wrapper)
                 dst_wrapper.chmod(0o755)
             src_desktop = tmp / "desktop" / f"pwa-{slug}-manager.desktop"
-            if src_desktop.exists():
+            if src_desktop.exists() and not IS_WINDOWS:
                 dst_desktop = get_desktop_file_path(app)
                 dst_desktop.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(src_desktop, dst_desktop)
@@ -2000,6 +2498,12 @@ def launch_app_from_cli(app_name: str):
     if detection['type'] == 'not_found':
         print(f"ERROR: Browser '{browser_key}' not found.", file=sys.stderr)
         sys.exit(1)
+    if IS_WINDOWS:
+        ok, msg = launch_app_windows(app, browser_key)
+        if not ok:
+            print(f"ERROR: {msg}", file=sys.stderr)
+            sys.exit(1)
+        sys.exit(0)
     gpu = CONFIG.get("gpu", True)
     nice_val   = profile_cfg.get("nice",   CONFIG.get("nice",   0))
     ionice_val = profile_cfg.get("ionice", CONFIG.get("ionice", 2))
@@ -2106,6 +2610,18 @@ def launch_extension_manager(browser_key: str,
 def _firefox_lock_is_stale(profile_dir: Path) -> bool:
     """True if profile_dir's Firefox lock isn't actually held by a live process
     (crash / unclean shutdown leftover), False if a process genuinely holds it."""
+    if IS_WINDOWS:
+        # A live Firefox keeps parent.lock open with no sharing, so merely
+        # opening it fails with PermissionError. If we can open it, it's stale.
+        lock = profile_dir / "parent.lock"
+        if not lock.exists():
+            return True
+        try:
+            with open(lock, "ab"):
+                pass
+            return True
+        except OSError:
+            return False
     parentlock = profile_dir / ".parentlock"
     if not parentlock.exists():
         return True
@@ -2120,6 +2636,17 @@ def _firefox_lock_is_stale(profile_dir: Path) -> bool:
                 return False  # someone else holds it -> a real instance is running
     except Exception:
         return True  # can't tell either way; don't block the launch attempt over it
+
+def _scrub_firefox_locks(profile_dir: Path):
+    """Remove leftover Firefox profile locks before launching. On Windows only
+    when no live Firefox holds them; on Linux unconditionally (existing behaviour)."""
+    if IS_WINDOWS and not _firefox_lock_is_stale(profile_dir):
+        return
+    for name in _FIREFOX_LOCK_NAMES:
+        try:
+            (profile_dir / name).unlink(missing_ok=True)
+        except OSError as exc:
+            _logger.warning("Could not remove Firefox lock %s: %s", name, exc)
 
 def _open_url_in_pwa_browser(browser_key: str, profile_dir: Path, url: str, app: dict = None):
     if not validate_url(url):
@@ -2150,7 +2677,7 @@ def _open_url_in_pwa_browser(browser_key: str, profile_dir: Path, url: str, app:
             # stale lock left behind by a crash/unclean shutdown so this still
             # starts cleanly rather than hitting the same false dialog.
             if _firefox_lock_is_stale(profile_dir):
-                for lock_name in ("lock", ".parentlock"):
+                for lock_name in _FIREFOX_LOCK_NAMES:
                     lock_path = profile_dir / lock_name
                     try:
                         if lock_path.exists() or lock_path.is_symlink():
@@ -2166,6 +2693,8 @@ def _open_url_in_pwa_browser(browser_key: str, profile_dir: Path, url: str, app:
 
 def cleanup_stale_pwa_desktop_files(status_callback=None) -> int:
     fixed = 0
+    if IS_WINDOWS:
+        return fixed
     if not DESKTOP_DIR.is_dir():
         return fixed
     old_dir_str = str(_OLD_CONFIG_DIR)
@@ -3230,8 +3759,9 @@ class PWAManagerWindow(QMainWindow):
             ("Backup Manager",          self.on_open_backup_manager),
             ("Backup All Installed Apps", self.on_backup_all),
             ("Install All in Category…", self.on_install_all_in_category),
-            ("Regenerate All Wrappers", self.on_regenerate_wrappers),
-            ("Migrate to .appify…",     self.on_migrate_dir),
+            ("Regenerate All Shortcuts" if IS_WINDOWS else "Regenerate All Wrappers",
+             self.on_regenerate_wrappers),
+            *([] if IS_WINDOWS else [("Migrate to .appify…", self.on_migrate_dir)]),
             ("Export All Data…",        self.on_export_data),
             ("Import All Data…",        self.on_import_data),
             ("Update Settings…",        self.on_open_update_settings),
@@ -3272,7 +3802,7 @@ class PWAManagerWindow(QMainWindow):
         # Update banner
         self._update_banner = _UpdateBanner()
         self._update_banner.button_clicked.connect(
-            lambda: subprocess.Popen(["xdg-open", "https://github.com/bobbycomet/Appify/releases"]))
+            lambda: open_url("https://github.com/bobbycomet/Appify/releases"))
         self._content_layout.addWidget(self._update_banner)
 
         self._content_layout.addStretch()
@@ -3528,6 +4058,19 @@ class PWAManagerWindow(QMainWindow):
         self.ionice_spin.setValue(CONFIG.get("ionice", 2))
         self.ionice_spin.setToolTip(ionice_tip)
         perf_grid.addWidget(self.ionice_spin, 1, 1)
+
+        if IS_WINDOWS:
+            # No Wayland/XWayland and no ionice on Windows.
+            self.x11_fallback_check.setVisible(False)
+            ionice_label.setVisible(False)
+            self.ionice_spin.setVisible(False)
+            nice_tip = ("Process priority when the app is started from Appify "
+                        "(Launch button).\nNegative = higher, positive = lower. "
+                        "Start Menu shortcuts always run at normal priority.")
+            nice_label.setToolTip(nice_tip)
+            self.nice_spin.setToolTip(nice_tip)
+            self.gamepad_check.setToolTip(
+                "Enhanced WebHID for cloud gaming (Chromium browsers only).")
 
         layout.addLayout(perf_grid)
 
@@ -4037,7 +4580,7 @@ class PWAManagerWindow(QMainWindow):
         ]:
             btn = QPushButton(label)
             btn.setProperty("class", "flat")
-            btn.clicked.connect(lambda _, u=url: subprocess.Popen(["xdg-open", u]))
+            btn.clicked.connect(lambda _, u=url: open_url(u))
             links_layout.addWidget(btn)
         links_layout.addStretch()
         layout.addLayout(links_layout)
@@ -4314,6 +4857,13 @@ class PWAManagerWindow(QMainWindow):
         if not app:
             return
         slug = slugify(app["name"])
+        if IS_WINDOWS:
+            if slug not in set(list_installed_apps()):
+                self.status_push(f"{app['name']} is not installed — install it first")
+                return
+            ok, msg = launch_app_windows(app)
+            self.status_push(f"▶ Launched {app['name']}" if ok else msg)
+            return
         launcher = CONFIG_DIR / "scripts" / f"pwa-launch-{slug}.sh"
         if launcher.exists() and os.access(str(launcher), os.X_OK):
             # Scrub stale Firefox profile locks before handing off to wrapper
@@ -4892,8 +5442,11 @@ class PWAManagerWindow(QMainWindow):
         install_desc = {
             "appimage": tr("AppImage (%(path)s)") % {"path": appimage_path},
             "deb":      tr("Debian package (.deb)"),
-            "unknown":  tr("Unknown — not detected as a deb or AppImage install"),
+            "windows-installer": tr("Windows installer (%(path)s)") % {"path": appimage_path},
+            "windows-portable":  tr("Windows portable build (%(path)s)") % {"path": appimage_path},
+            "unknown":  tr("Unknown — not detected as a deb, AppImage or Windows install"),
         }[install_type]
+        can_self_update = install_type in ("appimage", "deb", "windows-installer")
 
         info_lbl = QLabel(
             f"<b>{tr('Installed version')}:</b> {CURRENT_VERSION}<br>"
@@ -4990,6 +5543,19 @@ class PWAManagerWindow(QMainWindow):
         sched_layout.addLayout(sched_btn_row)
 
         layout.addWidget(sched_grp)
+        if IS_WINDOWS:
+            # The systemd timer is Linux-only; Windows checks at every launch.
+            sched_grp.setVisible(False)
+            note = QLabel(tr("Appify checks for updates automatically each time it "
+                             "starts, and shows a banner when a new version is available."))
+            note.setWordWrap(True)
+            note.setProperty("class", "caption")
+            layout.addWidget(note)
+            if install_type == "windows-portable":
+                port = QLabel(tr("This is the portable build — it can't update itself. "
+                                 "Download the new .zip from GitHub Releases."))
+                port.setWordWrap(True)
+                layout.addWidget(port)
 
         close_btn = QPushButton(tr("Close"))
         close_btn.clicked.connect(dlg.accept)
@@ -5029,14 +5595,14 @@ class PWAManagerWindow(QMainWindow):
                     latest_lbl.setText(
                         tr("Latest version: %(v)s %(suffix)s") % {
                             "v": release["version"], "suffix": suffix})
-                    install_update_btn.setEnabled(is_newer and install_type != "unknown")
+                    install_update_btn.setEnabled(is_newer and can_self_update)
                 GLib.idle_add(_apply)
             threading.Thread(target=_worker, daemon=True).start()
 
         def _open_releases():
             release = _state["release"]
             url = release["html_url"] if release else f"https://github.com/{APPIFY_GITHUB_REPO}/releases"
-            subprocess.Popen(["xdg-open", url])
+            open_url(url)
 
         def _do_install_update():
             release = _state["release"]
@@ -5054,6 +5620,9 @@ class PWAManagerWindow(QMainWindow):
             def _worker():
                 ok = install_appify_update(release, lambda msg: GLib.idle_add(self.status_push, msg))
                 GLib.idle_add(install_update_btn.setEnabled, not ok)
+                if ok and IS_WINDOWS:
+                    # Let the installer replace our files: quit shortly after it starts.
+                    GLib.idle_add(lambda: QTimer.singleShot(1500, QApplication.quit))
             threading.Thread(target=_worker, daemon=True).start()
 
         def _do_apply_schedule():
@@ -5160,6 +5729,7 @@ def main():
     parser.add_argument("--launch-app", type=str)
     parser.add_argument("--print-version", action="store_true",
                          help="Print the installed Appify version and exit (used by appify-updater.sh).")
+    parser.add_argument("--selftest", metavar="FILE", help=argparse.SUPPRESS)  # CI smoke test
     args = parser.parse_args()
     if args.print_version:
         print(CURRENT_VERSION)
@@ -5168,7 +5738,17 @@ def main():
         launch_app_from_cli(args.launch_app)
         return
 
+    if IS_WINDOWS:
+        try:   # own taskbar identity/icon instead of being grouped under python/pythonw
+            import ctypes
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("BobbyComet.Appify")
+        except Exception:
+            pass
     app = QApplication(sys.argv)
+    if IS_WINDOWS:
+        _icon_file = resource_path("appify.png")
+        if _icon_file.exists():
+            app.setWindowIcon(QIcon(str(_icon_file)))
     app.setApplicationName("Appify")
     app.setApplicationVersion(CURRENT_VERSION)
     app.setOrganizationName("BobbyComet")
@@ -5183,12 +5763,20 @@ def main():
     win = PWAManagerWindow()
     win.show()
 
+    if args.selftest:
+        # Build the whole UI, spin the event loop once, report success, exit.
+        # Used by the GitHub Actions workflow to prove the packaged exe starts.
+        app.processEvents()
+        Path(args.selftest).write_text(f"OK {CURRENT_VERSION} {get_session_type()}\n",
+                                       encoding="utf-8")
+        os._exit(0)
+
     sys.exit(app.exec())
 
 
 if __name__ == "__main__":
     script_path = Path(__file__)
-    if not os.access(script_path, os.X_OK):
+    if not IS_WINDOWS and not os.access(script_path, os.X_OK):
         try:
             script_path.chmod(0o755)
         except OSError:

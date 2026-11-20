@@ -1,0 +1,109 @@
+name: Build Windows
+
+on:
+  # Build + attach to the release whenever a version tag is pushed...
+  push:
+    tags: ["v*"]
+  # ...or whenever a release is published by hand in the GitHub UI.
+  release:
+    types: [published]
+  # Manual run. Leave release_tag blank to just build and download the artifacts.
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Existing release tag to attach the Windows files to (blank = build only)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write   # needed to upload release assets
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt "pyinstaller>=6.10,<7"
+
+      - name: Read version from source
+        id: ver
+        shell: pwsh
+        run: |
+          $m = Select-String -Path appify -Pattern '^CURRENT_VERSION\s*=\s*"([^"]+)"'
+          if (-not $m) { throw "Could not read CURRENT_VERSION from ./appify" }
+          $v = $m.Matches[0].Groups[1].Value
+          "version=$v" >> $env:GITHUB_OUTPUT
+          Write-Host "Appify version: $v"
+          if ("${{ github.ref_type }}" -eq "tag") {
+            $tag = "${{ github.ref_name }}".TrimStart("v")
+            if ($tag -ne $v) {
+              Write-Host "::warning::Tag '$tag' does not match CURRENT_VERSION '$v' in ./appify. The app would keep offering an update to itself."
+            }
+          }
+
+      - name: Build with PyInstaller
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path build_src | Out-Null
+          Copy-Item appify build_src\appify_main.py
+          pyinstaller --noconfirm --clean --windowed --name Appify `
+            --icon "$PWD\windows\appify.ico" `
+            --add-data "$PWD\windows\appify.png;." `
+            --hidden-import winreg `
+            --exclude-module tkinter `
+            build_src\appify_main.py
+          if ($LASTEXITCODE -ne 0) { throw "PyInstaller failed" }
+
+      - name: Smoke-test the packaged app
+        shell: pwsh
+        timeout-minutes: 3
+        run: |
+          $out = Join-Path $PWD "selftest.txt"
+          $p = Start-Process -FilePath "dist\Appify\Appify.exe" -ArgumentList @("--selftest", $out) -PassThru -Wait
+          if (-not (Test-Path $out)) { throw "Self-test produced no output (exit code $($p.ExitCode)). The packaged app failed to start." }
+          Write-Host "Self-test: $(Get-Content $out)"
+
+      - name: Build installer (Inno Setup)
+        shell: pwsh
+        run: |
+          choco upgrade innosetup -y --no-progress
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { throw "ISCC.exe not found at $iscc" }
+          & $iscc "/DMyAppVersion=${{ steps.ver.outputs.version }}" windows\appify.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed" }
+
+      - name: Create portable zip + checksums
+        shell: pwsh
+        run: |
+          $v = "${{ steps.ver.outputs.version }}"
+          Compress-Archive -Path dist\Appify\* -DestinationPath "release\Appify-$v-windows-portable.zip" -Force
+          Get-ChildItem release -File | Get-FileHash -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash.ToLower())  $(Split-Path $_.Path -Leaf)" } |
+            Set-Content release\SHA256SUMS-windows.txt
+          Get-ChildItem release | Format-Table Name, Length
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: appify-windows-${{ steps.ver.outputs.version }}
+          path: release/*
+          if-no-files-found: error
+
+      - name: Attach to GitHub release
+        if: github.event_name == 'push' || github.event_name == 'release' || inputs.release_tag != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.release_tag || github.event.release.tag_name || github.ref_name }}
+          files: release/*
+          fail_on_unmatched_files: true
